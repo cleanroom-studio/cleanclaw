@@ -50,7 +50,9 @@ pub mod openai_imagegen {
         async fn execute(&self, req: Request) -> Result<Response, ProviderError> {
             let prompt = str_field(&req.args, "prompt");
             if prompt.is_empty() {
-                return Err(ProviderError::InvalidArgs("imagegen: prompt required".into()));
+                return Err(ProviderError::InvalidArgs(
+                    "imagegen: prompt required".into(),
+                ));
             }
             if req.config.api_key.is_empty() {
                 return Err(ProviderError::MissingApiKey("openai"));
@@ -84,7 +86,10 @@ pub mod openai_imagegen {
                 let txt = resp.text().await.unwrap_or_default();
                 return Err(ProviderError::Upstream(format!("openai {status}: {txt}")));
             }
-            let v: Value = resp.json().await.map_err(|e| ProviderError::Decode(e.to_string()))?;
+            let v: Value = resp
+                .json()
+                .await
+                .map_err(|e| ProviderError::Decode(e.to_string()))?;
             let url = v
                 .get("data")
                 .and_then(|d| d.as_array())
@@ -125,7 +130,9 @@ pub mod none_imagegen {
             "none"
         }
         async fn execute(&self, _req: Request) -> Result<Response, ProviderError> {
-            Err(ProviderError::NotConfigured("imagegen: no provider configured".into()))
+            Err(ProviderError::NotConfigured(
+                "imagegen: no provider configured".into(),
+            ))
         }
     }
 }
@@ -198,9 +205,14 @@ pub mod openai_tts {
             if !resp.status().is_success() {
                 let status = resp.status();
                 let txt = resp.text().await.unwrap_or_default();
-                return Err(ProviderError::Upstream(format!("openai-tts {status}: {txt}")));
+                return Err(ProviderError::Upstream(format!(
+                    "openai-tts {status}: {txt}"
+                )));
             }
-            let bytes = resp.bytes().await.map_err(|e| ProviderError::Http(e.to_string()))?;
+            let bytes = resp
+                .bytes()
+                .await
+                .map_err(|e| ProviderError::Http(e.to_string()))?;
             Ok(Response::from_text(format!(
                 "[openai-tts] generated {} bytes of mp3 (model={model} voice={voice})",
                 bytes.len()
@@ -233,7 +245,9 @@ pub mod none_tts {
             "none"
         }
         async fn execute(&self, _req: Request) -> Result<Response, ProviderError> {
-            Err(ProviderError::NotConfigured("tts: no provider configured".into()))
+            Err(ProviderError::NotConfigured(
+                "tts: no provider configured".into(),
+            ))
         }
     }
 }
@@ -357,7 +371,10 @@ pub mod jina_fetch {
                 let txt = resp.text().await.unwrap_or_default();
                 return Err(ProviderError::Upstream(format!("jina {status}: {txt}")));
             }
-            let body = resp.text().await.map_err(|e| ProviderError::Http(e.to_string()))?;
+            let body = resp
+                .text()
+                .await
+                .map_err(|e| ProviderError::Http(e.to_string()))?;
             let truncated = if body.len() > MAX_BODY {
                 format!("{}…", &body[..MAX_BODY])
             } else {
@@ -399,7 +416,9 @@ pub mod brave_search {
         async fn execute(&self, req: Request) -> Result<Response, ProviderError> {
             let q = str_field(&req.args, "query");
             if q.is_empty() {
-                return Err(ProviderError::InvalidArgs("websearch: query required".into()));
+                return Err(ProviderError::InvalidArgs(
+                    "websearch: query required".into(),
+                ));
             }
             if req.config.api_key.is_empty() {
                 return Err(ProviderError::MissingApiKey("brave"));
@@ -417,7 +436,10 @@ pub mod brave_search {
                 let txt = resp.text().await.unwrap_or_default();
                 return Err(ProviderError::Upstream(format!("brave {status}: {txt}")));
             }
-            let v: Value = resp.json().await.map_err(|e| ProviderError::Decode(e.to_string()))?;
+            let v: Value = resp
+                .json()
+                .await
+                .map_err(|e| ProviderError::Decode(e.to_string()))?;
             let results = v
                 .get("web")
                 .and_then(|w| w.get("results"))
@@ -462,7 +484,9 @@ pub mod none_search {
             "none"
         }
         async fn execute(&self, _req: Request) -> Result<Response, ProviderError> {
-            Err(ProviderError::NotConfigured("websearch: no provider configured".into()))
+            Err(ProviderError::NotConfigured(
+                "websearch: no provider configured".into(),
+            ))
         }
     }
 }

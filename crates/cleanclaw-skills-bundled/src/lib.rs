@@ -398,7 +398,8 @@ mod tests {
         let path = dir.join(BUNDLED_HASH_FILENAME);
         // Write a clearly-wrong digest.
         let mut f = std::fs::File::create(&path).unwrap();
-        f.write_all(b"stale_digest_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").unwrap();
+        f.write_all(b"stale_digest_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+            .unwrap();
         assert!(sidecar_needs_install(&path).unwrap());
     }
 

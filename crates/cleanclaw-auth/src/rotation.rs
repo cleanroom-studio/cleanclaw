@@ -97,10 +97,7 @@ impl ApikeyRotator {
             plaintext: key,
             hash,
             prefix,
-            grace_until: existing
-                .prev_hash_set_at
-                .unwrap_or_else(Utc::now)
-                + self.grace,
+            grace_until: existing.prev_hash_set_at.unwrap_or_else(Utc::now) + self.grace,
         })
     }
 

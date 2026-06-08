@@ -17,7 +17,9 @@ pub fn render(active: ScopeName, name: &str, id: &str) -> String {
         (ScopeName::Agent, "Agent"),
     ];
     let mut out = String::new();
-    out.push_str(&format!(r#"<label for="{id}" class="text-sm font-medium">Scope</label>"#));
+    out.push_str(&format!(
+        r#"<label for="{id}" class="text-sm font-medium">Scope</label>"#
+    ));
     out.push_str(&format!(
         r#"<select id="{id}" name="{name}" class="mt-1 w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">"#
     ));

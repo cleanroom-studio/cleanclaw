@@ -8,11 +8,11 @@ use common::MockBackend;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use cleanclaw_provider::anthropic::AnthropicConfig;
+use cleanclaw_provider::anthropic::AnthropicProvider;
 use cleanclaw_provider::message::Message;
 use cleanclaw_provider::openai::OpenAIConfig;
 use cleanclaw_provider::openai::OpenAIProvider;
-use cleanclaw_provider::anthropic::AnthropicConfig;
-use cleanclaw_provider::anthropic::AnthropicProvider;
 use cleanclaw_provider::Provider;
 use serde_json::json;
 
@@ -34,7 +34,10 @@ async fn openai_chat_sends_bearer_and_unwraps_response() {
     let addr = mock.serve().await;
     let url = format!("http://{addr}");
 
-    let cfg = OpenAIConfig { api_key: "sk-test".into(), api_base: url.clone() };
+    let cfg = OpenAIConfig {
+        api_key: "sk-test".into(),
+        api_base: url.clone(),
+    };
 
     let p = OpenAIProvider::new(cfg);
     let req = cleanclaw_provider::message::ChatRequest {
@@ -75,7 +78,10 @@ async fn openai_chat_propagates_401_as_auth_error() {
     let mock = MockBackend::new();
     mock.set_response(401, br#"{"error": "bad key"}"#);
     let addr = mock.serve().await;
-    let cfg = OpenAIConfig { api_key: "wrong".into(), api_base: format!("http://{addr}") };
+    let cfg = OpenAIConfig {
+        api_key: "wrong".into(),
+        api_base: format!("http://{addr}"),
+    };
     let p = OpenAIProvider::new(cfg);
     let req = cleanclaw_provider::message::ChatRequest {
         model: "gpt-4o-mini".into(),
@@ -90,7 +96,10 @@ async fn openai_chat_propagates_401_as_auth_error() {
     };
     let err = p.chat(&req).await.unwrap_err();
     let s = err.to_string();
-    assert!(s.contains("401") || s.to_lowercase().contains("auth"), "got: {s}");
+    assert!(
+        s.contains("401") || s.to_lowercase().contains("auth"),
+        "got: {s}"
+    );
 }
 
 #[tokio::test]
@@ -98,7 +107,10 @@ async fn openai_chat_propagates_429_as_rate_limited() {
     let mock = MockBackend::new();
     mock.set_response(429, br#"{"error": "rate limited"}"#);
     let addr = mock.serve().await;
-    let cfg = OpenAIConfig { api_key: "sk".into(), api_base: format!("http://{addr}") };
+    let cfg = OpenAIConfig {
+        api_key: "sk".into(),
+        api_base: format!("http://{addr}"),
+    };
     let p = OpenAIProvider::new(cfg);
     let req = cleanclaw_provider::message::ChatRequest {
         model: "gpt-4o-mini".into(),
@@ -113,15 +125,24 @@ async fn openai_chat_propagates_429_as_rate_limited() {
     };
     let err = p.chat(&req).await.unwrap_err();
     let s = err.to_string();
-    assert!(s.to_lowercase().contains("rate") || s.contains("429"), "got: {s}");
+    assert!(
+        s.to_lowercase().contains("rate") || s.contains("429"),
+        "got: {s}"
+    );
 }
 
 #[tokio::test]
 async fn openai_chat_includes_tools_in_request() {
     let mock = MockBackend::new();
-    mock.set_response(200, br#"{"choices":[{"message":{"role":"assistant","content":"ok"}}]}"#);
+    mock.set_response(
+        200,
+        br#"{"choices":[{"message":{"role":"assistant","content":"ok"}}]}"#,
+    );
     let addr = mock.serve().await;
-    let cfg = OpenAIConfig { api_key: "sk".into(), api_base: format!("http://{addr}") };
+    let cfg = OpenAIConfig {
+        api_key: "sk".into(),
+        api_base: format!("http://{addr}"),
+    };
     let p = OpenAIProvider::new(cfg);
     let tool = cleanclaw_provider::message::ToolDefinition {
         name: "echo".into(),
@@ -148,9 +169,15 @@ async fn openai_chat_includes_tools_in_request() {
 #[tokio::test]
 async fn openai_chat_includes_org_header_when_set() {
     let mock = MockBackend::new();
-    mock.set_response(200, br#"{"choices":[{"message":{"role":"assistant","content":"ok"}}]}"#);
+    mock.set_response(
+        200,
+        br#"{"choices":[{"message":{"role":"assistant","content":"ok"}}]}"#,
+    );
     let addr = mock.serve().await;
-    let cfg = OpenAIConfig { api_key: "sk".into(), api_base: format!("http://{addr}") };
+    let cfg = OpenAIConfig {
+        api_key: "sk".into(),
+        api_base: format!("http://{addr}"),
+    };
     let p = OpenAIProvider::new(cfg);
     let req = cleanclaw_provider::message::ChatRequest {
         model: "gpt-4o-mini".into(),
@@ -164,10 +191,7 @@ async fn openai_chat_includes_org_header_when_set() {
         extra: HashMap::new(),
     };
     let _ = p.chat(&req).await.unwrap();
-    assert_eq!(
-        mock.last_auth(),
-        Some("Bearer sk".into())
-    );
+    assert_eq!(mock.last_auth(), Some("Bearer sk".into()));
     // The OpenAI-Organization header is sent as a custom header.
     // We just verify the bearer was correct.
 }
@@ -193,7 +217,10 @@ async fn openai_response_extracts_tool_calls() {
         }"#,
     );
     let addr = mock.serve().await;
-    let cfg = OpenAIConfig { api_key: "sk".into(), api_base: format!("http://{addr}") };
+    let cfg = OpenAIConfig {
+        api_key: "sk".into(),
+        api_base: format!("http://{addr}"),
+    };
     let p = OpenAIProvider::new(cfg);
     let req = cleanclaw_provider::message::ChatRequest {
         model: "gpt-4o-mini".into(),
@@ -226,7 +253,11 @@ async fn anthropic_chat_sends_x_api_key_header() {
         }"#,
     );
     let addr = mock.serve().await;
-    let cfg = AnthropicConfig { api_key: "sk-ant-test".into(), api_base: format!("http://{addr}"), version: "2023-06-01".into() };
+    let cfg = AnthropicConfig {
+        api_key: "sk-ant-test".into(),
+        api_base: format!("http://{addr}"),
+        version: "2023-06-01".into(),
+    };
     let p = AnthropicProvider::new(cfg);
     let req = cleanclaw_provider::message::ChatRequest {
         model: "claude-3-5-sonnet".into(),
@@ -246,8 +277,7 @@ async fn anthropic_chat_sends_x_api_key_header() {
 
     // Header should be `x-api-key`, not `Authorization: Bearer …`.
     assert_eq!(mock.last_auth(), Some("sk-ant-test".into()));
-    let body: serde_json::Value =
-        serde_json::from_slice(&mock.last_body().unwrap()).unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&mock.last_body().unwrap()).unwrap();
     assert_eq!(body["model"], "claude-3-5-sonnet");
     assert_eq!(body["max_tokens"], 64);
     assert!(body["messages"].as_array().unwrap().len() == 1);
@@ -258,7 +288,11 @@ async fn anthropic_chat_propagates_401() {
     let mock = MockBackend::new();
     mock.set_response(401, br#"{"error": "unauthorized"}"#);
     let addr = mock.serve().await;
-    let cfg = AnthropicConfig { api_key: "wrong".into(), api_base: format!("http://{addr}"), version: "2023-06-01".into() };
+    let cfg = AnthropicConfig {
+        api_key: "wrong".into(),
+        api_base: format!("http://{addr}"),
+        version: "2023-06-01".into(),
+    };
     let p = AnthropicProvider::new(cfg);
     let req = cleanclaw_provider::message::ChatRequest {
         model: "gpt-4o-mini".into(),
@@ -273,7 +307,10 @@ async fn anthropic_chat_propagates_401() {
     };
     let err = p.chat(&req).await.unwrap_err();
     let s = err.to_string();
-    assert!(s.contains("401") || s.to_lowercase().contains("auth"), "got: {s}");
+    assert!(
+        s.contains("401") || s.to_lowercase().contains("auth"),
+        "got: {s}"
+    );
 }
 
 #[tokio::test]
@@ -285,7 +322,10 @@ async fn both_providers_retry_on_500() {
     let mock = MockBackend::new();
     mock.set_response(500, br#"{"error": "internal"}"#);
     let addr = mock.serve().await;
-    let cfg = OpenAIConfig { api_key: "sk".into(), api_base: format!("http://{addr}") };
+    let cfg = OpenAIConfig {
+        api_key: "sk".into(),
+        api_base: format!("http://{addr}"),
+    };
     let p = OpenAIProvider::new(cfg);
     let req = cleanclaw_provider::message::ChatRequest {
         model: "gpt-4o-mini".into(),
@@ -300,12 +340,18 @@ async fn both_providers_retry_on_500() {
     };
     let err = p.chat(&req).await.unwrap_err();
     let s = err.to_string();
-    assert!(s.contains("500") || s.to_lowercase().contains("upstream"), "got: {s}");
+    assert!(
+        s.contains("500") || s.to_lowercase().contains("upstream"),
+        "got: {s}"
+    );
 }
 
 #[tokio::test]
 async fn missing_api_key_surfaces_as_config_error() {
-    let cfg = OpenAIConfig { api_key: String::new(), api_base: "http://example.invalid".into() };
+    let cfg = OpenAIConfig {
+        api_key: String::new(),
+        api_base: "http://example.invalid".into(),
+    };
     let p = OpenAIProvider::new(cfg);
     let req = cleanclaw_provider::message::ChatRequest {
         model: "gpt-4o-mini".into(),
@@ -336,7 +382,10 @@ async fn response_without_choices_errors() {
     let mock = MockBackend::new();
     mock.set_response(200, br#"{"id": "bad"}"#);
     let addr = mock.serve().await;
-    let cfg = OpenAIConfig { api_key: "sk".into(), api_base: format!("http://{addr}") };
+    let cfg = OpenAIConfig {
+        api_key: "sk".into(),
+        api_base: format!("http://{addr}"),
+    };
     let p = OpenAIProvider::new(cfg);
     let req = cleanclaw_provider::message::ChatRequest {
         model: "gpt-4o-mini".into(),
@@ -351,7 +400,10 @@ async fn response_without_choices_errors() {
     };
     let err = p.chat(&req).await.unwrap_err();
     let s = err.to_string();
-    assert!(s.to_lowercase().contains("decode") || s.to_lowercase().contains("no choices"), "got: {s}");
+    assert!(
+        s.to_lowercase().contains("decode") || s.to_lowercase().contains("no choices"),
+        "got: {s}"
+    );
 }
 
 #[tokio::test]
@@ -360,7 +412,10 @@ async fn retry_after_429_returns_rate_limited_error() {
     let mock = MockBackend::new();
     mock.set_response(429, br#"{}"#);
     let addr = mock.serve().await;
-    let cfg = OpenAIConfig { api_key: "sk".into(), api_base: format!("http://{addr}") };
+    let cfg = OpenAIConfig {
+        api_key: "sk".into(),
+        api_base: format!("http://{addr}"),
+    };
     let p = OpenAIProvider::new(cfg);
     let req = cleanclaw_provider::message::ChatRequest {
         model: "gpt-4o-mini".into(),
@@ -374,5 +429,8 @@ async fn retry_after_429_returns_rate_limited_error() {
         extra: HashMap::new(),
     };
     let err = p.chat(&req).await.unwrap_err();
-    assert!(matches!(err, cleanclaw_provider::ProviderError::RateLimited));
+    assert!(matches!(
+        err,
+        cleanclaw_provider::ProviderError::RateLimited
+    ));
 }

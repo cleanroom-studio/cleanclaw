@@ -43,15 +43,27 @@ pub struct Account {
     pub id: String,
     pub username: String,
     pub email: String,
-    #[serde(rename = "displayName", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "displayName",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub display_name: String,
     pub role: String,
     pub status: String,
     #[serde(rename = "apikeyId", default, skip_serializing_if = "String::is_empty")]
     pub apikey_id: String,
-    #[serde(rename = "externalId", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "externalId",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub external_id: String,
-    #[serde(rename = "avatarUrl", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "avatarUrl",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub avatar_url: String,
     #[serde(rename = "agentQuota")]
     pub agent_quota: i64,
@@ -110,7 +122,11 @@ impl Accounts {
         let apikey_id = in_.apikey_id.trim().to_string();
         let external_id = in_.external_id.trim().to_string();
         if !apikey_id.is_empty() && !external_id.is_empty() {
-            if let Ok(rec) = self.store.get_user_by_external(&apikey_id, &external_id).await {
+            if let Ok(rec) = self
+                .store
+                .get_user_by_external(&apikey_id, &external_id)
+                .await
+            {
                 return Ok(to_account(&rec));
             }
         }
@@ -175,10 +191,14 @@ impl Accounts {
         if login.contains('@') {
             login = login.to_ascii_lowercase();
         }
-        let rec = self.store.get_user_by_login(&login).await.map_err(|e| match e {
-            CleanClawError::NotFound(_) => UserError::InvalidCredentials,
-            other => UserError::Store(other),
-        })?;
+        let rec = self
+            .store
+            .get_user_by_login(&login)
+            .await
+            .map_err(|e| match e {
+                CleanClawError::NotFound(_) => UserError::InvalidCredentials,
+                other => UserError::Store(other),
+            })?;
         if rec.status != STATUS_ACTIVE {
             return Err(UserError::InvalidCredentials);
         }
@@ -253,7 +273,11 @@ impl Accounts {
     }
 
     pub async fn verify_password(&self, id: &str, password_: &str) -> Result<(), UserError> {
-        let rec = self.store.get_user(id).await.map_err(|_| UserError::InvalidCredentials)?;
+        let rec = self
+            .store
+            .get_user(id)
+            .await
+            .map_err(|_| UserError::InvalidCredentials)?;
         if rec.password_hash.is_empty() {
             return Err(UserError::InvalidCredentials);
         }
@@ -289,7 +313,11 @@ impl Accounts {
         if apikey_id.is_empty() || external_id.is_empty() {
             return Err(UserError::Missing("apikeyId/externalId"));
         }
-        if let Ok(rec) = self.store.get_user_by_external(apikey_id, external_id).await {
+        if let Ok(rec) = self
+            .store
+            .get_user_by_external(apikey_id, external_id)
+            .await
+        {
             return Ok(to_account(&rec));
         }
         let id = new_id("u_");
@@ -311,7 +339,11 @@ impl Accounts {
             updated_at: now,
         };
         if let Err(e) = self.store.create_user(&rec).await {
-            if let Ok(again) = self.store.get_user_by_external(apikey_id, external_id).await {
+            if let Ok(again) = self
+                .store
+                .get_user_by_external(apikey_id, external_id)
+                .await
+            {
                 return Ok(to_account(&again));
             }
             return Err(UserError::Store(e));

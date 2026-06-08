@@ -5,14 +5,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub mod env;
+pub mod resolved;
 pub mod runtime;
 pub mod scope;
-pub mod resolved;
 
-pub use env::{home_dir, load_env, scrub_boot_secrets, EnvConfig, EnvGateway, EnvLog, EnvSandbox, EnvStorage};
+pub use env::{
+    home_dir, load_env, scrub_boot_secrets, EnvConfig, EnvGateway, EnvLog, EnvSandbox, EnvStorage,
+};
+pub use resolved::ResolvedAgent;
 pub use runtime::*;
 pub use scope::Scope;
-pub use resolved::ResolvedAgent;
 
 // ---- Primitives --------------------------------------------------------
 

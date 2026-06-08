@@ -120,9 +120,8 @@ async fn install_from_hub(name: &str) -> Result<()> {
             "invalid plugin name: {name}"
         )));
     }
-    let url = format!(
-        "https://raw.githubusercontent.com/{HUB_REPO}/main/plugins/{name}/plugin.json"
-    );
+    let url =
+        format!("https://raw.githubusercontent.com/{HUB_REPO}/main/plugins/{name}/plugin.json");
     println!("fetching {url}");
     let manifest_bytes = match fetch_url(&url).await {
         Ok(b) => b,
@@ -279,9 +278,8 @@ mod tests {
     #[test]
     fn hub_url_format() {
         let name = "demo";
-        let url = format!(
-            "https://raw.githubusercontent.com/{HUB_REPO}/main/plugins/{name}/plugin.json"
-        );
+        let url =
+            format!("https://raw.githubusercontent.com/{HUB_REPO}/main/plugins/{name}/plugin.json");
         assert_eq!(
             url,
             "https://raw.githubusercontent.com/cleanroom-studio/cleanclaw/main/plugins/demo/plugin.json"

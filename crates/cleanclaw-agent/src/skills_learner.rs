@@ -99,7 +99,10 @@ pub fn render_skill_md(s: &ExtractedSkill) -> String {
 /// Persist `s` to `<workspace>/skills/<slug>/SKILL.md`. Returns
 /// the absolute path on success. Does NOT mkdir `<workspace>` —
 /// the caller is expected to ensure the workspace exists.
-pub fn write_to_workspace(s: &ExtractedSkill, workspace: &Path) -> std::io::Result<std::path::PathBuf> {
+pub fn write_to_workspace(
+    s: &ExtractedSkill,
+    workspace: &Path,
+) -> std::io::Result<std::path::PathBuf> {
     let dir = workspace.join("skills").join(&s.slug);
     std::fs::create_dir_all(&dir)?;
     let path = dir.join("SKILL.md");

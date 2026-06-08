@@ -63,9 +63,8 @@ impl Tool for InstallSkillTool {
                 a.name
             )));
         }
-        std::fs::create_dir_all(&dest).map_err(|e| {
-            CleanClawError::Internal(format!("create skills dir: {e}"))
-        })?;
+        std::fs::create_dir_all(&dest)
+            .map_err(|e| CleanClawError::Internal(format!("create skills dir: {e}")))?;
 
         if let Some(path) = a.path {
             copy_dir_recursive(&PathBuf::from(path), &dest)?;
@@ -95,14 +94,17 @@ fn copy_dir_recursive(src: &PathBuf, dst: &PathBuf) -> Result<()> {
         )));
     }
     std::fs::create_dir_all(dst).map_err(|e| CleanClawError::Internal(format!("mkdir: {e}")))?;
-    for entry in std::fs::read_dir(src).map_err(|e| CleanClawError::Internal(format!("readdir: {e}")))? {
+    for entry in
+        std::fs::read_dir(src).map_err(|e| CleanClawError::Internal(format!("readdir: {e}")))?
+    {
         let entry = entry.map_err(|e| CleanClawError::Internal(e.to_string()))?;
         let from = entry.path();
         let to = dst.join(entry.file_name());
         if from.is_dir() {
             copy_dir_recursive(&from, &to)?;
         } else {
-            std::fs::copy(&from, &to).map_err(|e| CleanClawError::Internal(format!("copy: {e}")))?;
+            std::fs::copy(&from, &to)
+                .map_err(|e| CleanClawError::Internal(format!("copy: {e}")))?;
         }
     }
     Ok(())

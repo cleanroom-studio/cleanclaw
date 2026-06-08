@@ -22,9 +22,7 @@ async fn pick_port() -> std::net::SocketAddr {
 
 async fn http_get(addr: std::net::SocketAddr, path: &str) -> (u16, String) {
     let mut s = TcpStream::connect(addr).await.unwrap();
-    let req = format!(
-        "GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"
-    );
+    let req = format!("GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
     s.write_all(req.as_bytes()).await.unwrap();
     let mut buf = Vec::new();
     s.read_to_end(&mut buf).await.unwrap();
@@ -108,8 +106,8 @@ async fn plugin_runtime_round_trip() {
     // The plugin-demo crate exposes a main() binary but also has
     // an `EchoPlugin` type reachable from the lib. We import it
     // here for an in-process test.
-    use cleanclaw_plugin_runtime::{InProcPluginClient, Plugin, ToolDef, ToolResult};
     use async_trait::async_trait;
+    use cleanclaw_plugin_runtime::{InProcPluginClient, Plugin, ToolDef, ToolResult};
     use serde_json::Value;
     use std::sync::Arc;
 

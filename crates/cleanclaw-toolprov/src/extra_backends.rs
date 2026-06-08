@@ -54,7 +54,9 @@ pub mod fal_imagegen {
         async fn execute(&self, req: Request) -> Result<Response, ProviderError> {
             let prompt = str_field(&req.args, "prompt");
             if prompt.is_empty() {
-                return Err(ProviderError::InvalidArgs("imagegen: prompt required".into()));
+                return Err(ProviderError::InvalidArgs(
+                    "imagegen: prompt required".into(),
+                ));
             }
             if req.config.api_key.is_empty() {
                 return Err(ProviderError::MissingApiKey("fal"));
@@ -85,7 +87,10 @@ pub mod fal_imagegen {
                 let txt = resp.text().await.unwrap_or_default();
                 return Err(ProviderError::Upstream(format!("fal {status}: {txt}")));
             }
-            let v: Value = resp.json().await.map_err(|e| ProviderError::Decode(e.to_string()))?;
+            let v: Value = resp
+                .json()
+                .await
+                .map_err(|e| ProviderError::Decode(e.to_string()))?;
             let image_url = v
                 .get("images")
                 .and_then(|x| x.as_array())
@@ -128,7 +133,9 @@ pub mod replicate_imagegen {
         async fn execute(&self, req: Request) -> Result<Response, ProviderError> {
             let prompt = str_field(&req.args, "prompt");
             if prompt.is_empty() {
-                return Err(ProviderError::InvalidArgs("imagegen: prompt required".into()));
+                return Err(ProviderError::InvalidArgs(
+                    "imagegen: prompt required".into(),
+                ));
             }
             if req.config.api_key.is_empty() {
                 return Err(ProviderError::MissingApiKey("replicate"));
@@ -154,9 +161,14 @@ pub mod replicate_imagegen {
             if !resp.status().is_success() {
                 let status = resp.status();
                 let txt = resp.text().await.unwrap_or_default();
-                return Err(ProviderError::Upstream(format!("replicate {status}: {txt}")));
+                return Err(ProviderError::Upstream(format!(
+                    "replicate {status}: {txt}"
+                )));
             }
-            let v: Value = resp.json().await.map_err(|e| ProviderError::Decode(e.to_string()))?;
+            let v: Value = resp
+                .json()
+                .await
+                .map_err(|e| ProviderError::Decode(e.to_string()))?;
             let image_url = v
                 .get("output")
                 .and_then(|o| match o {
@@ -165,7 +177,9 @@ pub mod replicate_imagegen {
                     _ => None,
                 })
                 .unwrap_or("");
-            Ok(Response::from_text(format!("[replicate] {model} → {image_url}")))
+            Ok(Response::from_text(format!(
+                "[replicate] {model} → {image_url}"
+            )))
         }
     }
 }
@@ -238,9 +252,14 @@ pub mod elevenlabs_tts {
             if !resp.status().is_success() {
                 let status = resp.status();
                 let txt = resp.text().await.unwrap_or_default();
-                return Err(ProviderError::Upstream(format!("elevenlabs {status}: {txt}")));
+                return Err(ProviderError::Upstream(format!(
+                    "elevenlabs {status}: {txt}"
+                )));
             }
-            let bytes = resp.bytes().await.map_err(|e| ProviderError::Http(e.to_string()))?;
+            let bytes = resp
+                .bytes()
+                .await
+                .map_err(|e| ProviderError::Http(e.to_string()))?;
             Ok(Response::from_text(format!(
                 "[elevenlabs] generated {} bytes of mpeg (model={model} voice={voice})",
                 bytes.len()
@@ -308,8 +327,14 @@ pub mod fish_tts {
                 let txt = resp.text().await.unwrap_or_default();
                 return Err(ProviderError::Upstream(format!("fish {status}: {txt}")));
             }
-            let bytes = resp.bytes().await.map_err(|e| ProviderError::Http(e.to_string()))?;
-            Ok(Response::from_text(format!("[fish] generated {} bytes of mp3", bytes.len())))
+            let bytes = resp
+                .bytes()
+                .await
+                .map_err(|e| ProviderError::Http(e.to_string()))?;
+            Ok(Response::from_text(format!(
+                "[fish] generated {} bytes of mp3",
+                bytes.len()
+            )))
         }
     }
 }
@@ -389,7 +414,10 @@ pub mod minimax_tts {
                 let txt = resp.text().await.unwrap_or_default();
                 return Err(ProviderError::Upstream(format!("minimax {status}: {txt}")));
             }
-            let v: Value = resp.json().await.map_err(|e| ProviderError::Decode(e.to_string()))?;
+            let v: Value = resp
+                .json()
+                .await
+                .map_err(|e| ProviderError::Decode(e.to_string()))?;
             let audio_bytes = v
                 .get("data")
                 .and_then(|d| d.get("audio"))
@@ -461,9 +489,14 @@ pub mod firecrawl_fetch {
             if !resp.status().is_success() {
                 let status = resp.status();
                 let txt = resp.text().await.unwrap_or_default();
-                return Err(ProviderError::Upstream(format!("firecrawl {status}: {txt}")));
+                return Err(ProviderError::Upstream(format!(
+                    "firecrawl {status}: {txt}"
+                )));
             }
-            let v: Value = resp.json().await.map_err(|e| ProviderError::Decode(e.to_string()))?;
+            let v: Value = resp
+                .json()
+                .await
+                .map_err(|e| ProviderError::Decode(e.to_string()))?;
             let markdown = v
                 .get("data")
                 .and_then(|d| d.get("markdown"))
@@ -509,7 +542,9 @@ pub mod exa_search {
         async fn execute(&self, req: Request) -> Result<Response, ProviderError> {
             let q = str_field(&req.args, "query");
             if q.is_empty() {
-                return Err(ProviderError::InvalidArgs("websearch: query required".into()));
+                return Err(ProviderError::InvalidArgs(
+                    "websearch: query required".into(),
+                ));
             }
             if req.config.api_key.is_empty() {
                 return Err(ProviderError::MissingApiKey("exa"));
@@ -533,8 +568,15 @@ pub mod exa_search {
                 let txt = resp.text().await.unwrap_or_default();
                 return Err(ProviderError::Upstream(format!("exa {status}: {txt}")));
             }
-            let v: Value = resp.json().await.map_err(|e| ProviderError::Decode(e.to_string()))?;
-            let results = v.get("results").and_then(|r| r.as_array()).cloned().unwrap_or_default();
+            let v: Value = resp
+                .json()
+                .await
+                .map_err(|e| ProviderError::Decode(e.to_string()))?;
+            let results = v
+                .get("results")
+                .and_then(|r| r.as_array())
+                .cloned()
+                .unwrap_or_default();
             let mut out = String::new();
             for (i, r) in results.iter().take(5).enumerate() {
                 let title = r.get("title").and_then(|t| t.as_str()).unwrap_or("");
@@ -579,7 +621,9 @@ pub mod searxng_search {
         async fn execute(&self, req: Request) -> Result<Response, ProviderError> {
             let q = str_field(&req.args, "query");
             if q.is_empty() {
-                return Err(ProviderError::InvalidArgs("websearch: query required".into()));
+                return Err(ProviderError::InvalidArgs(
+                    "websearch: query required".into(),
+                ));
             }
             let endpoint = if req.config.endpoint.is_empty() {
                 return Err(ProviderError::InvalidArgs(
@@ -588,7 +632,11 @@ pub mod searxng_search {
             } else {
                 req.config.endpoint.trim_end_matches('/')
             };
-            let url = format!("{}/search?q={}&format=json&categories=general", endpoint, urlencode(q));
+            let url = format!(
+                "{}/search?q={}&format=json&categories=general",
+                endpoint,
+                urlencode(q)
+            );
             let resp = self
                 .client
                 .get(&url)
@@ -601,8 +649,15 @@ pub mod searxng_search {
                 let txt = resp.text().await.unwrap_or_default();
                 return Err(ProviderError::Upstream(format!("searxng {status}: {txt}")));
             }
-            let v: Value = resp.json().await.map_err(|e| ProviderError::Decode(e.to_string()))?;
-            let results = v.get("results").and_then(|r| r.as_array()).cloned().unwrap_or_default();
+            let v: Value = resp
+                .json()
+                .await
+                .map_err(|e| ProviderError::Decode(e.to_string()))?;
+            let results = v
+                .get("results")
+                .and_then(|r| r.as_array())
+                .cloned()
+                .unwrap_or_default();
             let mut out = String::new();
             for (i, r) in results.iter().take(5).enumerate() {
                 let title = r.get("title").and_then(|t| t.as_str()).unwrap_or("");

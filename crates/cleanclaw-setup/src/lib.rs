@@ -45,12 +45,25 @@ pub enum SetupError {
 impl IntoResponse for SetupError {
     fn into_response(self) -> axum::response::Response {
         let (status, msg) = match &self {
-            SetupError::Auth(UserError::InvalidCredentials) => (StatusCode::UNAUTHORIZED, "invalid credentials".into()),
-            SetupError::Auth(UserError::LastSuperAdmin) => (StatusCode::CONFLICT, "cannot remove last super admin".into()),
-            SetupError::Auth(UserError::InvalidRole(_)) => (StatusCode::BAD_REQUEST, "invalid role".into()),
-            SetupError::Auth(UserError::InvalidStatus(_)) => (StatusCode::BAD_REQUEST, "invalid status".into()),
-            SetupError::Auth(UserError::Missing(_)) => (StatusCode::BAD_REQUEST, "missing required field".into()),
-            SetupError::Auth(UserError::Store(_)) => (StatusCode::INTERNAL_SERVER_ERROR, "store error".into()),
+            SetupError::Auth(UserError::InvalidCredentials) => {
+                (StatusCode::UNAUTHORIZED, "invalid credentials".into())
+            }
+            SetupError::Auth(UserError::LastSuperAdmin) => (
+                StatusCode::CONFLICT,
+                "cannot remove last super admin".into(),
+            ),
+            SetupError::Auth(UserError::InvalidRole(_)) => {
+                (StatusCode::BAD_REQUEST, "invalid role".into())
+            }
+            SetupError::Auth(UserError::InvalidStatus(_)) => {
+                (StatusCode::BAD_REQUEST, "invalid status".into())
+            }
+            SetupError::Auth(UserError::Missing(_)) => {
+                (StatusCode::BAD_REQUEST, "missing required field".into())
+            }
+            SetupError::Auth(UserError::Store(_)) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "store error".into())
+            }
             SetupError::BadRequest(s) => (StatusCode::BAD_REQUEST, s.clone()),
             SetupError::NotFound => (StatusCode::NOT_FOUND, "not found".into()),
             SetupError::Internal(s) => (StatusCode::INTERNAL_SERVER_ERROR, s.clone()),
@@ -96,9 +109,7 @@ pub struct Server {
 
 impl Server {
     pub fn new(store: Arc<dyn Store>) -> Self {
-        let accounts = Arc::new(
-            Accounts::new(store.clone()).expect("Accounts::new"),
-        );
+        let accounts = Arc::new(Accounts::new(store.clone()).expect("Accounts::new"));
         let skills_root = std::env::var("CLEANCLAW_SKILLS_ROOT")
             .map(PathBuf::from)
             .unwrap_or_else(|_| {
@@ -139,10 +150,7 @@ impl Server {
 
     /// Wire a `WebhookBridge` so the platform-specific HTTP
     /// routes can push verified webhook payloads onto the bus.
-    pub fn with_webhook_bridge(
-        mut self,
-        bridge: Arc<cleanclaw_channels::WebhookBridge>,
-    ) -> Self {
+    pub fn with_webhook_bridge(mut self, bridge: Arc<cleanclaw_channels::WebhookBridge>) -> Self {
         self.state = Arc::new(ServerState {
             accounts: self.state.accounts.clone(),
             store: self.state.store.clone(),
@@ -215,11 +223,19 @@ async fn register(
     // Bootstrap: if no users exist, force the first one to super_admin.
     let role = if req.role.is_empty() {
         let count = state.accounts.count().await?;
-        if count == 0 { ROLE_SUPER_ADMIN.to_string() } else { "user".to_string() }
+        if count == 0 {
+            ROLE_SUPER_ADMIN.to_string()
+        } else {
+            "user".to_string()
+        }
     } else {
         req.role
     };
-    let display_name = if req.display_name.is_empty() { req.username.clone() } else { req.display_name };
+    let display_name = if req.display_name.is_empty() {
+        req.username.clone()
+    } else {
+        req.display_name
+    };
     let in_ = CreateInput {
         username: req.username.clone(),
         email: req.email,
@@ -258,7 +274,10 @@ async fn login(
     State(state): State<Arc<ServerState>>,
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, SetupError> {
-    let acc = state.accounts.authenticate(&req.login, &req.password).await?;
+    let acc = state
+        .accounts
+        .authenticate(&req.login, &req.password)
+        .await?;
     let session_id = format!("sess_{}", uuid::Uuid::new_v4().simple());
     info!(user_id = %acc.id, username = %acc.username, "logged in");
     Ok(Json(LoginResponse {
@@ -306,9 +325,7 @@ pub struct MeRequest {
 /// Mount the API + static-asset fallback. Mirrors the Go `mount()`
 /// helper at the bottom of `setup/server.go`.
 pub fn mount(api: Router) -> Router {
-    Router::new()
-        .merge(api)
-        .fallback(get(server::serve_static))
+    Router::new().merge(api).fallback(get(server::serve_static))
 }
 
 pub mod assets {

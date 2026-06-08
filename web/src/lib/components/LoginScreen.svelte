@@ -10,21 +10,30 @@
   // sign-up success is functionally a sign-in success — we route
   // both through `onSuccess`.
 
-  import { login as apiLogin, register, getRegistrationOpen, type LoginResponse } from '$lib/api';
+  import {
+    login as apiLogin,
+    register,
+    getRegistrationOpen,
+    type LoginResponse,
+  } from "$lib/api";
 
-  let { onSuccess, error, registrationOpen = $bindable(false) }: {
+  let {
+    onSuccess,
+    error,
+    registrationOpen = $bindable(false),
+  }: {
     onSuccess?: (resp: LoginResponse) => void | Promise<void>;
     error?: string | null;
     registrationOpen?: boolean;
   } = $props();
 
-  let mode = $state<'signin' | 'signup'>('signin');
-  let loginField = $state('');
-  let password = $state('');
-  let signupUsername = $state('');
-  let signupEmail = $state('');
-  let signupConfirm = $state('');
-  let localError = $state('');
+  let mode = $state<"signin" | "signup">("signin");
+  let loginField = $state("");
+  let password = $state("");
+  let signupUsername = $state("");
+  let signupEmail = $state("");
+  let signupConfirm = $state("");
+  let localError = $state("");
   let loading = $state(false);
 
   $effect(() => {
@@ -40,8 +49,8 @@
     })();
   });
 
-  function switchMode(next: 'signin' | 'signup') {
-    localError = '';
+  function switchMode(next: "signin" | "signup") {
+    localError = "";
     mode = next;
   }
 
@@ -49,30 +58,30 @@
     e.preventDefault();
     if (!loginField.trim() || !password) return;
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const res = await apiLogin({ username: loginField.trim(), password });
       if (!res.ok) {
-        setError((res as any).error || 'Invalid credentials');
+        setError((res as any).error || "Invalid credentials");
         setLoading(false);
         return;
       }
       await onSuccess?.(res);
     } catch {
-      setError('Cannot reach server');
+      setError("Cannot reach server");
       setLoading(false);
     }
   }
 
   async function handleSignUp(e: Event) {
     e.preventDefault();
-    setError('');
+    setError("");
     if (!signupUsername.trim() || !signupEmail.trim() || !password) {
-      setError('All fields are required');
+      setError("All fields are required");
       return;
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError("Password must be at least 8 characters");
       return;
     }
     if (password !== signupConfirm) {
@@ -87,7 +96,7 @@
         password,
       });
       if (!res.ok) {
-        setError((res as any).error || 'Could not create account');
+        setError((res as any).error || "Could not create account");
         setLoading(false);
         return;
       }
@@ -96,13 +105,17 @@
       // render the originally-requested route.
       await onSuccess?.({ ok: true, user_id: (res as any).user_id });
     } catch {
-      setError('Cannot reach server');
+      setError("Cannot reach server");
       setLoading(false);
     }
   }
 
-  function setLoading(v: boolean) { loading = v; }
-  function setError(e: string) { localError = e; }
+  function setLoading(v: boolean) {
+    loading = v;
+  }
+  function setError(e: string) {
+    localError = e;
+  }
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-zinc-950 p-4">
@@ -110,11 +123,11 @@
     <div class="text-center space-y-2">
       <h1 class="text-2xl font-bold text-zinc-100">CleanClaw</h1>
       <p class="text-sm text-zinc-500">
-        {mode === 'signin' ? 'Sign in to your account' : 'Create your account'}
+        {mode === "signin" ? "Sign in to your account" : "Create your account"}
       </p>
     </div>
 
-    {#if mode === 'signup'}
+    {#if mode === "signup"}
       <form onsubmit={handleSignUp} class="space-y-4">
         <input
           type="text"
@@ -152,14 +165,14 @@
           disabled={loading}
           class="w-full rounded-lg bg-violet-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Creating account…' : 'Create account'}
+          {loading ? "Creating account…" : "Create account"}
         </button>
       </form>
       <p class="text-center text-sm text-zinc-500">
         Already have an account?
         <button
           type="button"
-          onclick={() => switchMode('signin')}
+          onclick={() => switchMode("signin")}
           class="text-violet-400 hover:text-violet-300"
         >
           Sign in
@@ -189,7 +202,7 @@
           disabled={loading}
           class="w-full rounded-lg bg-violet-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Signing in…' : 'Sign in'}
+          {loading ? "Signing in…" : "Sign in"}
         </button>
       </form>
       {#if registrationOpen}
@@ -197,7 +210,7 @@
           Don't have an account?
           <button
             type="button"
-            onclick={() => switchMode('signup')}
+            onclick={() => switchMode("signup")}
             class="text-violet-400 hover:text-violet-300"
           >
             Sign up

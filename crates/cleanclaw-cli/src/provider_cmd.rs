@@ -51,16 +51,8 @@ async fn ls(store: &dyn Store) -> Result<()> {
         return Ok(());
     }
     for r in rows {
-        let api_type = r
-            .data
-            .get("apiType")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let api_base = r
-            .data
-            .get("apiBase")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let api_type = r.data.get("apiType").and_then(|v| v.as_str()).unwrap_or("");
+        let api_base = r.data.get("apiBase").and_then(|v| v.as_str()).unwrap_or("");
         let models: Vec<String> = r
             .data
             .get("models")
@@ -120,4 +112,3 @@ async fn rm(store: &dyn Store, name: &str) -> Result<()> {
     println!("provider {name} removed");
     Ok(())
 }
-

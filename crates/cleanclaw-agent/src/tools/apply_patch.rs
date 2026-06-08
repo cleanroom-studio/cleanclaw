@@ -69,7 +69,7 @@ pub struct Hunk {
 pub struct PatchOp {
     pub op: OpType,
     pub path: String,
-    pub move_to: String, // Update only
+    pub move_to: String,  // Update only
     pub add_body: String, // Add only
     pub hunks: Vec<Hunk>, // Update only
 }
@@ -271,9 +271,8 @@ pub fn apply(ops: &[PatchOp], root: &Path) -> std::result::Result<String, String
     for (path, content) in &staging {
         if let Some(bytes) = content {
             if let Some(parent) = path.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| {
-                    format!("mkdir {}: {e}", parent.display())
-                })?;
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("mkdir {}: {e}", parent.display()))?;
             }
             std::fs::write(path, bytes).map_err(|e| format!("write {}: {e}", path.display()))?;
             log.push(format!("wrote {}", path.display()));
@@ -285,19 +284,18 @@ pub fn apply(ops: &[PatchOp], root: &Path) -> std::result::Result<String, String
     }
     for (from, to) in &moves {
         if let Some(parent) = to.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| {
-                format!("mkdir {}: {e}", parent.display())
-            })?;
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("mkdir {}: {e}", parent.display()))?;
         }
-        std::fs::rename(from, to).map_err(|e| format!("move {} → {}: {e}", from.display(), to.display()))?;
+        std::fs::rename(from, to)
+            .map_err(|e| format!("move {} → {}: {e}", from.display(), to.display()))?;
         log.push(format!("moved {} → {}", from.display(), to.display()));
     }
     Ok(log.join("\n"))
 }
 
 fn apply_hunks(content: &[u8], hunks: &[Hunk]) -> std::result::Result<Vec<u8>, String> {
-    let text = std::str::from_utf8(content)
-        .map_err(|e| format!("file is not utf-8: {e}"))?;
+    let text = std::str::from_utf8(content).map_err(|e| format!("file is not utf-8: {e}"))?;
     let mut lines: Vec<String> = text.lines().map(|l| l.to_string()).collect();
     // Preserve a trailing newline if the file had one.
     let trailing_nl = text.ends_with('\n');
@@ -512,7 +510,8 @@ mod tests {
 
     #[test]
     fn parse_multi_op() {
-        let patch = "*** Add File: a\n+x\n*** Delete File: b\n*** Update File: c\n@@\n old\n-new\n+new\n";
+        let patch =
+            "*** Add File: a\n+x\n*** Delete File: b\n*** Update File: c\n@@\n old\n-new\n+new\n";
         let ops = parse(patch).unwrap();
         assert_eq!(ops.len(), 3);
     }

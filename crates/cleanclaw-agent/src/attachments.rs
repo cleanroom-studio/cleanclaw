@@ -39,11 +39,7 @@ impl AttachmentStore {
     /// Resolve a list of URLs for a session into `Attachment` records.
     /// Drops oversized / unsupported URLs with a warning. Returns
     /// the in-memory copies.
-    pub async fn resolve(
-        &self,
-        session_key: &str,
-        urls: &[String],
-    ) -> Result<Vec<Attachment>> {
+    pub async fn resolve(&self, session_key: &str, urls: &[String]) -> Result<Vec<Attachment>> {
         let mut out = Vec::new();
         let mut seen: HashSet<String> = HashSet::new();
         for url in urls.iter().take(MAX_ATTACHMENTS_PER_MESSAGE) {
@@ -84,9 +80,11 @@ async fn fetch_one(url: &str) -> Result<Attachment> {
         .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| CleanClawError::Internal(format!("attachment client: {e}")))?;
-    let resp = client.get(url).send().await.map_err(|e| {
-        CleanClawError::Upstream(format!("attachment fetch {url}: {e}"))
-    })?;
+    let resp = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| CleanClawError::Upstream(format!("attachment fetch {url}: {e}")))?;
     if !resp.status().is_success() {
         return Err(CleanClawError::Upstream(format!(
             "attachment fetch {url}: HTTP {}",
@@ -104,9 +102,10 @@ async fn fetch_one(url: &str) -> Result<Attachment> {
             "attachment {url}: unsupported content-type {content_type}"
         )));
     }
-    let bytes = resp.bytes().await.map_err(|e| {
-        CleanClawError::Upstream(format!("attachment body: {e}"))
-    })?;
+    let bytes = resp
+        .bytes()
+        .await
+        .map_err(|e| CleanClawError::Upstream(format!("attachment body: {e}")))?;
     if bytes.len() > MAX_ATTACHMENT_BYTES {
         return Err(CleanClawError::InvalidArgument(format!(
             "attachment {url}: {} bytes exceeds {MAX_ATTACHMENT_BYTES} limit",

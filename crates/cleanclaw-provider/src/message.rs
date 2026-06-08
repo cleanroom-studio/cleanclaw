@@ -128,7 +128,11 @@ impl Message {
             name: None,
             cache_control: None,
             raw: None,
-            thinking: if thinking.is_empty() { None } else { Some(thinking) },
+            thinking: if thinking.is_empty() {
+                None
+            } else {
+                Some(thinking)
+            },
             timestamp: None,
         }
     }

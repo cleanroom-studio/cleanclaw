@@ -11,7 +11,10 @@ pub mod users;
 
 pub use identity::{ApiKeyType, AuthMethod, Identity, Role};
 pub use resolver::{Resolver, SESSION_COOKIE_NAME, SESSION_TTL};
-pub use users::{Account, Accounts, CreateInput, UserError, ROLE_APP_USER, ROLE_SUPER_ADMIN, ROLE_USER, STATUS_ACTIVE, STATUS_DISABLED};
+pub use users::{
+    Account, Accounts, CreateInput, UserError, ROLE_APP_USER, ROLE_SUPER_ADMIN, ROLE_USER,
+    STATUS_ACTIVE, STATUS_DISABLED,
+};
 
 // =====================================================================
 // Password-reset token lifecycle. Mirrors the typical

@@ -11,28 +11,37 @@
   //   - admin path / skill / tool / plugin / providers / etc. prefixes
   //     are gated: non-admins are redirected to /overview.
 
-  import { onMount, untrack } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import { getStatus, getMe, getRegistrationOpen, type UserInfo, type LoginResponse } from '$lib/api';
-  import LoginScreen from './LoginScreen.svelte';
+  import { onMount, untrack } from "svelte";
+  import { goto } from "$app/navigation";
+  import { page } from "$app/state";
+  import {
+    getStatus,
+    getMe,
+    getRegistrationOpen,
+    type UserInfo,
+    type LoginResponse,
+  } from "$lib/api";
+  import LoginScreen from "./LoginScreen.svelte";
 
   let { children }: { children?: any } = $props();
 
   const ADMIN_PATH_PREFIXES = [
-    '/admin/',
-    '/skills',
-    '/providers',
-    '/channels',
-    '/channels-config',
-    '/plugins',
-    '/tools',
-    '/cron',
+    "/admin/",
+    "/skills",
+    "/providers",
+    "/channels",
+    "/channels-config",
+    "/plugins",
+    "/tools",
+    "/cron",
   ];
 
   function isAdminPath(pathname: string): boolean {
     return ADMIN_PATH_PREFIXES.some(
-      (p) => pathname === p || pathname === p.replace(/\/$/, '') || pathname.startsWith(p + (p.endsWith('/') ? '' : '/')),
+      (p) =>
+        pathname === p ||
+        pathname === p.replace(/\/$/, "") ||
+        pathname.startsWith(p + (p.endsWith("/") ? "" : "/")),
     );
   }
 
@@ -44,9 +53,9 @@
 
   // re-run whenever the route changes so a fresh /api/me probe
   // happens after login / logout navigation.
-  let lastPath = $state('');
+  let lastPath = $state("");
   $effect(() => {
-    const p = page.url?.pathname || '';
+    const p = page.url?.pathname || "";
     if (p === lastPath && checked) return;
     lastPath = p;
     void probe();
@@ -66,16 +75,21 @@
       // server down — fall through to LoginScreen
     }
     if (!configured) {
-      const onOnboard = page.url?.pathname === '/onboard' || page.url?.pathname?.startsWith('/onboard/');
+      const onOnboard =
+        page.url?.pathname === "/onboard" ||
+        page.url?.pathname?.startsWith("/onboard/");
       if (!onOnboard) {
-        await goto('/onboard/');
+        await goto("/onboard/");
         return;
       }
       authed = true;
       checked = true;
       return;
     }
-    if (page.url?.pathname === '/signup' || page.url?.pathname?.startsWith('/signup/')) {
+    if (
+      page.url?.pathname === "/signup" ||
+      page.url?.pathname?.startsWith("/signup/")
+    ) {
       authed = true;
       checked = true;
       try {
@@ -87,8 +101,11 @@
     try {
       const r = await getMe();
       if (r.ok && r.user) {
-        if (isAdminPath(page.url?.pathname || '') && r.user.role !== 'super_admin') {
-          await goto('/overview/');
+        if (
+          isAdminPath(page.url?.pathname || "") &&
+          r.user.role !== "super_admin"
+        ) {
+          await goto("/overview/");
           return;
         }
         user = r.user;
@@ -109,7 +126,9 @@
 
 {#if !checked}
   <div class="flex min-h-screen items-center justify-center bg-zinc-950">
-    <div class="h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-violet-500"></div>
+    <div
+      class="h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-violet-500"
+    ></div>
   </div>
 {:else if !authed}
   <LoginScreen onSuccess={onLoginSuccess} {error} bind:registrationOpen />

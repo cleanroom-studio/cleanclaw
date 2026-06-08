@@ -56,7 +56,10 @@ async fn ls(store: &dyn Store, user: Option<String>) -> Result<()> {
         return Ok(());
     }
     for r in rows {
-        println!("{:<20} {:<8} {:<20} {}", r.id, r.r#type, r.key_prefix, r.name);
+        println!(
+            "{:<20} {:<8} {:<20} {}",
+            r.id, r.r#type, r.key_prefix, r.name
+        );
     }
     Ok(())
 }

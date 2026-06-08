@@ -167,7 +167,10 @@ impl LocalFs {
         project_id: &str,
         session_id: &str,
     ) -> (PathBuf, bool) {
-        (scope_dir(&self.root, agent_id, project_id, session_id), true)
+        (
+            scope_dir(&self.root, agent_id, project_id, session_id),
+            true,
+        )
     }
 
     fn full_path(&self, agent_id: &str, project_id: &str, session_id: &str, path: &str) -> PathBuf {
@@ -176,10 +179,7 @@ impl LocalFs {
 }
 
 fn sniff_content_type(path: &Path) -> String {
-    let ext = path
-        .extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or("");
+    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
     let from_ext = mime_guess_from_ext(ext);
     from_ext.unwrap_or_else(|| "application/octet-stream".into())
 }
@@ -257,7 +257,9 @@ impl Store for LocalFs {
         let full = self.full_path(agent_id, project_id, session_id, path);
         let meta = match tokio::fs::metadata(&full).await {
             Ok(m) => m,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Err(WorkspaceError::NotFound),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                return Err(WorkspaceError::NotFound)
+            }
             Err(e) => return Err(WorkspaceError::Io(e)),
         };
         let mod_time = meta
@@ -451,12 +453,7 @@ impl Store for S3 {
     ) -> Result<ObjectInfo, WorkspaceError> {
         Err(WorkspaceError::Other("s3 stub".into()))
     }
-    async fn list(
-        &self,
-        _a: &str,
-        _p: &str,
-        _s: &str,
-    ) -> Result<Vec<ObjectInfo>, WorkspaceError> {
+    async fn list(&self, _a: &str, _p: &str, _s: &str) -> Result<Vec<ObjectInfo>, WorkspaceError> {
         Err(WorkspaceError::Other("s3 stub".into()))
     }
     async fn delete(
@@ -648,13 +645,7 @@ impl Store for Metered {
         (self.meter)(agent_id, len);
         Ok(())
     }
-    async fn get(
-        &self,
-        a: &str,
-        p: &str,
-        s: &str,
-        path: &str,
-    ) -> Result<Bytes, WorkspaceError> {
+    async fn get(&self, a: &str, p: &str, s: &str, path: &str) -> Result<Bytes, WorkspaceError> {
         self.inner.get(a, p, s, path).await
     }
     async fn stat(
@@ -666,21 +657,10 @@ impl Store for Metered {
     ) -> Result<ObjectInfo, WorkspaceError> {
         self.inner.stat(a, p, s, path).await
     }
-    async fn list(
-        &self,
-        a: &str,
-        p: &str,
-        s: &str,
-    ) -> Result<Vec<ObjectInfo>, WorkspaceError> {
+    async fn list(&self, a: &str, p: &str, s: &str) -> Result<Vec<ObjectInfo>, WorkspaceError> {
         self.inner.list(a, p, s).await
     }
-    async fn delete(
-        &self,
-        a: &str,
-        p: &str,
-        s: &str,
-        path: &str,
-    ) -> Result<(), WorkspaceError> {
+    async fn delete(&self, a: &str, p: &str, s: &str, path: &str) -> Result<(), WorkspaceError> {
         self.inner.delete(a, p, s, path).await
     }
     async fn move_scope(
@@ -887,15 +867,28 @@ mod tests {
     #[test]
     fn factory_aws_s3_requires_region() {
         let f = Factory::new("aws-s3");
-        let err = { match f.build("/d") { Err(e) => e, Ok(_) => panic!("expected error") } };
+        let err = {
+            match f.build("/d") {
+                Err(e) => e,
+                Ok(_) => panic!("expected error"),
+            }
+        };
         assert!(matches!(err, WorkspaceError::MissingRegion("aws-s3")));
     }
 
     #[test]
     fn factory_r2_requires_account_id() {
         let f = Factory::new("cloudflare-r2");
-        let err = { match f.build("/d") { Err(e) => e, Ok(_) => panic!("expected error") } };
-        assert!(matches!(err, WorkspaceError::MissingAccountId("cloudflare-r2")));
+        let err = {
+            match f.build("/d") {
+                Err(e) => e,
+                Ok(_) => panic!("expected error"),
+            }
+        };
+        assert!(matches!(
+            err,
+            WorkspaceError::MissingAccountId("cloudflare-r2")
+        ));
     }
 
     #[test]
@@ -926,7 +919,12 @@ mod tests {
     #[test]
     fn factory_minio_requires_endpoint() {
         let f = Factory::new("minio");
-        let err = { match f.build("/d") { Err(e) => e, Ok(_) => panic!("expected error") } };
+        let err = {
+            match f.build("/d") {
+                Err(e) => e,
+                Ok(_) => panic!("expected error"),
+            }
+        };
         assert!(matches!(err, WorkspaceError::MissingEndpoint("minio")));
     }
 
@@ -966,7 +964,10 @@ mod tests {
 
     #[test]
     fn sniff_default_octet_stream() {
-        assert_eq!(sniff_content_type(Path::new("x.bin")), "application/octet-stream");
+        assert_eq!(
+            sniff_content_type(Path::new("x.bin")),
+            "application/octet-stream"
+        );
     }
 
     #[test]
@@ -980,8 +981,14 @@ mod tests {
     fn scope_dir_layouts() {
         let root = Path::new("/w");
         assert_eq!(scope_dir(root, "a", "", ""), PathBuf::from("/w/a"));
-        assert_eq!(scope_dir(root, "a", "", "s1"), PathBuf::from("/w/a/sessions/s1"));
-        assert_eq!(scope_dir(root, "a", "p1", "s1"), PathBuf::from("/w/a/projects/p1"));
+        assert_eq!(
+            scope_dir(root, "a", "", "s1"),
+            PathBuf::from("/w/a/sessions/s1")
+        );
+        assert_eq!(
+            scope_dir(root, "a", "p1", "s1"),
+            PathBuf::from("/w/a/projects/p1")
+        );
     }
 }
 

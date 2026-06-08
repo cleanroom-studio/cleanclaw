@@ -71,7 +71,7 @@ impl GoalManager {
         // so a fresh restart that re-ticks a goal can't fire
         // inmediatamente. (A future-cut moves this into a dedicated
         // `last_fired_at` column.)
-//
+        //
         // The abs() comparison is the TZ-shift guard: the sqlx +
         // sqlite + chrono round-trip on non-UTC hosts can shift the
         // persisted `updated_at` by the local TZ offset. Without
@@ -207,7 +207,12 @@ mod tests {
         // 10-minute continuation window after the test's
         // chrono::Utc::now() call.
         let now = chrono::DateTime::<chrono::Utc>::from_timestamp(1_900_000_000, 0).unwrap();
-        eprintln!("DEBUG make_goal: now={} age_secs={} updated_at={}", now.timestamp(), age_secs, (now - chrono::Duration::seconds(age_secs)).timestamp());
+        eprintln!(
+            "DEBUG make_goal: now={} age_secs={} updated_at={}",
+            now.timestamp(),
+            age_secs,
+            (now - chrono::Duration::seconds(age_secs)).timestamp()
+        );
         GoalRecord {
             id: id.into(),
             agent_id: agent.into(),
@@ -268,13 +273,12 @@ mod tests {
         assert_eq!(n, 0);
         // Bus should be empty. Race a 1s timeout so the test
         // doesn't hang forever if the assertion ever fails.
-        let outcome = tokio::time::timeout(
-            std::time::Duration::from_millis(100),
-            bus.recv_inbound(),
-        )
-        .await;
-        assert!(outcome.is_err() || outcome.unwrap().is_none(),
-            "no continuation should fire for fresh goal");
+        let outcome =
+            tokio::time::timeout(std::time::Duration::from_millis(100), bus.recv_inbound()).await;
+        assert!(
+            outcome.is_err() || outcome.unwrap().is_none(),
+            "no continuation should fire for fresh goal"
+        );
     }
 
     #[tokio::test]
@@ -376,7 +380,12 @@ mod tests {
 
     #[test]
     fn goal_status_round_trip() {
-        for s in [GoalStatus::Active, GoalStatus::Paused, GoalStatus::BudgetLimited, GoalStatus::Complete] {
+        for s in [
+            GoalStatus::Active,
+            GoalStatus::Paused,
+            GoalStatus::BudgetLimited,
+            GoalStatus::Complete,
+        ] {
             assert_eq!(GoalStatus::parse(s.as_str()), s);
         }
     }

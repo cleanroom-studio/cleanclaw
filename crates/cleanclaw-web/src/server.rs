@@ -1,6 +1,7 @@
 //! Axum server boot + route table. W1 wires the bare minimum
 //! (`/`, `/overview`, `/favicon.ico`); later phases add the rest.
 
+use crate::html::Theme;
 use axum::{
     extract::{Path, Query, State},
     http::{header, StatusCode},
@@ -8,10 +9,9 @@ use axum::{
     routing::{get, post},
     Form, Router,
 };
-use std::path::PathBuf;
-use crate::html::Theme;
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpListener;
@@ -77,8 +77,8 @@ impl WebState {
 /// dashboard, the auth flow (login/signup), the settings tabs, the
 /// admin pages, the apikeys page, and the agent workspace
 /// (`/agents`, `/agents/{id}`, and the 12 sub-tabs under that).
-    pub fn router(state: WebState) -> Router {
-        Router::new()
+pub fn router(state: WebState) -> Router {
+    Router::new()
         .route("/", get(root))
         .route("/overview", get(overview))
         .route("/favicon.ico", get(favicon))
@@ -86,11 +86,26 @@ impl WebState {
         .route("/login", get(login_get).post(login_post))
         .route("/signup", get(signup_get).post(signup_post))
         .route("/onboard", get(onboard).post(onboard_post))
-        .route("/settings", get(|| async { Redirect::to("/settings/general") }))
-        .route("/settings/general", get(settings_general).post(settings_general_post))
-        .route("/settings/account", get(settings_account).post(settings_account_post))
-        .route("/settings/account/password", post(settings_account_password_post))
-        .route("/settings/runtime", get(settings_runtime).post(settings_runtime_post))
+        .route(
+            "/settings",
+            get(|| async { Redirect::to("/settings/general") }),
+        )
+        .route(
+            "/settings/general",
+            get(settings_general).post(settings_general_post),
+        )
+        .route(
+            "/settings/account",
+            get(settings_account).post(settings_account_post),
+        )
+        .route(
+            "/settings/account/password",
+            post(settings_account_password_post),
+        )
+        .route(
+            "/settings/runtime",
+            get(settings_runtime).post(settings_runtime_post),
+        )
         .route("/settings/about", get(settings_about))
         .route("/admin/users", get(admin_users))
         .route("/admin/usage", get(admin_usage))
@@ -108,7 +123,10 @@ impl WebState {
         .route("/agents/:id/plugins", get(agent_plugins))
         .route("/agents/:id/models", get(agent_models))
         .route("/agents/:id/context", get(agent_context))
-        .route("/agents/:id/customize", get(agent_customize).post(agent_customize_post))
+        .route(
+            "/agents/:id/customize",
+            get(agent_customize).post(agent_customize_post),
+        )
         .route("/agents/:id/project", get(agent_project))
         .route("/agents/:id/project/:pid", get(agent_project_id))
         .route("/agents/:id/usage", get(agent_usage))
@@ -197,11 +215,11 @@ async fn favicon() -> Response {
     // Tiny 1x1 transparent PNG. Stops the browser from 404-spamming
     // `/favicon.ico` on every page. Real branding lives in W8.
     const BYTES: &[u8] = &[
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
-        0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00,
-        0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41, 0x54, 0x78,
-        0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
-        0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
     ];
 
     // Try the on-disk file first; if absent, fall back to the
@@ -217,12 +235,7 @@ async fn favicon() -> Response {
         )
             .into_response();
     }
-    (
-        StatusCode::OK,
-        [(header::CONTENT_TYPE, "image/png")],
-        BYTES,
-    )
-        .into_response()
+    (StatusCode::OK, [(header::CONTENT_TYPE, "image/png")], BYTES).into_response()
 }
 
 /// Stub for `useMe()`-style auth. W1 returns a fixed demo user so
@@ -252,10 +265,7 @@ async fn login_post(
         Err(msg) => {
             return redirect_with_query(
                 "/login",
-                &[
-                    ("error", msg.as_str()),
-                    ("login", form.login.as_str()),
-                ],
+                &[("error", msg.as_str()), ("login", form.login.as_str())],
             );
         }
     };
@@ -282,7 +292,10 @@ async fn login_post(
             let next_header: String = next.to_string();
             (
                 StatusCode::SEE_OTHER,
-                [(header::LOCATION, next_header), (header::SET_COOKIE, cookie)],
+                [
+                    (header::LOCATION, next_header),
+                    (header::SET_COOKIE, cookie),
+                ],
             )
                 .into_response()
         }
@@ -301,7 +314,12 @@ async fn signup_get(Query(params): Query<HashMap<String, String>>) -> Html<Strin
     let error = params.get("error").map(|s| s.as_str());
     let prefill_username = params.get("username").map(|s| s.as_str());
     let prefill_email = params.get("email").map(|s| s.as_str());
-    Html(crate::pages::auth::signup_page(theme, error, prefill_username, prefill_email))
+    Html(crate::pages::auth::signup_page(
+        theme,
+        error,
+        prefill_username,
+        prefill_email,
+    ))
 }
 
 async fn signup_post(
@@ -399,7 +417,8 @@ async fn mint_session_for(state: &WebState, user_id: &str) -> String {
             sid: sid.clone(),
             user_id: user_id.to_string(),
             created_at: now,
-            expires_at: now + chrono::Duration::from_std(cleanclaw_auth::SESSION_TTL).unwrap_or_default(),
+            expires_at: now
+                + chrono::Duration::from_std(cleanclaw_auth::SESSION_TTL).unwrap_or_default(),
         };
         if let Err(e) = store.create_web_session(&sess).await {
             tracing::warn!(?e, user_id, "mint_session_for: store failed");
@@ -429,8 +448,7 @@ fn signup_error_message(e: &cleanclaw_auth::UserError) -> String {
             }
         }
         Store(CleanClawError::Internal(msg))
-            if msg.contains("UNIQUE")
-                && (msg.contains("username") || msg.contains("email")) =>
+            if msg.contains("UNIQUE") && (msg.contains("username") || msg.contains("email")) =>
         {
             if msg.contains("username") {
                 "Username already taken".to_string()
@@ -446,25 +464,19 @@ fn signup_error_message(e: &cleanclaw_auth::UserError) -> String {
 /// Returns `None` when no session cookie is present or the
 /// session is unknown. The store lookup uses the same
 /// `WebSessionRecord` table that `mint_session_for` writes to.
-async fn resolve_user_id(
-    state: &WebState,
-    headers: &axum::http::HeaderMap,
-) -> Option<String> {
+async fn resolve_user_id(state: &WebState, headers: &axum::http::HeaderMap) -> Option<String> {
     let sid = headers
         .get(axum::http::header::COOKIE)
         .and_then(|v| v.to_str().ok())
         .and_then(|cookies| {
-            cookies
-                .split(';')
-                .map(|s| s.trim())
-                .find_map(|c| {
-                    let (k, v) = c.split_once('=')?;
-                    if k == cleanclaw_auth::SESSION_COOKIE_NAME {
-                        Some(v.to_string())
-                    } else {
-                        None
-                    }
-                })
+            cookies.split(';').map(|s| s.trim()).find_map(|c| {
+                let (k, v) = c.split_once('=')?;
+                if k == cleanclaw_auth::SESSION_COOKIE_NAME {
+                    Some(v.to_string())
+                } else {
+                    None
+                }
+            })
         })?;
     let store = state.store.as_ref()?;
     let sess = store.get_web_session(&sid).await.ok()?;
@@ -507,10 +519,7 @@ async fn settings_general_post(
         data.insert("api_base".into(), serde_json::Value::String(api_base));
     }
     if !api_key.is_empty() {
-        data.insert(
-            "api_key".into(),
-            serde_json::Value::String(api_key.clone()),
-        );
+        data.insert("api_key".into(), serde_json::Value::String(api_key.clone()));
     }
     let rec = cleanclaw_store::models::ConfigRecord {
         id: format!("cfg_provider_{provider}"),
@@ -558,9 +567,7 @@ async fn settings_account_post(
     let Some(accounts) = state.accounts.as_ref() else {
         return Redirect::to("/settings/account").into_response();
     };
-    let res = accounts
-        .update(&user_id, &display_name, "", "", None)
-        .await;
+    let res = accounts.update(&user_id, &display_name, "", "", None).await;
     if let Err(e) = res {
         tracing::warn!(?e, user_id, "settings_account_post: update failed");
         return redirect_with_query(
@@ -829,10 +836,7 @@ async fn agent_chat_post(
         updated_at: now,
         chatter_user_id: user_id.clone(),
     };
-    if let Err(e) = store
-        .save_session(&user_id, &id, &session_id, &rec)
-        .await
-    {
+    if let Err(e) = store.save_session(&user_id, &id, &session_id, &rec).await {
         tracing::warn!(?e, %session_id, "agent_chat_post: save_session failed");
         return redirect_with_query(
             &format!("/agents/{}", crate::client::urlencode(&id)),
@@ -907,10 +911,7 @@ async fn agent_session_detail(
         Ok(s) => Some(s),
         Err(_) => None,
     };
-    let messages = match store
-        .list_session_messages(&user_id, &id, &sid)
-        .await
-    {
+    let messages = match store.list_session_messages(&user_id, &id, &sid).await {
         Ok(m) => m,
         Err(err) => {
             tracing::warn!(?err, %user_id, %id, %sid, "agent_session_detail: list messages failed");
@@ -940,7 +941,9 @@ async fn agent_channels(
     let channels = match state.store.as_ref() {
         Some(store) => match load_channel_rows(store).await {
             Ok(r) => project_agent_channels(
-                &r.into_iter().filter(|r| r.scope_id == id).collect::<Vec<_>>(),
+                &r.into_iter()
+                    .filter(|r| r.scope_id == id)
+                    .collect::<Vec<_>>(),
             ),
             Err(err) => {
                 tracing::warn!(?err, agent = %id, "agent_channels: load failed");
@@ -961,7 +964,9 @@ async fn agent_scheduler(
     let jobs = match state.store.as_ref() {
         Some(store) => match load_cron_infos(store).await {
             Ok(j) => project_agent_cron_jobs(
-                &j.into_iter().filter(|j| j.agent_id == id).collect::<Vec<_>>(),
+                &j.into_iter()
+                    .filter(|j| j.agent_id == id)
+                    .collect::<Vec<_>>(),
             ),
             Err(err) => {
                 tracing::warn!(?err, agent = %id, "agent_scheduler: load failed");
@@ -1271,7 +1276,10 @@ async fn onboard_post(
         return redirect_with_query(
             "/onboard",
             &[
-                ("error", "Username must be 3+ chars (letters, digits, _ or -)"),
+                (
+                    "error",
+                    "Username must be 3+ chars (letters, digits, _ or -)",
+                ),
                 ("username", &username),
                 ("email", &email),
             ],
@@ -1355,10 +1363,7 @@ async fn onboard_post(
             data.insert("api_base".into(), serde_json::Value::String(api_base));
         }
         if !api_key.is_empty() {
-            data.insert(
-                "api_key".into(),
-                serde_json::Value::String(api_key.clone()),
-            );
+            data.insert("api_key".into(), serde_json::Value::String(api_key.clone()));
         }
         if !model.is_empty() {
             data.insert("model".into(), serde_json::Value::String(model));
@@ -1466,10 +1471,7 @@ async fn load_model_entries(
                     .get("context_window")
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0),
-                max_tokens: m
-                    .get("max_tokens")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0),
+                max_tokens: m.get("max_tokens").and_then(|v| v.as_u64()).unwrap_or(0),
             };
             out.push(entry);
         }
@@ -1548,23 +1550,23 @@ async fn load_tools_config(
     for c in &configs {
         match c.kind.as_str() {
             "tool_category" => {
-                if let Ok(cat) = serde_json::from_value::<crate::types::ToolCategoryCatalog>(
-                    c.data.clone(),
-                ) {
+                if let Ok(cat) =
+                    serde_json::from_value::<crate::types::ToolCategoryCatalog>(c.data.clone())
+                {
                     cfg.categories.push(cat);
                 }
             }
             "tool_provider" => {
-                if let Ok(prov) = serde_json::from_value::<crate::types::ToolProviderSettings>(
-                    c.data.clone(),
-                ) {
+                if let Ok(prov) =
+                    serde_json::from_value::<crate::types::ToolProviderSettings>(c.data.clone())
+                {
                     cfg.tool_providers.insert(c.name.clone(), prov);
                 }
             }
             "tool_setting" => {
-                if let Ok(set) = serde_json::from_value::<crate::types::ToolCategorySettings>(
-                    c.data.clone(),
-                ) {
+                if let Ok(set) =
+                    serde_json::from_value::<crate::types::ToolCategorySettings>(c.data.clone())
+                {
                     cfg.tools.insert(c.name.clone(), set);
                 }
             }
@@ -1680,7 +1682,11 @@ fn project_channel_health(rows: &[crate::types::ChannelRow]) -> Vec<crate::types
                 .unwrap_or("(unset)")
                 .to_string(),
             enabled: Some(r.enabled),
-            status: Some(if r.enabled { "ok".to_string() } else { "disabled".to_string() }),
+            status: Some(if r.enabled {
+                "ok".to_string()
+            } else {
+                "disabled".to_string()
+            }),
         })
         .collect()
 }
@@ -1730,9 +1736,7 @@ fn project_agent_channels(rows: &[crate::types::ChannelRow]) -> Vec<crate::types
 
 /// Project a slice of `CronJobInfo`s into the per-agent
 /// `AgentCronJob` shape the `/agents/{id}/scheduler` page expects.
-fn project_agent_cron_jobs(
-    jobs: &[crate::types::CronJobInfo],
-) -> Vec<crate::types::AgentCronJob> {
+fn project_agent_cron_jobs(jobs: &[crate::types::CronJobInfo]) -> Vec<crate::types::AgentCronJob> {
     jobs.iter()
         .map(|j| crate::types::AgentCronJob {
             id: j.id.clone(),
@@ -1773,10 +1777,7 @@ pub async fn echo_path(Path(p): Path<String>) -> String {
 /// String>` query string into a sorted key=value vector — useful for
 /// stable cache keys.
 pub fn sorted_query(q: &HashMap<String, String>) -> Vec<(String, String)> {
-    let mut v: Vec<(String, String)> = q
-        .iter()
-        .map(|(k, v)| (k.clone(), v.clone()))
-        .collect();
+    let mut v: Vec<(String, String)> = q.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
     v.sort();
     v
 }
@@ -1797,7 +1798,10 @@ pub fn default_addr() -> SocketAddr {
 
 /// Health-check ping that resolves after `d`; used by tests to wait
 /// for the server to start listening.
-pub async fn wait_for_ready(addr: SocketAddr, d: Duration) -> std::result::Result<(), std::io::Error> {
+pub async fn wait_for_ready(
+    addr: SocketAddr,
+    d: Duration,
+) -> std::result::Result<(), std::io::Error> {
     let deadline = std::time::Instant::now() + d;
     while std::time::Instant::now() < deadline {
         if tokio::net::TcpStream::connect(addr).await.is_ok() {
@@ -1827,7 +1831,13 @@ mod tests {
         q.insert("b".to_string(), "2".to_string());
         q.insert("a".to_string(), "1".to_string());
         let s = sorted_query(&q);
-        assert_eq!(s, vec![("a".to_string(), "1".to_string()), ("b".to_string(), "2".to_string())]);
+        assert_eq!(
+            s,
+            vec![
+                ("a".to_string(), "1".to_string()),
+                ("b".to_string(), "2".to_string())
+            ]
+        );
     }
 
     #[test]
@@ -1850,11 +1860,11 @@ mod tests {
 struct FaviconBytes;
 impl FaviconBytes {
     const PNG: [u8; 67] = [
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
-        0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00,
-        0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41, 0x54, 0x78,
-        0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
-        0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
     ];
 }
 
@@ -1884,7 +1894,12 @@ async fn serve_static(Path(path): Path<String>) -> Response {
         Some("js") => "application/javascript",
         _ => "application/octet-stream",
     };
-    (StatusCode::OK, [(header::CONTENT_TYPE, content_type)], bytes).into_response()
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, content_type)],
+        bytes,
+    )
+        .into_response()
 }
 
 #[cfg(test)]
@@ -1898,7 +1913,12 @@ mod static_tests {
         // Build a tiny app with just the static route.
         let app = axum::Router::new().route("/static/*p", axum::routing::get(serve_static));
         let resp = app
-            .oneshot(Request::builder().uri(path).body(axum::body::Body::empty()).unwrap())
+            .oneshot(
+                Request::builder()
+                    .uri(path)
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
             .await
             .unwrap();
         let status = resp.status();
@@ -1944,9 +1964,9 @@ mod static_tests {
 #[cfg(test)]
 mod resource_loader_tests {
     use super::*;
+    use chrono::Utc;
     use cleanclaw_store::models::ConfigRecord;
     use cleanclaw_store::Store;
-    use chrono::Utc;
     use serde_json::json;
     use std::sync::Arc;
 
@@ -2019,21 +2039,13 @@ mod resource_loader_tests {
         save(&store, disabled).await;
         save(
             &store,
-            cfg(
-                "model",
-                "on",
-                json!({"model": {"id": "y", "name": "Y"}}),
-            ),
+            cfg("model", "on", json!({"model": {"id": "y", "name": "Y"}})),
         )
         .await;
         // An unrelated config kind must be ignored.
         save(
             &store,
-            cfg(
-                "provider",
-                "z",
-                json!({"model": {"id": "should_skip"}}),
-            ),
+            cfg("provider", "z", json!({"model": {"id": "should_skip"}})),
         )
         .await;
         let entries = load_model_entries(&store).await.unwrap();
@@ -2044,11 +2056,7 @@ mod resource_loader_tests {
     #[tokio::test]
     async fn models_loader_handles_minimal_row() {
         let store = fresh_store().await;
-        save(
-            &store,
-            cfg("model", "minimal", json!({"model": {}})),
-        )
-        .await;
+        save(&store, cfg("model", "minimal", json!({"model": {}}))).await;
         let entries = load_model_entries(&store).await.unwrap();
         assert_eq!(entries.len(), 1);
         // Defaults fall back to the row name when id/name are missing.
@@ -2095,11 +2103,7 @@ mod resource_loader_tests {
         let mut off = cfg("provider", "off", json!({}));
         off.enabled = false;
         save(&store, off).await;
-        save(
-            &store,
-            cfg("provider", "on", json!({})),
-        )
-        .await;
+        save(&store, cfg("provider", "on", json!({}))).await;
         let rows = load_provider_rows(&store).await.unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].name, "on");
@@ -2288,7 +2292,11 @@ mod resource_loader_tests {
         save(&store, c2).await;
         let rows = load_channel_rows(&store).await.unwrap();
         // Per-agent view: scope_id == "a1" → just the discord row.
-        let agent_rows: Vec<_> = rows.iter().filter(|r| r.scope_id == "a1").cloned().collect();
+        let agent_rows: Vec<_> = rows
+            .iter()
+            .filter(|r| r.scope_id == "a1")
+            .cloned()
+            .collect();
         let channels = project_agent_channels(&agent_rows);
         assert_eq!(channels.len(), 1);
         assert_eq!(channels[0].kind, "discord");
@@ -2368,7 +2376,10 @@ mod resource_loader_tests {
         let infos = load_cron_infos(&store).await.unwrap();
         assert_eq!(infos.len(), 2);
         let agent_jobs = project_agent_cron_jobs(
-            &infos.into_iter().filter(|j| j.agent_id == "a1").collect::<Vec<_>>(),
+            &infos
+                .into_iter()
+                .filter(|j| j.agent_id == "a1")
+                .collect::<Vec<_>>(),
         );
         assert_eq!(agent_jobs.len(), 1);
         assert_eq!(agent_jobs[0].name, "alpha");
@@ -2473,12 +2484,8 @@ mod resource_loader_tests {
         // valid form redirects to /overview.
         let (tx, _rx) = watch::channel(false);
         let state = WebState::new(tx);
-        let (status, location, _cookies) = post_form(
-            state,
-            "/login",
-            "login=ada&password=secret",
-        )
-        .await;
+        let (status, location, _cookies) =
+            post_form(state, "/login", "login=ada&password=secret").await;
         assert_eq!(status, StatusCode::SEE_OTHER);
         assert_eq!(location.as_deref(), Some("/overview"));
     }
@@ -2487,8 +2494,7 @@ mod resource_loader_tests {
     async fn login_post_validates_and_redirects_to_login_with_error() {
         let (tx, _rx) = watch::channel(false);
         let state = WebState::new(tx);
-        let (status, location, _cookies) =
-            post_form(state, "/login", "login=&password=").await;
+        let (status, location, _cookies) = post_form(state, "/login", "login=&password=").await;
         assert_eq!(status, StatusCode::SEE_OTHER);
         let loc = location.unwrap();
         assert!(loc.starts_with("/login?"), "got {loc}");
@@ -2551,12 +2557,8 @@ mod resource_loader_tests {
         )
         .await;
         // Then log in.
-        let (status, location, cookies) = post_form(
-            state,
-            "/login",
-            "login=carol&password=longenough123",
-        )
-        .await;
+        let (status, location, cookies) =
+            post_form(state, "/login", "login=carol&password=longenough123").await;
         assert_eq!(status, StatusCode::SEE_OTHER);
         assert_eq!(location.as_deref(), Some("/overview"));
         assert!(cookies.iter().any(|c| c.starts_with("cleanclaw_session=")));
@@ -2571,12 +2573,8 @@ mod resource_loader_tests {
             "username=dave&email=dave%40example.com&password=longenough123",
         )
         .await;
-        let (status, location, _cookies) = post_form(
-            state,
-            "/login",
-            "login=dave&password=wrong",
-        )
-        .await;
+        let (status, location, _cookies) =
+            post_form(state, "/login", "login=dave&password=wrong").await;
         assert_eq!(status, StatusCode::SEE_OTHER);
         let loc = location.unwrap();
         assert!(loc.starts_with("/login?"));
@@ -2633,7 +2631,10 @@ mod resource_loader_tests {
         assert_eq!(status, StatusCode::SEE_OTHER);
         assert_eq!(location.as_deref(), Some("/settings/runtime"));
         let configs = store.list_configs_all_kinds().await.unwrap();
-        let runtime: Vec<_> = configs.iter().filter(|c| c.name == "runtime_sandbox").collect();
+        let runtime: Vec<_> = configs
+            .iter()
+            .filter(|c| c.name == "runtime_sandbox")
+            .collect();
         assert_eq!(runtime.len(), 1);
         assert_eq!(runtime[0].data.get("sandbox_backend").unwrap(), "docker");
         assert_eq!(
@@ -2905,7 +2906,10 @@ mod resource_loader_tests {
         assert!(s.contains("My first chat"), "session title not in page");
         assert!(s.contains("/static/ws-chat.js"), "WS client not embedded");
         assert!(s.contains("data-agent-id=\"a_george\""), "agent id missing");
-        assert!(s.contains("data-session-id=\"sess_g\""), "session id missing");
+        assert!(
+            s.contains("data-session-id=\"sess_g\""),
+            "session id missing"
+        );
         // The composer + the chat-* classes are wired.
         assert!(s.contains("data-chat-form"), "composer form missing");
         assert!(s.contains("data-chat-input"), "composer input missing");

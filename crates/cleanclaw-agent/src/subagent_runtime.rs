@@ -22,11 +22,7 @@ pub struct DefaultSubAgentSpawner {
 pub trait SubAgentDriver: Send + Sync {
     /// Run `target_agent_id` with `task` as the user message. Returns
     /// the agent's final reply.
-    async fn drive(
-        &self,
-        target_agent_id: &str,
-        task: &str,
-    ) -> Result<String>;
+    async fn drive(&self, target_agent_id: &str, task: &str) -> Result<String>;
 }
 
 #[async_trait::async_trait]
@@ -56,9 +52,7 @@ impl SubAgentSpawner for DefaultSubAgentSpawner {
                 .enable_all()
                 .build()
                 .map_err(|e| {
-                    cleanclaw_core::CleanClawError::Internal(format!(
-                        "subagent: rt build {e}"
-                    ))
+                    cleanclaw_core::CleanClawError::Internal(format!("subagent: rt build {e}"))
                 })?;
             let target_for_rt = target.clone();
             let task_for_rt = task.clone();
@@ -123,7 +117,7 @@ fn _unused_message_check(m: &Message) -> &str {
 #[cfg(test)]
 mod tests {
     //! P6-3: integration tests for the sub-agent driver.
-//!
+    //!
     //! These tests wire the `spawn_subagent` tool into a parent
     //! agent whose provider is a canned mock, then drive a target
     //! agent with a separate canned mock and assert that the
@@ -259,11 +253,7 @@ mod tests {
         fn parameters(&self) -> Value {
             json!({"type": "object", "properties": {}})
         }
-        async fn call(
-            &self,
-            _ctx: &ToolContext,
-            _args: Value,
-        ) -> cleanclaw_core::Result<Value> {
+        async fn call(&self, _ctx: &ToolContext, _args: Value) -> cleanclaw_core::Result<Value> {
             Ok(json!({"ok": true}))
         }
     }

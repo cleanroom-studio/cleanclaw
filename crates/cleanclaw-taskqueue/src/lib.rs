@@ -69,8 +69,9 @@ impl TaskError {
 
 /// Type-erased task handler. Callers can pass plain `Fn(Task) -> impl
 /// Future<...>` closures; the `handler()` helper boxes them up.
-pub type BoxedTaskHandler =
-    Arc<dyn Fn(Task) -> Pin<Box<dyn Future<Output = Result<String, TaskError>> + Send>> + Send + Sync>;
+pub type BoxedTaskHandler = Arc<
+    dyn Fn(Task) -> Pin<Box<dyn Future<Output = Result<String, TaskError>> + Send>> + Send + Sync,
+>;
 
 /// Helper to turn a plain async closure into a `BoxedTaskHandler`.
 pub fn handler<F, Fut>(f: F) -> BoxedTaskHandler
@@ -118,7 +119,11 @@ impl Queue {
         task_timeout: Duration,
         handler: BoxedTaskHandler,
     ) -> Arc<Self> {
-        let mc = if max_concurrent <= 0 { 10 } else { max_concurrent };
+        let mc = if max_concurrent <= 0 {
+            10
+        } else {
+            max_concurrent
+        };
         let tt = if task_timeout.is_zero() {
             Duration::from_secs(5 * 60)
         } else {
@@ -136,7 +141,9 @@ impl Queue {
             seq: AtomicU64::new(0),
             shutdown: AtomicBool::new(false),
         });
-        let q = Arc::new(Self { inner: inner.clone() });
+        let q = Arc::new(Self {
+            inner: inner.clone(),
+        });
         // Kick off idle cleanup loop.
         let cleanup_inner = inner.clone();
         let shutdown = Arc::new(AtomicBool::new(false));
@@ -314,10 +321,7 @@ async fn execute_task(inner: Arc<Inner>, mut task: Task) {
     let handler = inner.handler.clone();
     let timeout = inner.task_timeout;
     let task_for_handler = task.clone();
-    let res = tokio::time::timeout(timeout, async move {
-        (handler)(task_for_handler).await
-    })
-    .await;
+    let res = tokio::time::timeout(timeout, async move { (handler)(task_for_handler).await }).await;
 
     let done_at = Utc::now();
     let duration_ms = task
@@ -479,9 +483,10 @@ mod tests {
         for _ in 0..100 {
             tokio::time::sleep(Duration::from_millis(20)).await;
             let st = q.inner.state.lock().await;
-            if ids.iter().all(|id| {
-                matches!(st.tasks.get(id).map(|t| t.status), Some(TaskStatus::Done))
-            }) {
+            if ids
+                .iter()
+                .all(|id| matches!(st.tasks.get(id).map(|t| t.status), Some(TaskStatus::Done)))
+            {
                 break;
             }
         }
@@ -560,7 +565,10 @@ mod tests {
         let recent = q.recent_tasks(10).await;
         assert!(recent.len() >= 3);
         for w in recent.windows(2) {
-            assert!(w[0].created_at >= w[1].created_at, "not sorted newest first");
+            assert!(
+                w[0].created_at >= w[1].created_at,
+                "not sorted newest first"
+            );
         }
         q.stop();
     }

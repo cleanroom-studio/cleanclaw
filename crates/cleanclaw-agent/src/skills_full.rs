@@ -35,9 +35,7 @@ impl SkillsConfig {
             global_root: home.join("skills"),
             extra_dirs: std::env::var("CLEANCLAW_EXTRA_SKILLS_DIRS")
                 .ok()
-                .map(|s| {
-                    s.split(',').map(|p| PathBuf::from(p.trim())).collect()
-                })
+                .map(|s| s.split(',').map(|p| PathBuf::from(p.trim())).collect())
                 .unwrap_or_default(),
         }
     }
@@ -104,7 +102,9 @@ impl SkillsLoader {
             for skill in discover(dir) {
                 // Higher-priority dirs were pushed first; we insert-if-absent
                 // so they win on name conflicts.
-                by_name.entry(skill.name.clone()).or_insert_with(|| skill.clone());
+                by_name
+                    .entry(skill.name.clone())
+                    .or_insert_with(|| skill.clone());
                 by_dir.push(skill);
             }
         }

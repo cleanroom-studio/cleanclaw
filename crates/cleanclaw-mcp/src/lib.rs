@@ -14,8 +14,8 @@ use std::process::Stdio;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use async_trait::async_trait;
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
@@ -195,8 +195,11 @@ fn rpc_call_tool(id: u64, name: &str, args: Value) -> JsonRpcRequest<'_> {
         jsonrpc: "2.0",
         id,
         method: "tools/call",
-        params: serde_json::to_value(ToolCallParams { name, arguments: args })
-            .unwrap(),
+        params: serde_json::to_value(ToolCallParams {
+            name,
+            arguments: args,
+        })
+        .unwrap(),
     }
 }
 
@@ -397,7 +400,10 @@ impl Client for HttpClient {
         if !resp.status().is_success() {
             return Err(McpError::Http(format!("status {}", resp.status())));
         }
-        let raw: Value = resp.json().await.map_err(|e| McpError::Http(e.to_string()))?;
+        let raw: Value = resp
+            .json()
+            .await
+            .map_err(|e| McpError::Http(e.to_string()))?;
         let _ = parse_rpc_response(raw)?;
         *self.state.lock().await = Some(());
         Ok(())
@@ -417,7 +423,10 @@ impl Client for HttpClient {
             .send()
             .await
             .map_err(|e| McpError::Http(e.to_string()))?;
-        let raw: Value = resp.json().await.map_err(|e| McpError::Http(e.to_string()))?;
+        let raw: Value = resp
+            .json()
+            .await
+            .map_err(|e| McpError::Http(e.to_string()))?;
         let v = parse_rpc_response(raw)?;
         let v: ToolsListResult = serde_json::from_value(v)?;
         Ok(v.tools)
@@ -437,7 +446,10 @@ impl Client for HttpClient {
             .send()
             .await
             .map_err(|e| McpError::Http(e.to_string()))?;
-        let raw: Value = resp.json().await.map_err(|e| McpError::Http(e.to_string()))?;
+        let raw: Value = resp
+            .json()
+            .await
+            .map_err(|e| McpError::Http(e.to_string()))?;
         let v = parse_rpc_response(raw)?;
         let res: ToolCallResultWire = serde_json::from_value(v)?;
         let text = res
@@ -587,7 +599,10 @@ mod tests {
 
     #[test]
     fn prefixed_tool_name_formats_correctly() {
-        assert_eq!(prefixed_tool_name("github", "list_repos"), "github__list_repos");
+        assert_eq!(
+            prefixed_tool_name("github", "list_repos"),
+            "github__list_repos"
+        );
     }
 
     #[test]
@@ -664,10 +679,7 @@ mod tests {
 
     #[tokio::test]
     async fn http_client_connect_to_bad_url_errors() {
-        let client = HttpClient::new(
-            "http://127.0.0.1:1/nonexistent",
-            HashMap::new(),
-        );
+        let client = HttpClient::new("http://127.0.0.1:1/nonexistent", HashMap::new());
         let err = client.connect().await;
         assert!(matches!(err, Err(McpError::Http(_))));
     }

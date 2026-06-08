@@ -82,10 +82,7 @@ async fn agent_usage(
         .unwrap_or_else(|| chrono::Utc::now().date_naive() - chrono::Duration::days(30));
     match state.store.list_token_usage(since_date).await {
         Ok(all) => {
-            let rows: Vec<_> = all
-                .into_iter()
-                .filter(|r| r.agent_id == agent_id)
-                .collect();
+            let rows: Vec<_> = all.into_iter().filter(|r| r.agent_id == agent_id).collect();
             let input: i64 = rows.iter().map(|r| r.input_tokens).sum();
             let output: i64 = rows.iter().map(|r| r.output_tokens).sum();
             (

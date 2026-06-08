@@ -3,13 +3,11 @@
 //! turn-failure tracker all wire together correctly.
 
 use async_trait::async_trait;
-use cleanclaw_agent::{
-    Agent, AgentBuilder, Hook, HookPhase, HookRegistry, TurnInput,
-};
-use cleanclaw_provider::{Message, Role, Usage};
+use cleanclaw_agent::{Agent, AgentBuilder, Hook, HookPhase, HookRegistry, TurnInput};
 use cleanclaw_provider::{
     ChatRequest, ChatResponse, Provider, ProviderError, ProviderStream, StreamEvent, ToolCall,
 };
+use cleanclaw_provider::{Message, Role, Usage};
 use cleanclaw_store::models::{AgentRecord, SessionRecord, UserRecord};
 use cleanclaw_store::sqlite::SqliteStore;
 use cleanclaw_store::Store;
@@ -38,7 +36,9 @@ impl Provider for MockProvider {
         Ok(q.remove(0))
     }
     async fn chat_stream(&self, _req: &ChatRequest) -> Result<ProviderStream, ProviderError> {
-        Err(ProviderError::Config("streaming not used in this test".into()))
+        Err(ProviderError::Config(
+            "streaming not used in this test".into(),
+        ))
     }
 }
 
@@ -130,7 +130,11 @@ async fn full_loop_with_tools_and_hooks() {
     {
         let mut q = scripted.lock().await;
         // First response: tool call (current_time). Second: text reply.
-        q.push(make_response_with_tool("calling tool", "current_time", "tc_1"));
+        q.push(make_response_with_tool(
+            "calling tool",
+            "current_time",
+            "tc_1",
+        ));
         q.push(make_response("done"));
     }
 
@@ -159,12 +163,18 @@ async fn full_loop_with_tools_and_hooks() {
     cleanclaw_agent::builtins::register_builtins(&mut tools);
 
     let agent: Arc<Agent> = Arc::new(
-        AgentBuilder::new("agt_1", "u_1", "test-model", Arc::new(provider.clone()), store.clone())
-            .tools(tools)
-            .max_iterations(4)
-            .max_tokens(1024)
-            .hooks(Arc::new(hooks))
-            .build(),
+        AgentBuilder::new(
+            "agt_1",
+            "u_1",
+            "test-model",
+            Arc::new(provider.clone()),
+            store.clone(),
+        )
+        .tools(tools)
+        .max_iterations(4)
+        .max_tokens(1024)
+        .hooks(Arc::new(hooks))
+        .build(),
     );
 
     let input = TurnInput {
@@ -199,15 +209,25 @@ async fn tool_failure_records_in_turn_failures() {
         // We can simulate this by returning tool_calls twice — the loop should
         // see the failure on each and run the turn until max_iterations.
         q.push(make_response_with_tool("first try", "no_such_tool", "tc_1"));
-        q.push(make_response_with_tool("second try", "no_such_tool", "tc_1"));
+        q.push(make_response_with_tool(
+            "second try",
+            "no_such_tool",
+            "tc_1",
+        ));
     }
     let mut tools = cleanclaw_agent::ToolRegistry::new();
     cleanclaw_agent::builtins::register_builtins(&mut tools);
     let agent: Arc<Agent> = Arc::new(
-        AgentBuilder::new("agt_1", "u_1", "test-model", Arc::new(provider.clone()), store.clone())
-            .tools(tools)
-            .max_iterations(2)
-            .build(),
+        AgentBuilder::new(
+            "agt_1",
+            "u_1",
+            "test-model",
+            Arc::new(provider.clone()),
+            store.clone(),
+        )
+        .tools(tools)
+        .max_iterations(2)
+        .build(),
     );
     let input = TurnInput {
         user_text: "try something".into(),
@@ -222,6 +242,8 @@ async fn tool_failure_records_in_turn_failures() {
         attachments: vec![],
     };
     let _ = agent.run_turn(input).await;
-    let prior = agent.turn_failures.prior_failure("no_such_tool", &json!({}));
+    let prior = agent
+        .turn_failures
+        .prior_failure("no_such_tool", &json!({}));
     assert!(prior.is_some(), "no_such_tool failure should be recorded");
 }

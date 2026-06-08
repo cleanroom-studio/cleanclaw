@@ -38,12 +38,10 @@
 //! test harness (e.g. `direnv` or `set -a; source .env; set +a`)
 //! before `cargo test` is invoked.
 
-use cleanclaw_provider::message::{
-    ChatRequest, Message, StreamEvent, ToolDefinition, Usage,
-};
+use cleanclaw_provider::anthropic::AnthropicProvider;
+use cleanclaw_provider::message::{ChatRequest, Message, StreamEvent, ToolDefinition, Usage};
 use cleanclaw_provider::openai::OpenAIProvider;
 use cleanclaw_provider::Provider;
-use cleanclaw_provider::anthropic::AnthropicProvider;
 use futures_util::StreamExt;
 use std::time::Duration;
 
@@ -55,8 +53,7 @@ use std::time::Duration;
 /// env doesn't override it — that way the suite stays
 /// useful against the real Anthropic / OpenAI endpoints too.
 fn anthropic_model() -> String {
-    std::env::var("E2E_ANTHROPIC_MODEL")
-        .unwrap_or_else(|_| anthropic_model().to_string())
+    std::env::var("E2E_ANTHROPIC_MODEL").unwrap_or_else(|_| anthropic_model().to_string())
 }
 
 fn openai_model() -> String {
@@ -119,8 +116,7 @@ fn openai_env() -> Option<(String, String)> {
 /// back to the default. The `.env` file usually sets
 /// `OPENAI_BASE_URL=https://api.minimaxi.com/v1`.
 fn resolve_openai_base() -> String {
-    std::env::var("OPENAI_BASE_URL")
-        .unwrap_or_else(|_| "https://api.openai.com/v1".to_string())
+    std::env::var("OPENAI_BASE_URL").unwrap_or_else(|_| "https://api.openai.com/v1".to_string())
 }
 
 /// Build the simplest possible Anthropic chat request and
@@ -207,9 +203,7 @@ async fn anthropic_multi_turn() {
     // sane model should at least mention the color. We don't
     // require "blue" exactly because thinking-mode sometimes
     // streams the answer via <think> tags that get stripped.
-    let mentions_color = text.contains("blue")
-        || text.contains("color")
-        || text.contains("colour");
+    let mentions_color = text.contains("blue") || text.contains("color") || text.contains("colour");
     assert!(
         mentions_color,
         "expected the model to engage with the color question, got {text:?}"
@@ -272,7 +266,10 @@ async fn anthropic_tool_use_round_trip() {
         .get("city")
         .and_then(|v| v.as_str())
         .unwrap_or_default();
-    assert!(!city.is_empty(), "expected non-empty city in tool_call args");
+    assert!(
+        !city.is_empty(),
+        "expected non-empty city in tool_call args"
+    );
 
     // Feed the tool result back.
     let req2 = ChatRequest {
@@ -364,8 +361,8 @@ async fn anthropic_streaming() {
                 _ => {}
             },
             Ok(Some(Err(e))) => panic!("stream error: {e}"),
-            Ok(None) => break,        // stream ended without Done
-            Err(_) => break,          // timeout
+            Ok(None) => break, // stream ended without Done
+            Err(_) => break,   // timeout
         }
     }
     assert!(

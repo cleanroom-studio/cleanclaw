@@ -5,11 +5,11 @@
 //! provider / hook) via a `plugin.json` manifest; the manager spawns
 //! the process, runs `initialize`, and routes subsequent calls.
 
+use cleanclaw_bus::OutboundMessage;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicI64, Ordering};
-use cleanclaw_bus::OutboundMessage;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -88,7 +88,10 @@ impl Manifest {
     pub fn from_file(path: &std::path::Path) -> Result<Self, PluginError> {
         let data = std::fs::read_to_string(path)?;
         let mut m: Manifest = serde_json::from_str(&data)?;
-        m.dir = path.parent().unwrap_or(std::path::Path::new(".")).to_path_buf();
+        m.dir = path
+            .parent()
+            .unwrap_or(std::path::Path::new("."))
+            .to_path_buf();
         Ok(m)
     }
 }
@@ -209,7 +212,7 @@ impl Subprocess {
     /// line from the subprocess's stdout, dispatches responses to
     /// the matching `pending` oneshot, and forwards notifications
     /// to the registered handler.
-//
+    //
     /// Mirrors `Process.readLoop` in the Go runtime.
     fn spawn_read_loop(
         manifest_id: String,
@@ -330,12 +333,8 @@ impl PluginProcess for Subprocess {
         let manifest_id = self.manifest.id.clone();
         let pending_for_loop = Arc::clone(&self.pending);
         let on_notify_for_loop = Arc::clone(&self.on_notify);
-        let read_task = Self::spawn_read_loop(
-            manifest_id,
-            stdout,
-            pending_for_loop,
-            on_notify_for_loop,
-        );
+        let read_task =
+            Self::spawn_read_loop(manifest_id, stdout, pending_for_loop, on_notify_for_loop);
 
         *self.state.lock().await = Some(SubprocessState {
             child,
@@ -371,7 +370,9 @@ impl PluginProcess for Subprocess {
             state.stdin.write_all(line.as_bytes()).await?;
             state.stdin.flush().await?;
         }
-        let resp = rx.await.map_err(|_| PluginError::Exited("channel closed".into()))?;
+        let resp = rx
+            .await
+            .map_err(|_| PluginError::Exited("channel closed".into()))?;
         if let Some(e) = resp.error {
             return Err(PluginError::Rpc {
                 code: e.code,
@@ -528,7 +529,10 @@ impl ToolAdapter for DefaultToolAdapter {
             .await
             .ok_or_else(|| PluginError::NotFound(plugin_id.to_string()))?;
         let v = plugin
-            .call(METHOD_TOOL_EXECUTE, serde_json::json!({"name": tool, "args": args}))
+            .call(
+                METHOD_TOOL_EXECUTE,
+                serde_json::json!({"name": tool, "args": args}),
+            )
             .await?;
         let r: ToolResult = serde_json::from_value(v)?;
         Ok(r)
@@ -678,7 +682,15 @@ mod tests {
 
     #[test]
     fn method_constants_distinct() {
-        let all = [METHOD_INITIALIZE, METHOD_SHUTDOWN, METHOD_TOOL_LIST, METHOD_TOOL_EXECUTE, METHOD_PROVIDER_LIST, METHOD_PROVIDER_EXECUTE, METHOD_HOOK_FIRE];
+        let all = [
+            METHOD_INITIALIZE,
+            METHOD_SHUTDOWN,
+            METHOD_TOOL_LIST,
+            METHOD_TOOL_EXECUTE,
+            METHOD_PROVIDER_LIST,
+            METHOD_PROVIDER_EXECUTE,
+            METHOD_HOOK_FIRE,
+        ];
         let mut seen = std::collections::HashSet::new();
         for m in all {
             assert!(seen.insert(m), "duplicate method constant {m}");
@@ -761,13 +773,10 @@ sleep 1
         assert!(r.get("echoed_id").is_some());
 
         // Notification should have arrived too.
-        let method = tokio::time::timeout(
-            std::time::Duration::from_secs(2),
-            nrx.recv(),
-        )
-        .await
-        .expect("notification timed out")
-        .expect("notification channel open");
+        let method = tokio::time::timeout(std::time::Duration::from_secs(2), nrx.recv())
+            .await
+            .expect("notification timed out")
+            .expect("notification channel open");
         assert_eq!(method, "ready");
 
         sub.stop().await.expect("stop");
@@ -903,7 +912,7 @@ impl HookAdapter {
     /// completed before the timeout). Errors and timeouts are
     /// logged + counted as fired-but-errored; the agent loop never
     /// blocks on a misbehaving plugin.
-//
+    //
     /// The wire format is `hook.fire` with params
     /// `{"point": "<name>", ...payload}`. This matches what
     /// `cleanclaw_plugin_runtime::Plugin::hook_fire` already
@@ -926,10 +935,7 @@ impl HookAdapter {
         let ids = self.manager.ids().await;
         // Build the params once — all plugins see the same shape.
         let mut params_map = serde_json::Map::new();
-        params_map.insert(
-            "point".into(),
-            Value::String(hook_point_name.to_string()),
-        );
+        params_map.insert("point".into(), Value::String(hook_point_name.to_string()));
         if let Value::Object(p) = payload {
             for (k, v) in p {
                 if k != "point" {
@@ -940,14 +946,12 @@ impl HookAdapter {
         let params = Value::Object(params_map);
         let mut fired = 0usize;
         for id in ids {
-            let Some(plugin) = self.manager.get(&id).await else { continue };
+            let Some(plugin) = self.manager.get(&id).await else {
+                continue;
+            };
             let method = "hook.fire".to_string();
             let params_c = params.clone();
-            let result = tokio::time::timeout(
-                timeout,
-                plugin.call(&method, params_c),
-            )
-            .await;
+            let result = tokio::time::timeout(timeout, plugin.call(&method, params_c)).await;
             match result {
                 Ok(Ok(_)) => fired += 1,
                 Ok(Err(e)) => {
@@ -1149,10 +1153,7 @@ mod adapter_tests {
             if !self.delay.is_zero() {
                 tokio::time::sleep(self.delay).await;
             }
-            self.calls
-                .lock()
-                .await
-                .push((method.to_string(), params));
+            self.calls.lock().await.push((method.to_string(), params));
             Ok(Value::Null)
         }
         async fn notify(&self, _m: &str, _p: Value) -> Result<(), PluginError> {

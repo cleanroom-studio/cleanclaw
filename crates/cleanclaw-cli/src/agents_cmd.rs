@@ -39,9 +39,18 @@ pub enum AgentsCmd {
 
 #[derive(Subcommand)]
 pub enum FilesCmd {
-    Ls { name: String },
-    Get { name: String, filename: String },
-    Put { name: String, filename: String, path: PathBuf },
+    Ls {
+        name: String,
+    },
+    Get {
+        name: String,
+        filename: String,
+    },
+    Put {
+        name: String,
+        filename: String,
+        path: PathBuf,
+    },
 }
 
 pub async fn run(cmd: AgentsCmd) -> Result<()> {
@@ -55,18 +64,7 @@ pub async fn run(cmd: AgentsCmd) -> Result<()> {
             username,
             soul,
             identity,
-        } => {
-            init(
-                &*store,
-                name,
-                model,
-                api_key_env,
-                username,
-                soul,
-                identity,
-            )
-            .await
-        }
+        } => init(&*store, name, model, api_key_env, username, soul, identity).await,
         AgentsCmd::Files { name, cmd } => files(&*store, &name, cmd).await,
         AgentsCmd::Rm { name } => rm(&*store, &name).await,
     }
@@ -79,11 +77,7 @@ async fn ls(store: &dyn Store) -> Result<()> {
         return Ok(());
     }
     for a in agents {
-        let model = a
-            .config
-            .get("model")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let model = a.config.get("model").and_then(|v| v.as_str()).unwrap_or("");
         println!("{:<24} {:<32} {}", a.id, a.name, model);
     }
     Ok(())
@@ -156,9 +150,12 @@ async fn files(store: &dyn Store, name: &str, cmd: FilesCmd) -> Result<()> {
             Ok(())
         }
         FilesCmd::Put { filename, path, .. } => {
-            let bytes = std::fs::read(&path)
-                .map_err(|e| cleanclaw_core::CleanClawError::Internal(format!("read {path:?}: {e}")))?;
-            store.save_workspace_file(&agent.id, "", &filename, &bytes).await?;
+            let bytes = std::fs::read(&path).map_err(|e| {
+                cleanclaw_core::CleanClawError::Internal(format!("read {path:?}: {e}"))
+            })?;
+            store
+                .save_workspace_file(&agent.id, "", &filename, &bytes)
+                .await?;
             println!("uploaded {filename} ({} bytes)", bytes.len());
             Ok(())
         }
@@ -183,7 +180,9 @@ pub async fn resolve_agent(store: &dyn Store, name: &str) -> Result<AgentRecord>
             return Ok(a);
         }
     }
-    Err(cleanclaw_core::CleanClawError::NotFound(format!("agent {name}")))
+    Err(cleanclaw_core::CleanClawError::NotFound(format!(
+        "agent {name}"
+    )))
 }
 
 async fn ensure_admin(store: &dyn Store) -> Result<String> {

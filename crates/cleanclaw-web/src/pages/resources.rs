@@ -5,7 +5,9 @@
 //! Each page is a server-rendered card layout that lists the
 //! corresponding resources and exposes create / delete actions.
 
-use crate::html::{card_open, card_close, card_header, card_title, card_content, card_description, esc, Theme};
+use crate::html::{
+    card_close, card_content, card_description, card_header, card_open, card_title, esc, Theme,
+};
 use crate::layout::{render, NavKey};
 use crate::types::*;
 
@@ -19,7 +21,9 @@ pub fn channels_list(theme: Theme, channels: &[ChannelInfo]) -> String {
         rows.push(vec![
             esc(&c.kind),
             esc(&c.bot_username),
-            c.enabled.map(|b| if b { "yes" } else { "no" }.to_string()).unwrap_or_default(),
+            c.enabled
+                .map(|b| if b { "yes" } else { "no" }.to_string())
+                .unwrap_or_default(),
             esc(c.status.as_deref().unwrap_or("")),
         ]);
     }
@@ -36,11 +40,22 @@ pub fn channels_list(theme: Theme, channels: &[ChannelInfo]) -> String {
         card_header = card_header(),
         card_title = card_title("Channels"),
         card_content = card_content(""),
-        create_btn = crate::html::button("Add channel", crate::html::ButtonVariant::Default, crate::html::ButtonSize::Sm, Some("/channels-config")),
+        create_btn = crate::html::button(
+            "Add channel",
+            crate::html::ButtonVariant::Default,
+            crate::html::ButtonSize::Sm,
+            Some("/channels-config")
+        ),
         table = crate::html::table(&["Type", "Bot username", "Enabled", "Status"], &rows),
         card_close = card_close(),
     );
-    render("Channels · CleanClaw", NavKey::Channels, &body, Some(("Ada", "admin")), theme)
+    render(
+        "Channels · CleanClaw",
+        NavKey::Channels,
+        &body,
+        Some(("Ada", "admin")),
+        theme,
+    )
 }
 
 // =====================================================================
@@ -71,11 +86,22 @@ pub fn channels_config(theme: Theme, channels: &[ChannelRow]) -> String {
         card_header = card_header(),
         card_title = card_title("Channel configuration"),
         card_content = card_content(""),
-        create_btn = crate::html::button("New channel", crate::html::ButtonVariant::Default, crate::html::ButtonSize::Sm, Some("/channels-config/new")),
+        create_btn = crate::html::button(
+            "New channel",
+            crate::html::ButtonVariant::Default,
+            crate::html::ButtonSize::Sm,
+            Some("/channels-config/new")
+        ),
         table = crate::html::table(&["ID", "Scope", "Scope ID", "Type", "Enabled"], &rows),
         card_close = card_close(),
     );
-    render("Channel config · CleanClaw", NavKey::ChannelsConfig, &body, Some(("Ada", "admin")), theme)
+    render(
+        "Channel config · CleanClaw",
+        NavKey::ChannelsConfig,
+        &body,
+        Some(("Ada", "admin")),
+        theme,
+    )
 }
 
 // =====================================================================
@@ -127,7 +153,13 @@ pub fn models(theme: Theme, models: &[ModelEntry]) -> String {
         },
         card_close = card_close(),
     );
-    render("Models · CleanClaw", NavKey::Models, &body, Some(("Ada", "user")), theme)
+    render(
+        "Models · CleanClaw",
+        NavKey::Models,
+        &body,
+        Some(("Ada", "user")),
+        theme,
+    )
 }
 
 // =====================================================================
@@ -164,7 +196,12 @@ pub fn providers(theme: Theme, providers: &[ProviderRow]) -> String {
         card_header = card_header(),
         card_title = card_title("Providers"),
         card_content = card_content(""),
-        create_btn = crate::html::button("New provider", crate::html::ButtonVariant::Default, crate::html::ButtonSize::Sm, Some("/providers/new")),
+        create_btn = crate::html::button(
+            "New provider",
+            crate::html::ButtonVariant::Default,
+            crate::html::ButtonSize::Sm,
+            Some("/providers/new")
+        ),
         rows_html = if rows.is_empty() {
             r#"<tr><td colspan="5" class="p-2 text-muted-foreground text-sm">No providers configured.</td></tr>"#.to_string()
         } else {
@@ -181,7 +218,13 @@ pub fn providers(theme: Theme, providers: &[ProviderRow]) -> String {
         },
         card_close = card_close(),
     );
-    render("Providers · CleanClaw", NavKey::Providers, &body, Some(("Ada", "admin")), theme)
+    render(
+        "Providers · CleanClaw",
+        NavKey::Providers,
+        &body,
+        Some(("Ada", "admin")),
+        theme,
+    )
 }
 
 // =====================================================================
@@ -233,7 +276,13 @@ pub fn plugins(theme: Theme, plugins: &[PluginInfo]) -> String {
         },
         card_close = card_close(),
     );
-    render("Plugins · CleanClaw", NavKey::Plugins, &body, Some(("Ada", "admin")), theme)
+    render(
+        "Plugins · CleanClaw",
+        NavKey::Plugins,
+        &body,
+        Some(("Ada", "admin")),
+        theme,
+    )
 }
 
 // =====================================================================
@@ -243,11 +292,7 @@ pub fn plugins(theme: Theme, plugins: &[PluginInfo]) -> String {
 pub fn skills(theme: Theme, skills: &[SkillInfo]) -> String {
     let mut rows: Vec<Vec<String>> = Vec::new();
     for s in skills {
-        rows.push(vec![
-            esc(&s.name),
-            esc(&s.description),
-            esc(&s.location),
-        ]);
+        rows.push(vec![esc(&s.name), esc(&s.description), esc(&s.location)]);
     }
     let body = format!(
         r#"{card_open}
@@ -266,7 +311,12 @@ pub fn skills(theme: Theme, skills: &[SkillInfo]) -> String {
         card_header = card_header(),
         card_title = card_title("Skills"),
         card_content = card_content(""),
-        install_btn = crate::html::button("Install skill", crate::html::ButtonVariant::Default, crate::html::ButtonSize::Sm, Some("/skills/install")),
+        install_btn = crate::html::button(
+            "Install skill",
+            crate::html::ButtonVariant::Default,
+            crate::html::ButtonSize::Sm,
+            Some("/skills/install")
+        ),
         rows_html = if rows.is_empty() {
             r#"<tr><td colspan="3" class="p-2 text-muted-foreground text-sm">No skills installed.</td></tr>"#.to_string()
         } else {
@@ -283,7 +333,13 @@ pub fn skills(theme: Theme, skills: &[SkillInfo]) -> String {
         },
         card_close = card_close(),
     );
-    render("Skills · CleanClaw", NavKey::Skills, &body, Some(("Ada", "user")), theme)
+    render(
+        "Skills · CleanClaw",
+        NavKey::Skills,
+        &body,
+        Some(("Ada", "user")),
+        theme,
+    )
 }
 
 // =====================================================================
@@ -355,7 +411,13 @@ pub fn tools(theme: Theme, cfg: Option<&ToolsConfig>) -> String {
             card_close = card_close(),
         ),
     };
-    render("Tools · CleanClaw", NavKey::Tools, &body, Some(("Ada", "user")), theme)
+    render(
+        "Tools · CleanClaw",
+        NavKey::Tools,
+        &body,
+        Some(("Ada", "user")),
+        theme,
+    )
 }
 
 // =====================================================================
@@ -392,7 +454,12 @@ pub fn cron(theme: Theme, jobs: &[CronJobInfo]) -> String {
         card_header = card_header(),
         card_title = card_title("Scheduler"),
         card_content = card_content(""),
-        create_btn = crate::html::button("New job", crate::html::ButtonVariant::Default, crate::html::ButtonSize::Sm, Some("/cron/new")),
+        create_btn = crate::html::button(
+            "New job",
+            crate::html::ButtonVariant::Default,
+            crate::html::ButtonSize::Sm,
+            Some("/cron/new")
+        ),
         rows_html = if rows.is_empty() {
             r#"<tr><td colspan="5" class="p-2 text-muted-foreground text-sm">No cron jobs.</td></tr>"#.to_string()
         } else {
@@ -409,7 +476,13 @@ pub fn cron(theme: Theme, jobs: &[CronJobInfo]) -> String {
         },
         card_close = card_close(),
     );
-    render("Scheduler · CleanClaw", NavKey::Cron, &body, Some(("Ada", "user")), theme)
+    render(
+        "Scheduler · CleanClaw",
+        NavKey::Cron,
+        &body,
+        Some(("Ada", "user")),
+        theme,
+    )
 }
 
 // =====================================================================
@@ -456,7 +529,8 @@ pub fn onboard(theme: Theme, error: Option<&str>) -> String {
         card_title = card_title("Welcome to CleanClaw"),
         desc = card_description("Set up the admin account and connect a provider."),
         error_alert = match error {
-            Some(msg) => crate::html::alert("Setup failed", msg, crate::html::AlertVariant::Destructive),
+            Some(msg) =>
+                crate::html::alert("Setup failed", msg, crate::html::AlertVariant::Destructive),
             None => String::new(),
         },
         label_user = crate::html::label("Username", "username"),
@@ -466,7 +540,12 @@ pub fn onboard(theme: Theme, error: Option<&str>) -> String {
         label_pass = crate::html::label("Password", "password"),
         input_pass = crate::html::html_password("password", "Password (min 8 chars)", ""),
         label_base = crate::html::label("API base URL", "apiBase"),
-        input_base = crate::html::input("apiBase", "https://api.openai.com/v1", "https://api.openai.com/v1", "url"),
+        input_base = crate::html::input(
+            "apiBase",
+            "https://api.openai.com/v1",
+            "https://api.openai.com/v1",
+            "url"
+        ),
         label_key = crate::html::label("API key", "apiKey"),
         input_key = crate::html::html_password("apiKey", "API key", ""),
         label_model = crate::html::label("Default model", "model"),
@@ -521,7 +600,12 @@ mod tests {
             name: "GPT-4o".into(),
             reasoning: false,
             input: vec!["text".into()],
-            cost: ModelCost { input: 0.0, output: 0.0, cache_read: 0.0, cache_write: 0.0 },
+            cost: ModelCost {
+                input: 0.0,
+                output: 0.0,
+                cache_read: 0.0,
+                cache_write: 0.0,
+            },
             context_window: 128000,
             max_tokens: 16384,
         }];

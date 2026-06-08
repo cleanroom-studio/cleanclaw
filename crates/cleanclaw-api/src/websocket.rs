@@ -75,10 +75,7 @@ pub struct ConnectAuth {
 }
 
 /// `GET /api/ws` — accept a WebSocket upgrade.
-pub async fn ws_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<WsState>,
-) -> impl IntoResponse {
+pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<WsState>) -> impl IntoResponse {
     ws.on_upgrade(move |socket| handle_socket(socket, state))
 }
 

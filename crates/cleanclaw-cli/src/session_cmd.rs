@@ -29,12 +29,7 @@ async fn ls(store: &dyn Store, name: &str) -> Result<()> {
     let agent = resolve_agent(store, name).await?;
     let sessions = store.list_sessions(&agent.user_id, &agent.id).await?;
     for s in sessions {
-        println!(
-            "{:<28} {:<8} {}",
-            s.key,
-            s.message_count,
-            s.title
-        );
+        println!("{:<28} {:<8} {}", s.key, s.message_count, s.title);
     }
     Ok(())
 }
@@ -56,4 +51,3 @@ async fn rm(store: &dyn Store, name: &str, key: &str) -> Result<()> {
     println!("session {key} deleted");
     Ok(())
 }
-

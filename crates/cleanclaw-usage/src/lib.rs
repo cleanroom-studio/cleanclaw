@@ -351,15 +351,45 @@ mod tests {
     #[tokio::test]
     async fn top_agents_sorts_by_tokens_desc() {
         let m = MemMeter::new();
-        m.record_tokens("u", "a1", "s", "p", "m", Tokens { input: 100, ..Default::default() })
-            .await
-            .unwrap();
-        m.record_tokens("u", "a2", "s", "p", "m", Tokens { input: 500, ..Default::default() })
-            .await
-            .unwrap();
-        m.record_tokens("u", "a3", "s", "p", "m", Tokens { input: 200, ..Default::default() })
-            .await
-            .unwrap();
+        m.record_tokens(
+            "u",
+            "a1",
+            "s",
+            "p",
+            "m",
+            Tokens {
+                input: 100,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        m.record_tokens(
+            "u",
+            "a2",
+            "s",
+            "p",
+            "m",
+            Tokens {
+                input: 500,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        m.record_tokens(
+            "u",
+            "a3",
+            "s",
+            "p",
+            "m",
+            Tokens {
+                input: 200,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
         let r = m.top_agents(Range::last_n(1), 10).await.unwrap();
         assert_eq!(r[0].key, "a2");
         assert_eq!(r[0].tokens, 500);
@@ -371,9 +401,19 @@ mod tests {
     async fn top_agents_limit_caps_results() {
         let m = MemMeter::new();
         for n in 0..5 {
-            m.record_tokens("u", &format!("a{n}"), "s", "p", "m", Tokens { input: n, ..Default::default() })
-                .await
-                .unwrap();
+            m.record_tokens(
+                "u",
+                &format!("a{n}"),
+                "s",
+                "p",
+                "m",
+                Tokens {
+                    input: n,
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
         }
         let r = m.top_agents(Range::last_n(1), 2).await.unwrap();
         assert_eq!(r.len(), 2);
@@ -384,21 +424,64 @@ mod tests {
     #[tokio::test]
     async fn sessions_for_agent_filters_by_user() {
         let m = MemMeter::new();
-        m.record_tokens("u1", "a1", "s1", "p", "m", Tokens { input: 10, ..Default::default() })
-            .await
-            .unwrap();
-        m.record_tokens("u2", "a1", "s2", "p", "m", Tokens { input: 20, ..Default::default() })
-            .await
-            .unwrap();
-        m.record_tokens("u1", "a1", "s1", "p", "m", Tokens { input: 30, ..Default::default() })
-            .await
-            .unwrap();
-        m.record_tokens("u1", "a2", "s3", "p", "m", Tokens { input: 999, ..Default::default() })
-            .await
-            .unwrap();
+        m.record_tokens(
+            "u1",
+            "a1",
+            "s1",
+            "p",
+            "m",
+            Tokens {
+                input: 10,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        m.record_tokens(
+            "u2",
+            "a1",
+            "s2",
+            "p",
+            "m",
+            Tokens {
+                input: 20,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        m.record_tokens(
+            "u1",
+            "a1",
+            "s1",
+            "p",
+            "m",
+            Tokens {
+                input: 30,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        m.record_tokens(
+            "u1",
+            "a2",
+            "s3",
+            "p",
+            "m",
+            Tokens {
+                input: 999,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
 
         // All users for a1
-        let r = m.sessions_for_agent("a1", "", Range::last_n(1), 0).await.unwrap();
+        let r = m
+            .sessions_for_agent("a1", "", Range::last_n(1), 0)
+            .await
+            .unwrap();
         assert_eq!(r.len(), 2);
         assert_eq!(r[0].key, "s1"); // tokens 40 > 20
         assert_eq!(r[0].tokens, 40);

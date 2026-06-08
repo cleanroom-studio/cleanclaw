@@ -167,10 +167,9 @@ pub fn compute_next_run(job: &CronJobRecord, now: DateTime<Utc>) -> Result<DateT
             let schedule = Schedule::from_str(&job.schedule).map_err(|e| {
                 cleanclaw_core::CleanClawError::InvalidArgument(format!("cron expr: {e}"))
             })?;
-            schedule
-                .after(&now)
-                .next()
-                .ok_or_else(|| cleanclaw_core::CleanClawError::NotImplemented("no future fire".into()))
+            schedule.after(&now).next().ok_or_else(|| {
+                cleanclaw_core::CleanClawError::NotImplemented("no future fire".into())
+            })
         }
         "interval" => {
             let trimmed = job.schedule.trim_start_matches("every ").trim();
@@ -314,7 +313,10 @@ mod tests {
         assert_eq!(parse_duration("5m").unwrap(), Duration::from_secs(300));
         assert_eq!(parse_duration("1h").unwrap(), Duration::from_secs(3600));
         assert_eq!(parse_duration("30s").unwrap(), Duration::from_secs(30));
-        assert_eq!(parse_duration("2d").unwrap(), Duration::from_secs(2 * 86400));
+        assert_eq!(
+            parse_duration("2d").unwrap(),
+            Duration::from_secs(2 * 86400)
+        );
     }
 
     #[test]
@@ -344,7 +346,10 @@ mod tests {
     #[test]
     fn validate_once_iso() {
         let t = validate_once("2026-12-31T23:59:00Z").unwrap();
-        assert_eq!(t.format("%Y-%m-%dT%H:%M:%SZ").to_string(), "2026-12-31T23:59:00Z");
+        assert_eq!(
+            t.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+            "2026-12-31T23:59:00Z"
+        );
     }
 
     #[test]

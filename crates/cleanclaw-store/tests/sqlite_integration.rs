@@ -51,7 +51,9 @@ async fn users_crud_and_idempotent_upserts() {
 #[tokio::test]
 async fn web_sessions_round_trip() {
     let st = fresh().await;
-    st.create_user(&make_user("u_alice", "alice")).await.unwrap();
+    st.create_user(&make_user("u_alice", "alice"))
+        .await
+        .unwrap();
     let sess = cleanclaw_store::models::WebSessionRecord {
         sid: "s_abc".into(),
         user_id: "u_alice".into(),
@@ -66,7 +68,9 @@ async fn web_sessions_round_trip() {
 #[tokio::test]
 async fn api_key_lifecycle() {
     let st = fresh().await;
-    st.create_user(&make_user("u_alice", "alice")).await.unwrap();
+    st.create_user(&make_user("u_alice", "alice"))
+        .await
+        .unwrap();
     let k = cleanclaw_store::models::ApiKeyRecord {
         id: "k1".into(),
         user_id: "u_alice".into(),
@@ -81,14 +85,18 @@ async fn api_key_lifecycle() {
     st.create_api_key(&k).await.unwrap();
     let keys = st.list_api_keys("u_alice").await.unwrap();
     assert_eq!(keys.len(), 1);
-    st.rotate_api_key("k1", "newhash", "newprefix").await.unwrap();
+    st.rotate_api_key("k1", "newhash", "newprefix")
+        .await
+        .unwrap();
     let got = st.get_api_key("k1").await.unwrap();
     assert_eq!(got.key_hash, "newhash");
     assert_eq!(got.key_prefix, "newprefix");
     let by_hash = st.lookup_api_key_by_hash("newhash").await.unwrap();
     assert_eq!(by_hash.id, "k1");
     // apikey_agents M:N
-    st.set_api_key_agents("k1", &["agt_1".into(), "agt_2".into()]).await.unwrap();
+    st.set_api_key_agents("k1", &["agt_1".into(), "agt_2".into()])
+        .await
+        .unwrap();
     let agents = st.list_api_key_agents("k1").await.unwrap();
     assert_eq!(agents.len(), 2);
     st.delete_api_key("k1").await.unwrap();
@@ -98,7 +106,9 @@ async fn api_key_lifecycle() {
 #[tokio::test]
 async fn agents_and_workspace_files() {
     let st = fresh().await;
-    st.create_user(&make_user("u_alice", "alice")).await.unwrap();
+    st.create_user(&make_user("u_alice", "alice"))
+        .await
+        .unwrap();
     let a = cleanclaw_store::models::AgentRecord {
         id: "agt_1".into(),
         user_id: "u_alice".into(),
@@ -124,11 +134,17 @@ async fn agents_and_workspace_files() {
     assert!(files.contains(&"SOUL.md".to_string()));
     assert!(files.contains(&"MEMORY.md".to_string()));
 
-    let (row_user, content) = st.get_workspace_file("agt_1", "u_alice", "MEMORY.md").await.unwrap();
+    let (row_user, content) = st
+        .get_workspace_file("agt_1", "u_alice", "MEMORY.md")
+        .await
+        .unwrap();
     assert_eq!(row_user, "u_alice");
     assert_eq!(content, b"chatter memory");
 
-    let (row_user, content) = st.get_workspace_file("agt_1", "u_alice", "SOUL.md").await.unwrap();
+    let (row_user, content) = st
+        .get_workspace_file("agt_1", "u_alice", "SOUL.md")
+        .await
+        .unwrap();
     assert_eq!(row_user, ""); // fell through to owner
     assert_eq!(content, b"# SOUL");
 }
@@ -136,7 +152,9 @@ async fn agents_and_workspace_files() {
 #[tokio::test]
 async fn sessions_and_message_archive() {
     let st = fresh().await;
-    st.create_user(&make_user("u_alice", "alice")).await.unwrap();
+    st.create_user(&make_user("u_alice", "alice"))
+        .await
+        .unwrap();
     let mut s = cleanclaw_store::models::SessionRecord {
         user_id: "u_alice".into(),
         agent_id: "agt_1".into(),
@@ -151,9 +169,13 @@ async fn sessions_and_message_archive() {
         updated_at: Utc::now(),
         chatter_user_id: "u_alice".into(),
     };
-    st.save_session("u_alice", "agt_1", "sk_1", &s).await.unwrap();
+    st.save_session("u_alice", "agt_1", "sk_1", &s)
+        .await
+        .unwrap();
     s.title = "renamed".into();
-    st.save_session("u_alice", "agt_1", "sk_1", &s).await.unwrap();
+    st.save_session("u_alice", "agt_1", "sk_1", &s)
+        .await
+        .unwrap();
     let got = st.get_session("u_alice", "agt_1", "sk_1").await.unwrap();
     assert_eq!(got.title, "renamed");
 
@@ -185,7 +207,10 @@ async fn sessions_and_message_archive() {
     let s2 = st.append_session_message(&m2).await.unwrap();
     assert_eq!(s1, 0);
     assert_eq!(s2, 1);
-    let msgs = st.list_session_messages("u_alice", "agt_1", "sk_1").await.unwrap();
+    let msgs = st
+        .list_session_messages("u_alice", "agt_1", "sk_1")
+        .await
+        .unwrap();
     assert_eq!(msgs.len(), 2);
     assert_eq!(msgs[1].content, "hello");
 }
@@ -193,7 +218,9 @@ async fn sessions_and_message_archive() {
 #[tokio::test]
 async fn configs_scope_tagged() {
     let st = fresh().await;
-    st.create_user(&make_user("u_alice", "alice")).await.unwrap();
+    st.create_user(&make_user("u_alice", "alice"))
+        .await
+        .unwrap();
     let rec = cleanclaw_store::models::ConfigRecord {
         id: "cfg_1".into(),
         kind: "provider".into(),
@@ -216,14 +243,21 @@ async fn configs_scope_tagged() {
 
     let list = st.list_configs("provider", "u_alice", "").await.unwrap();
     assert_eq!(list.len(), 1);
-    st.delete_config("provider", "u_alice", "", "openai").await.unwrap();
-    assert!(st.get_config("provider", "u_alice", "", "openai").await.is_err());
+    st.delete_config("provider", "u_alice", "", "openai")
+        .await
+        .unwrap();
+    assert!(st
+        .get_config("provider", "u_alice", "", "openai")
+        .await
+        .is_err());
 }
 
 #[tokio::test]
 async fn cron_jobs_lifecycle() {
     let st = fresh().await;
-    st.create_user(&make_user("u_alice", "alice")).await.unwrap();
+    st.create_user(&make_user("u_alice", "alice"))
+        .await
+        .unwrap();
     let j = cleanclaw_store::models::CronJobRecord {
         id: "cj_1".into(),
         user_id: "u_alice".into(),
@@ -245,7 +279,10 @@ async fn cron_jobs_lifecycle() {
         created_at: Utc::now(),
     };
     st.save_cron_job(&j).await.unwrap();
-    let due = st.list_due_cron_jobs(Utc::now().timestamp(), 100).await.unwrap();
+    let due = st
+        .list_due_cron_jobs(Utc::now().timestamp(), 100)
+        .await
+        .unwrap();
     assert!(due.iter().any(|x| x.id == "cj_1"));
     st.delete_cron_job("cj_1").await.unwrap();
 }
@@ -281,7 +318,9 @@ async fn channel_lease_acquire_renew_release() {
 #[tokio::test]
 async fn token_usage_upsert_aggregates() {
     let st = fresh().await;
-    st.create_user(&make_user("u_alice", "alice")).await.unwrap();
+    st.create_user(&make_user("u_alice", "alice"))
+        .await
+        .unwrap();
     let day = chrono::NaiveDate::from_ymd_opt(2026, 6, 1).unwrap();
     let mut r = cleanclaw_store::models::TokenUsageRecord {
         day,
@@ -382,10 +421,7 @@ async fn lookup_channel_by_credential_finds_system_row_when_credential_empty() {
 
     // A blank credential_key in the lookup still finds the
     // system row — the SQL OR-matches both shapes.
-    let got = st
-        .lookup_channel_by_credential("slack", "")
-        .await
-        .unwrap();
+    let got = st.lookup_channel_by_credential("slack", "").await.unwrap();
     let got = got.expect("system-scoped row must be findable");
     assert!(got.user_id.is_empty());
     assert_eq!(got.agent_id, "slack_main");

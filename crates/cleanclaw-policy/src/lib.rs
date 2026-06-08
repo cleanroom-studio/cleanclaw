@@ -261,10 +261,7 @@ impl Engine {
                         continue;
                     }
                     if !rule.methods.is_empty()
-                        && !rule
-                            .methods
-                            .iter()
-                            .any(|m| m.eq_ignore_ascii_case(method))
+                        && !rule.methods.iter().any(|m| m.eq_ignore_ascii_case(method))
                     {
                         continue;
                     }
@@ -424,8 +421,12 @@ mod tests {
             paths: vec!["/api/*".into()],
         }];
         let e = Engine::new(p);
-        assert!(e.check_network("api.example.com", 443, "GET", "/api/v1/x").is_ok());
-        assert!(e.check_network("example.com", 443, "GET", "/api/v1/x").is_ok());
+        assert!(e
+            .check_network("api.example.com", 443, "GET", "/api/v1/x")
+            .is_ok());
+        assert!(e
+            .check_network("example.com", 443, "GET", "/api/v1/x")
+            .is_ok());
         assert!(e
             .check_network("api.example.com", 80, "GET", "/api/v1/x")
             .is_err());

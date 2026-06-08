@@ -113,12 +113,7 @@ pub trait Store: Send + Sync {
     ) -> Result<()>;
     async fn list_sessions(&self, user_id: &str, agent_id: &str) -> Result<Vec<SessionMeta>>;
     async fn list_session_owner_pairs(&self) -> Result<Vec<SessionOwnerPair>>;
-    async fn delete_session(
-        &self,
-        user_id: &str,
-        agent_id: &str,
-        session_key: &str,
-    ) -> Result<()>;
+    async fn delete_session(&self, user_id: &str, agent_id: &str, session_key: &str) -> Result<()>;
     async fn rename_session(
         &self,
         user_id: &str,
@@ -188,12 +183,7 @@ pub trait Store: Send + Sync {
         project_id: &str,
     ) -> Result<ProjectRecord>;
     async fn save_project(&self, p: &ProjectRecord) -> Result<()>;
-    async fn delete_project(
-        &self,
-        user_id: &str,
-        agent_id: &str,
-        project_id: &str,
-    ) -> Result<()>;
+    async fn delete_project(&self, user_id: &str, agent_id: &str, project_id: &str) -> Result<()>;
 
     // ---- Goals ----
     async fn save_goal(&self, g: &GoalRecord) -> Result<()>;
@@ -237,8 +227,6 @@ pub trait Store: Send + Sync {
 
     // ---- Token usage ----
     async fn upsert_token_usage(&self, r: &TokenUsageRecord) -> Result<()>;
-    async fn list_token_usage(
-        &self,
-        since_day: chrono::NaiveDate,
-    ) -> Result<Vec<TokenUsageRecord>>;
+    async fn list_token_usage(&self, since_day: chrono::NaiveDate)
+        -> Result<Vec<TokenUsageRecord>>;
 }

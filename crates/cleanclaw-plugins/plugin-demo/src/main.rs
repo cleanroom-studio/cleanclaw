@@ -5,9 +5,7 @@
 //! Provides a single `echo` tool that returns whatever text is sent.
 
 use async_trait::async_trait;
-use cleanclaw_plugin_runtime::{
-    args_object, run_plugin, Plugin, PluginError, ToolDef, ToolResult,
-};
+use cleanclaw_plugin_runtime::{args_object, run_plugin, Plugin, PluginError, ToolDef, ToolResult};
 use serde_json::Value;
 use std::sync::Arc;
 
@@ -34,11 +32,7 @@ impl Plugin for EchoPlugin {
         }])
     }
 
-    async fn tool_execute(
-        &self,
-        name: &str,
-        args: Value,
-    ) -> Result<ToolResult, PluginError> {
+    async fn tool_execute(&self, name: &str, args: Value) -> Result<ToolResult, PluginError> {
         match name {
             "echo" => {
                 let text = args

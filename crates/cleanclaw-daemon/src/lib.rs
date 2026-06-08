@@ -100,9 +100,7 @@ pub fn is_running() -> bool {
 
 #[cfg(unix)]
 fn libc_kill(pid: u32) -> i32 {
-    let status = Command::new("kill")
-        .args(["-0", &pid.to_string()])
-        .status();
+    let status = Command::new("kill").args(["-0", &pid.to_string()]).status();
     match status {
         Ok(s) => {
             if s.success() {
@@ -224,10 +222,8 @@ pub async fn shutdown_signal() {
     #[cfg(unix)]
     {
         use tokio::signal::unix::{signal, SignalKind};
-        let mut term = signal(SignalKind::terminate())
-            .expect("install SIGTERM handler");
-        let mut int = signal(SignalKind::interrupt())
-            .expect("install SIGINT handler");
+        let mut term = signal(SignalKind::terminate()).expect("install SIGTERM handler");
+        let mut int = signal(SignalKind::interrupt()).expect("install SIGINT handler");
         tokio::select! {
             _ = term.recv() => info!("received SIGTERM, shutting down"),
             _ = int.recv() => info!("received SIGINT, shutting down"),
@@ -304,14 +300,20 @@ pub fn install_launchd(exe_path: &Path) -> std::io::Result<()> {
     }
     fs::write(&path, plist)?;
     info!("launchd plist written: {}", path.display());
-    let _ = Command::new("launchctl").args(["load", "-w"]).arg(&path).status();
+    let _ = Command::new("launchctl")
+        .args(["load", "-w"])
+        .arg(&path)
+        .status();
     Ok(())
 }
 
 pub fn uninstall_launchd() -> std::io::Result<()> {
     let path = launchd_plist_path();
     if path.exists() {
-        let _ = Command::new("launchctl").args(["unload"]).arg(&path).status();
+        let _ = Command::new("launchctl")
+            .args(["unload"])
+            .arg(&path)
+            .status();
         fs::remove_file(&path)?;
     }
     Ok(())
@@ -488,7 +490,10 @@ mod tests {
         std::fs::write(pid_path(), format!("{fake}\n")).unwrap();
         let s = get_status().unwrap();
         assert!(!s.running, "fake PID should not be reported as running");
-        assert!(!pid_path().exists(), "stale PID file should have been removed");
+        assert!(
+            !pid_path().exists(),
+            "stale PID file should have been removed"
+        );
     }
 
     #[test]
@@ -526,10 +531,7 @@ use tokio::sync::watch;
 /// immediately. On the Rust side we return a `DaemonHandle` that
 /// holds the spawned process + a watch channel for the wrapper's
 /// lifecycle.
-pub async fn start(
-    port: u16,
-    log_file: &Path,
-) -> Result<DaemonHandle, DaemonError> {
+pub async fn start(port: u16, log_file: &Path) -> Result<DaemonHandle, DaemonError> {
     let exe = std::env::current_exe()?;
     let pidfile = pid_path();
     if let Some(parent) = pidfile.parent() {
@@ -582,7 +584,9 @@ fn libc_setsid() {
     extern "C" {
         fn setsid() -> i32;
     }
-    unsafe { setsid(); }
+    unsafe {
+        setsid();
+    }
 }
 
 /// Handle to a running detached daemon. Drop the handle to send a

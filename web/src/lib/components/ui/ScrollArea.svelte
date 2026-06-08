@@ -1,6 +1,10 @@
 <script lang="ts">
-  import { scrollAreaClasses } from './classes';
-  let { children, class: cls = '', maxHeight = '24rem' }: {
+  import { scrollAreaClasses } from "./classes";
+  let {
+    children,
+    class: cls = "",
+    maxHeight = "24rem",
+  }: {
     children?: any;
     class?: string;
     maxHeight?: string;

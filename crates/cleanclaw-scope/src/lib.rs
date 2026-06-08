@@ -315,15 +315,30 @@ mod tests {
 
     #[test]
     fn ownership_from_scope_round_trip() {
-        assert_eq!(ownership_from_scope("user", "u1"), ("u1".to_string(), "".to_string()));
-        assert_eq!(ownership_from_scope("agent", "a1"), ("".to_string(), "a1".to_string()));
-        assert_eq!(ownership_from_scope("system", ""), ("".to_string(), "".to_string()));
-        assert_eq!(ownership_from_scope("garbage", "x"), ("".to_string(), "".to_string()));
+        assert_eq!(
+            ownership_from_scope("user", "u1"),
+            ("u1".to_string(), "".to_string())
+        );
+        assert_eq!(
+            ownership_from_scope("agent", "a1"),
+            ("".to_string(), "a1".to_string())
+        );
+        assert_eq!(
+            ownership_from_scope("system", ""),
+            ("".to_string(), "".to_string())
+        );
+        assert_eq!(
+            ownership_from_scope("garbage", "x"),
+            ("".to_string(), "".to_string())
+        );
     }
 
     #[test]
     fn scope_from_ownership_user_agent_compound() {
-        assert_eq!(scope_from_ownership("u", "a"), ("user-agent", "u/a".to_string()));
+        assert_eq!(
+            scope_from_ownership("u", "a"),
+            ("user-agent", "u/a".to_string())
+        );
         assert_eq!(scope_from_ownership("u", ""), ("user", "u".to_string()));
         assert_eq!(scope_from_ownership("", "a"), ("agent", "a".to_string()));
         assert_eq!(scope_from_ownership("", ""), ("system", "".to_string()));

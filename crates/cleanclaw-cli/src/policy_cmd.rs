@@ -6,7 +6,9 @@
 
 use clap::Subcommand;
 use cleanclaw_core::Result;
-use cleanclaw_policy::{default_policy, load_preset, restricted_policy, standard_policy, Engine, Policy};
+use cleanclaw_policy::{
+    default_policy, load_preset, restricted_policy, standard_policy, Engine, Policy,
+};
 
 #[derive(Subcommand)]
 pub enum PolicyCmd {
@@ -19,7 +21,10 @@ pub enum PolicyCmd {
 const BUILTIN_PRESETS: &[(&str, &str)] = &[
     ("default", "Default — host passthrough with audit logging"),
     ("restricted", "Restricted — read-only FS, no net, no exec"),
-    ("standard", "Standard — workspace FS only, HTTPS net, all tools"),
+    (
+        "standard",
+        "Standard — workspace FS only, HTTPS net, all tools",
+    ),
 ];
 
 pub async fn run(cmd: PolicyCmd) -> Result<()> {

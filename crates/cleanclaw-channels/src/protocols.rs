@@ -82,7 +82,7 @@ pub struct PresenceUpdate {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeartbeatPayload {
-    pub op: u8, // always 1
+    pub op: u8,         // always 1
     pub d: Option<i64>, // last sequence number, or null
 }
 
@@ -90,9 +90,9 @@ pub struct HeartbeatPayload {
 /// `t` field is the event name (`MESSAGE_CREATE`, `READY`, …).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dispatch {
-    pub op: u8, // 0
+    pub op: u8,         // 0
     pub s: Option<u64>, // sequence
-    pub t: String, // event name
+    pub t: String,      // event name
     pub d: serde_json::Value,
 }
 
@@ -248,7 +248,7 @@ pub struct FeishuMessage {
     pub create_time: String,
     pub chat_id: String,
     pub message_type: String, // "text" | "image" | "post" | …
-    pub content: String, // JSON-encoded body
+    pub content: String,      // JSON-encoded body
 }
 
 impl FeishuMessageEvent {

@@ -21,6 +21,8 @@ mod tests {
         assert!(!scrubbed.contains("AKIA"));
         let threats = scan(s);
         assert!(threats.iter().any(|t| t.kind == ThreatType::CredentialLeak));
-        assert!(threats.iter().any(|t| t.kind == ThreatType::PromptInjection));
+        assert!(threats
+            .iter()
+            .any(|t| t.kind == ThreatType::PromptInjection));
     }
 }

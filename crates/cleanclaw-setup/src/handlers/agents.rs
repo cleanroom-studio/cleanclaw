@@ -20,9 +20,17 @@ use crate::{Server, ServerState, SetupError};
 pub fn router() -> Router<Arc<ServerState>> {
     Router::new()
         .route("/api/agents", get(list_agents).post(create_agent))
-        .route("/api/agents/:id", get(get_agent).put(update_agent).delete(delete_agent))
+        .route(
+            "/api/agents/:id",
+            get(get_agent).put(update_agent).delete(delete_agent),
+        )
         .route("/api/agents/:id/files", get(list_agent_files))
-        .route("/api/agents/:id/files/:name", get(get_agent_file).put(put_agent_file).delete(delete_agent_file))
+        .route(
+            "/api/agents/:id/files/:name",
+            get(get_agent_file)
+                .put(put_agent_file)
+                .delete(delete_agent_file),
+        )
 }
 
 #[derive(Debug, Serialize)]
@@ -91,7 +99,10 @@ async fn create_agent(
         header_user(&headers)
     };
     if owner.is_empty() {
-        return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "owner required"})))
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({"error": "owner required"})),
+        )
             .into_response();
     }
     let now = chrono::Utc::now();
@@ -205,19 +216,18 @@ async fn get_agent_file(
     Path((id, name)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let user_id = String::new(); // user_id="" → shared file
-    match state
-        .store
-        .get_workspace_file(&id, &user_id, &name)
-        .await
-    {
-        Ok((content, _)) => (StatusCode::OK, Json(AgentFileDto {
-            agent_id: id,
-            user_id,
-            filename: name,
-            content: String::from_utf8_lossy(content.as_bytes()).to_string(),
-            updated_at: chrono::Utc::now(),
-        }))
-        .into_response(),
+    match state.store.get_workspace_file(&id, &user_id, &name).await {
+        Ok((content, _)) => (
+            StatusCode::OK,
+            Json(AgentFileDto {
+                agent_id: id,
+                user_id,
+                filename: name,
+                content: String::from_utf8_lossy(content.as_bytes()).to_string(),
+                updated_at: chrono::Utc::now(),
+            }),
+        )
+            .into_response(),
         Err(e) => err_response(e),
     }
 }
@@ -237,14 +247,17 @@ async fn put_agent_file(
         .save_workspace_file(&id, "", &name, req.content.as_bytes())
         .await
     {
-        Ok(()) => (StatusCode::OK, Json(serde_json::json!({
-            "agent_id": id,
-            "user_id": "",
-            "filename": name,
-            "content": req.content,
-            "updated_at": chrono::Utc::now(),
-        })))
-        .into_response(),
+        Ok(()) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "agent_id": id,
+                "user_id": "",
+                "filename": name,
+                "content": req.content,
+                "updated_at": chrono::Utc::now(),
+            })),
+        )
+            .into_response(),
         Err(e) => err_response(e),
     }
 }
@@ -283,9 +296,5 @@ fn err_response(e: CleanClawError) -> axum::response::Response {
         CleanClawError::Conflict(_) => StatusCode::CONFLICT,
         _ => StatusCode::INTERNAL_SERVER_ERROR,
     };
-    (
-        status,
-        Json(serde_json::json!({ "error": e.to_string() })),
-    )
-        .into_response()
+    (status, Json(serde_json::json!({ "error": e.to_string() }))).into_response()
 }

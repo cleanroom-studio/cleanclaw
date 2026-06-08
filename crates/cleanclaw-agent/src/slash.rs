@@ -130,7 +130,8 @@ pub async fn apply_outcome(
         SlashOutcome::NotASlash => Ok(SlashResultOutcome::Continue),
         SlashOutcome::Handled { reply } => {
             if let Some(rec) = &existing {
-                let mut msgs: Vec<Message> = serde_json::from_value(rec.messages.clone()).unwrap_or_default();
+                let mut msgs: Vec<Message> =
+                    serde_json::from_value(rec.messages.clone()).unwrap_or_default();
                 msgs.push(Message::system(reply));
                 let updated = SessionRecord {
                     messages: serde_json::to_value(&msgs)?,
@@ -138,7 +139,9 @@ pub async fn apply_outcome(
                     updated_at: now,
                     ..rec.clone()
                 };
-                store.save_session(user_id, agent_id, session_key, &updated).await?;
+                store
+                    .save_session(user_id, agent_id, session_key, &updated)
+                    .await?;
             }
             Ok(SlashResultOutcome::Continue)
         }
@@ -148,26 +151,50 @@ pub async fn apply_outcome(
                 user_id: user_id.to_string(),
                 agent_id: agent_id.to_string(),
                 session_key: session_key.to_string(),
-                channel: existing.as_ref().map(|r| r.channel.clone()).unwrap_or_default(),
-                account_id: existing.as_ref().map(|r| r.account_id.clone()).unwrap_or_default(),
-                chat_id: existing.as_ref().map(|r| r.chat_id.clone()).unwrap_or_default(),
-                project_id: existing.as_ref().map(|r| r.project_id.clone()).unwrap_or_default(),
-                title: existing.as_ref().map(|r| r.title.clone()).unwrap_or_default(),
+                channel: existing
+                    .as_ref()
+                    .map(|r| r.channel.clone())
+                    .unwrap_or_default(),
+                account_id: existing
+                    .as_ref()
+                    .map(|r| r.account_id.clone())
+                    .unwrap_or_default(),
+                chat_id: existing
+                    .as_ref()
+                    .map(|r| r.chat_id.clone())
+                    .unwrap_or_default(),
+                project_id: existing
+                    .as_ref()
+                    .map(|r| r.project_id.clone())
+                    .unwrap_or_default(),
+                title: existing
+                    .as_ref()
+                    .map(|r| r.title.clone())
+                    .unwrap_or_default(),
                 messages: serde_json::json!([]),
                 message_count: 0,
                 updated_at: now,
-                chatter_user_id: existing.as_ref().map(|r| r.chatter_user_id.clone()).unwrap_or_default(),
+                chatter_user_id: existing
+                    .as_ref()
+                    .map(|r| r.chatter_user_id.clone())
+                    .unwrap_or_default(),
             };
-            store.save_session(user_id, agent_id, session_key, &rec).await?;
+            store
+                .save_session(user_id, agent_id, session_key, &rec)
+                .await?;
             Ok(SlashResultOutcome::Continue)
         }
         SlashOutcome::DropLastExchange => {
             if let Some(rec) = &existing {
-                let mut msgs: Vec<Message> = serde_json::from_value(rec.messages.clone()).unwrap_or_default();
+                let mut msgs: Vec<Message> =
+                    serde_json::from_value(rec.messages.clone()).unwrap_or_default();
                 // Drop up to the last user+assistant pair.
                 let mut dropped = 0;
                 while let Some(m) = msgs.last() {
-                    if matches!(m.role, cleanclaw_provider::Role::User | cleanclaw_provider::Role::Assistant) {
+                    if matches!(
+                        m.role,
+                        cleanclaw_provider::Role::User | cleanclaw_provider::Role::Assistant
+                    ) {
                         msgs.pop();
                         dropped += 1;
                         if dropped >= 2 {
@@ -183,15 +210,21 @@ pub async fn apply_outcome(
                     updated_at: now,
                     ..rec.clone()
                 };
-                store.save_session(user_id, agent_id, session_key, &updated).await?;
+                store
+                    .save_session(user_id, agent_id, session_key, &updated)
+                    .await?;
             }
             Ok(SlashResultOutcome::Continue)
         }
         SlashOutcome::DropLastAssistant => {
             if let Some(rec) = &existing {
-                let mut msgs: Vec<Message> = serde_json::from_value(rec.messages.clone()).unwrap_or_default();
+                let mut msgs: Vec<Message> =
+                    serde_json::from_value(rec.messages.clone()).unwrap_or_default();
                 // Drop the last assistant turn.
-                if let Some(pos) = msgs.iter().rposition(|m| matches!(m.role, cleanclaw_provider::Role::Assistant)) {
+                if let Some(pos) = msgs
+                    .iter()
+                    .rposition(|m| matches!(m.role, cleanclaw_provider::Role::Assistant))
+                {
                     msgs.remove(pos);
                 }
                 let updated = SessionRecord {
@@ -200,7 +233,9 @@ pub async fn apply_outcome(
                     updated_at: now,
                     ..rec.clone()
                 };
-                store.save_session(user_id, agent_id, session_key, &updated).await?;
+                store
+                    .save_session(user_id, agent_id, session_key, &updated)
+                    .await?;
             }
             Ok(SlashResultOutcome::Continue)
         }

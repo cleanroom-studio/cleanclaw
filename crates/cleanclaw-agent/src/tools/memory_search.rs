@@ -51,7 +51,15 @@ impl Tool for MemorySearchTool {
             return Err(CleanClawError::InvalidArgument("query is required".into()));
         }
         let limit = a.limit.unwrap_or(10);
-        let results = search_memory(&self.workspace, &self.user_id, &self.agent_id, &self.store, &a.query, limit).await?;
+        let results = search_memory(
+            &self.workspace,
+            &self.user_id,
+            &self.agent_id,
+            &self.store,
+            &a.query,
+            limit,
+        )
+        .await?;
         if results.is_empty() {
             return Ok(json!({"results": [], "query": a.query}));
         }
@@ -90,7 +98,10 @@ async fn search_memory(
     // chatter's sessions for this agent and grep the messages.
     if let Ok(sessions) = store.list_sessions(user_id, agent_id).await {
         for sess in sessions.iter().take(50) {
-            if let Ok(msgs) = store.list_session_messages(user_id, agent_id, &sess.key).await {
+            if let Ok(msgs) = store
+                .list_session_messages(user_id, agent_id, &sess.key)
+                .await
+            {
                 for m in msgs {
                     if line_contains(&m.content, query) && !m.content.is_empty() {
                         results.push(json!({

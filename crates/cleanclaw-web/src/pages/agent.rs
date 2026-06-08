@@ -6,7 +6,7 @@
 //! the same agent shell. The shell is shared (rendered once per
 //! page) and the sub-tab strip drives navigation between them.
 
-use crate::html::{card_open, card_close, card_header, card_title, card_content, esc, tabs, Theme};
+use crate::html::{card_close, card_content, card_header, card_open, card_title, esc, tabs, Theme};
 use crate::layout::{render, NavKey};
 use crate::types::*;
 use cleanclaw_store::models::{SessionMessageRecord, SessionRecord};
@@ -87,10 +87,7 @@ pub fn agent_tabs(id: &str, active: AgentTab) -> String {
         ("customize", "Customize"),
         ("usage", "Usage"),
     ];
-    let _ = labels
-        .iter()
-        .map(|(_, l)| *l)
-        .collect::<Vec<_>>();
+    let _ = labels.iter().map(|(_, l)| *l).collect::<Vec<_>>();
     // The tabs helper expects `(&str, &str)` tuples. We patch the
     // hrefs into the buttons via a post-render transform, but for
     // SSR we just render the labels and let the agent layout wrap
@@ -188,15 +185,28 @@ pub fn list(theme: Theme, agents: &[AgentDetail]) -> String {
         card_header = card_header(),
         card_title = card_title("Agents"),
         card_content = card_content(""),
-        create_btn = crate::html::button("New agent", crate::html::ButtonVariant::Default, crate::html::ButtonSize::Sm, Some("/agents/new")),
+        create_btn = crate::html::button(
+            "New agent",
+            crate::html::ButtonVariant::Default,
+            crate::html::ButtonSize::Sm,
+            Some("/agents/new")
+        ),
         table = crate::html::table(&["ID", "Name", "Model", "Workspace"], &rows),
         card_close = card_close(),
     );
-    let inner = format!(r#"<div class="space-y-4">
+    let inner = format!(
+        r#"<div class="space-y-4">
 <h1 class="text-2xl font-semibold tracking-tight">Agents</h1>
 {body}
-</div>"#);
-    render("Agents · CleanClaw", NavKey::Agents, &inner, Some(("Ada", "user")), theme)
+</div>"#
+    );
+    render(
+        "Agents · CleanClaw",
+        NavKey::Agents,
+        &inner,
+        Some(("Ada", "user")),
+        theme,
+    )
 }
 
 // =====================================================================
@@ -234,7 +244,13 @@ pub fn overview(id: &str, agent: Option<&AgentDetail>, theme: Theme) -> String {
         card_body = card_body,
         card_close = card_close(),
     );
-    page(id, AgentTab::Overview, agent.and_then(|a| a.name.as_deref()), &body, theme)
+    page(
+        id,
+        AgentTab::Overview,
+        agent.and_then(|a| a.name.as_deref()),
+        &body,
+        theme,
+    )
 }
 
 // =====================================================================
@@ -262,7 +278,12 @@ pub fn chat(id: &str, theme: Theme) -> String {
         id_enc = urlencode_path(id),
         label = crate::html::label("Session id (leave empty for new)", "session"),
         input = crate::html::input("session", "session_xxx", "", "text"),
-        submit = crate::html::button("Open chat", crate::html::ButtonVariant::Default, crate::html::ButtonSize::Default, None),
+        submit = crate::html::button(
+            "Open chat",
+            crate::html::ButtonVariant::Default,
+            crate::html::ButtonSize::Default,
+            None
+        ),
         card_close = card_close(),
     );
     page(id, AgentTab::Chat, None, &body, theme)
@@ -324,9 +345,7 @@ pub fn chat_surface(
         // Tool calls (assistant only) — render as a small
         // sub-card. We escape the JSON; the JS will pretty-print
         // it on hover.
-        if !m.tool_calls.is_null()
-            && m.tool_calls != serde_json::Value::Array(Vec::new())
-        {
+        if !m.tool_calls.is_null() && m.tool_calls != serde_json::Value::Array(Vec::new()) {
             let tc_json = esc(&m.tool_calls.to_string());
             history_html.push_str(&format!(
                 r#"<div class="chat-tool" data-msg-id="{seq}">
@@ -532,11 +551,7 @@ pub fn scheduler(id: &str, jobs: &[AgentCronJob], theme: Theme) -> String {
 pub fn skills(id: &str, skills: &[SkillInfo], theme: Theme) -> String {
     let mut rows: Vec<Vec<String>> = Vec::new();
     for s in skills {
-        rows.push(vec![
-            esc(&s.name),
-            esc(&s.description),
-            esc(&s.location),
-        ]);
+        rows.push(vec![esc(&s.name), esc(&s.description), esc(&s.location)]);
     }
     let body = format!(
         r#"{card_open}
@@ -635,7 +650,9 @@ pub fn models(id: &str, agent: Option<&AgentFileConfig>, theme: Theme) -> String
             mti = c.max_tool_iterations.unwrap_or(0),
             ws = esc(c.workspace.as_deref().unwrap_or("")),
         ),
-        None => r#"<p class="text-sm text-muted-foreground">No agent config available.</p>"#.to_string(),
+        None => {
+            r#"<p class="text-sm text-muted-foreground">No agent config available.</p>"#.to_string()
+        }
     };
     let card = format!(
         r#"{card_open}
@@ -802,7 +819,8 @@ pub fn usage(id: &str, usage_data: Option<&AgentTokenUsage>, theme: Theme) -> St
 {card_close}"#,
                 card_open = card_open(""),
                 card_header = card_header(),
-                card_title = card_title(format!("Usage · last {range}", range = u.range.as_str()).as_str()),
+                card_title =
+                    card_title(format!("Usage · last {range}", range = u.range.as_str()).as_str()),
                 card_content = card_content(""),
                 rows_html = if rows.is_empty() {
                     r#"<tr><td colspan="3" class="p-2 text-muted-foreground text-sm">No usage data.</td></tr>"#.to_string()

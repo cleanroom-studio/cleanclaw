@@ -13,6 +13,6 @@ pub mod openai;
 pub mod provider;
 pub mod url;
 
+pub use factory::build_provider;
 pub use message::*;
 pub use provider::{Provider, ProviderError, ProviderStream};
-pub use factory::build_provider;

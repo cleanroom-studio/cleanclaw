@@ -1,26 +1,39 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { adminListUsers, adminUpdateUserRole, adminDeleteUser, type UserInfo } from '$lib/api';
-  import Card from '$lib/components/ui/Card.svelte';
-  import Badge from '$lib/components/ui/Badge.svelte';
+  import { onMount } from "svelte";
+  import {
+    adminListUsers,
+    adminUpdateUserRole,
+    adminDeleteUser,
+    type UserInfo,
+  } from "$lib/api";
+  import Card from "$lib/components/ui/Card.svelte";
+  import Badge from "$lib/components/ui/Badge.svelte";
 
   let users = $state<UserInfo[]>([]);
   let loading = $state(true);
-  let error = $state('');
+  let error = $state("");
 
   async function refresh() {
     loading = true;
     try {
       const r = await adminListUsers();
-      users = (r.users ?? []).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
-    } catch (e) { error = (e as Error).message; } finally { loading = false; }
+      users = (r.users ?? []).sort((a, b) =>
+        (a.username || "").localeCompare(b.username || ""),
+      );
+    } catch (e) {
+      error = (e as Error).message;
+    } finally {
+      loading = false;
+    }
   }
 
   async function setRole(id: string, role: string) {
     try {
       await adminUpdateUserRole(id, role as any);
       await refresh();
-    } catch (e) { alert((e as Error).message); }
+    } catch (e) {
+      alert((e as Error).message);
+    }
   }
 
   async function remove(id: string, username: string) {
@@ -28,7 +41,9 @@
     try {
       await adminDeleteUser(id);
       await refresh();
-    } catch (e) { alert((e as Error).message); }
+    } catch (e) {
+      alert((e as Error).message);
+    }
   }
 
   onMount(refresh);
@@ -58,12 +73,13 @@
             <tr class="border-b border-zinc-800/50">
               <td class="py-2 font-mono text-xs">{u.id}</td>
               <td class="py-2">{u.username}</td>
-              <td class="py-2 text-zinc-500 text-xs">{u.email || '—'}</td>
+              <td class="py-2 text-zinc-500 text-xs">{u.email || "—"}</td>
               <td class="py-2">
                 <select
                   class="h-7 bg-zinc-900 border border-zinc-700 rounded px-2 text-xs"
                   value={u.role}
-                  onchange={(e) => setRole(u.id, (e.currentTarget as HTMLSelectElement).value)}
+                  onchange={(e) =>
+                    setRole(u.id, (e.currentTarget as HTMLSelectElement).value)}
                 >
                   <option value="user">user</option>
                   <option value="admin">admin</option>
@@ -71,7 +87,10 @@
                 </select>
               </td>
               <td class="py-2 text-right">
-                <button class="text-xs text-red-400 hover:underline" onclick={() => remove(u.id, u.username)}>Delete</button>
+                <button
+                  class="text-xs text-red-400 hover:underline"
+                  onclick={() => remove(u.id, u.username)}>Delete</button
+                >
               </td>
             </tr>
           {/each}

@@ -26,8 +26,8 @@ pub mod attachments;
 pub mod bundled_skills;
 pub mod compact;
 pub mod context;
-pub mod events;
 pub mod event_hub;
+pub mod events;
 pub mod goal;
 pub mod goal_hook;
 pub mod heartbeat;
@@ -48,8 +48,8 @@ pub use attachments::{Attachment, AttachmentStore};
 pub use bundled_skills::{bundled_hash, install_bundled, BUNDLED_SKILL_NAMES};
 pub use compact::{compact_in_place, estimate_tokens, save_compacted, should_compact};
 pub use context::{ContextBuilder, IdentityFileStore, IdentityFiles};
-pub use events::AgentEventType;
 pub use event_hub::{AgentEvent, EventEnvelope, EventHub, SharedEventHub, Usage};
+pub use events::AgentEventType;
 pub use goal::{goal_context_prompt, GoalManager, GoalStatus};
 pub use heartbeat::{HeartbeatConfig, HeartbeatScheduler, HeartbeatTick};
 pub use hooks::{Hook, HookPhase, HookRegistry};
@@ -61,9 +61,9 @@ pub use memory::{
 };
 pub use skills_full::{LoadedSkills, SharedSkillsLoader, SkillsConfig, SkillsLoader};
 pub use slash::{
-    apply_outcome as apply_slash_outcome, dispatch as dispatch_slash, SlashOutcome,
-    SlashResult, SlashResultOutcome,
+    apply_outcome as apply_slash_outcome, dispatch as dispatch_slash, SlashOutcome, SlashResult,
+    SlashResultOutcome,
 };
 pub use tool_recovery::{recover_tool_calls_from_text, RecoveredCall, TurnFailKey, TurnFailures};
-pub use tools::{Tool, ToolContext, ToolRegistry};
 pub use tools::builtins;
+pub use tools::{Tool, ToolContext, ToolRegistry};

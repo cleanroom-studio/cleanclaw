@@ -1,45 +1,45 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import AppShell from '$lib/components/AppShell.svelte';
-  import Card from '$lib/components/ui/Card.svelte';
-  import Button from '$lib/components/ui/Button.svelte';
-  import Textarea from '$lib/components/ui/Textarea.svelte';
-  import Label from '$lib/components/ui/Label.svelte';
-  import { getAgent, updateAgent, type AgentDetail } from '$lib/api';
+  import { onMount } from "svelte";
+  import AppShell from "$lib/components/AppShell.svelte";
+  import Card from "$lib/components/ui/Card.svelte";
+  import Button from "$lib/components/ui/Button.svelte";
+  import Textarea from "$lib/components/ui/Textarea.svelte";
+  import Label from "$lib/components/ui/Label.svelte";
+  import { getAgent, updateAgent, type AgentDetail } from "$lib/api";
 
   let { params }: { params: { id: string } } = $props();
   let agent = $state<AgentDetail | null>(null);
-  let soul = $state('');
-  let identity = $state('');
-  let systemPrompt = $state('');
+  let soul = $state("");
+  let identity = $state("");
+  let systemPrompt = $state("");
   let saving = $state(false);
-  let message = $state('');
+  let message = $state("");
 
   async function load() {
     try {
       const r = await getAgent(params.id);
       agent = r.agent;
-      soul = r.agent.soul ?? '';
-      identity = r.agent.identity ?? '';
-      systemPrompt = r.agent.system_prompt ?? '';
+      soul = r.agent.soul ?? "";
+      identity = r.agent.identity ?? "";
+      systemPrompt = r.agent.system_prompt ?? "";
     } catch (e: any) {
-      message = e?.message || 'failed to load';
+      message = e?.message || "failed to load";
     }
   }
 
   async function save(e: Event) {
     e.preventDefault();
     saving = true;
-    message = '';
+    message = "";
     try {
       await updateAgent(params.id, {
         soul,
         identity,
-        system_prompt: systemPrompt
+        system_prompt: systemPrompt,
       } as any);
-      message = 'saved';
+      message = "saved";
     } catch (e: any) {
-      message = e?.message || 'save failed';
+      message = e?.message || "save failed";
     } finally {
       saving = false;
     }
@@ -60,18 +60,35 @@
       <form onsubmit={save} class="space-y-4">
         <div class="space-y-1.5">
           <Label for="soul">Soul</Label>
-          <Textarea id="soul" bind:value={soul} rows={6} placeholder="Personality, values, tone…" />
+          <Textarea
+            id="soul"
+            bind:value={soul}
+            rows={6}
+            placeholder="Personality, values, tone…"
+          />
         </div>
         <div class="space-y-1.5">
           <Label for="identity">Identity</Label>
-          <Textarea id="identity" bind:value={identity} rows={4} placeholder="Name, role, expertise…" />
+          <Textarea
+            id="identity"
+            bind:value={identity}
+            rows={4}
+            placeholder="Name, role, expertise…"
+          />
         </div>
         <div class="space-y-1.5">
           <Label for="sp">System prompt</Label>
-          <Textarea id="sp" bind:value={systemPrompt} rows={8} placeholder="You are…" />
+          <Textarea
+            id="sp"
+            bind:value={systemPrompt}
+            rows={8}
+            placeholder="You are…"
+          />
         </div>
         <div class="flex items-center gap-3">
-          <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+          <Button type="submit" disabled={saving}
+            >{saving ? "Saving…" : "Save"}</Button
+          >
           {#if message}
             <span class="text-sm text-muted-foreground">{message}</span>
           {/if}

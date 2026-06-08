@@ -98,12 +98,7 @@ impl ToolRegistry {
             .collect()
     }
 
-    pub async fn dispatch(
-        &self,
-        ctx: &ToolContext,
-        name: &str,
-        args: Value,
-    ) -> Result<Value> {
+    pub async fn dispatch(&self, ctx: &ToolContext, name: &str, args: Value) -> Result<Value> {
         let t = self
             .tools
             .get(name)

@@ -66,8 +66,12 @@ impl ButtonVariant {
         match self {
             ButtonVariant::Default => "bg-primary text-primary-foreground hover:bg-primary/90",
             ButtonVariant::Destructive => "bg-destructive text-white hover:bg-destructive/90",
-            ButtonVariant::Outline => "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-            ButtonVariant::Secondary => "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+            ButtonVariant::Outline => {
+                "border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+            }
+            ButtonVariant::Secondary => {
+                "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+            }
             ButtonVariant::Ghost => "hover:bg-accent hover:text-accent-foreground",
             ButtonVariant::Link => "text-primary underline-offset-4 hover:underline",
         }
@@ -95,12 +99,7 @@ impl ButtonSize {
 
 /// Render a `<button>` (or `<a>` if `href` is set) with the shadcn
 /// visual treatment. All text content is HTML-escaped.
-pub fn button(
-    label: &str,
-    variant: ButtonVariant,
-    size: ButtonSize,
-    href: Option<&str>,
-) -> String {
+pub fn button(label: &str, variant: ButtonVariant, size: ButtonSize, href: Option<&str>) -> String {
     let cls = cn([
         "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium",
         "transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
@@ -276,8 +275,7 @@ pub fn skeleton(extra: &str) -> String {
 
 /// Avatar.
 pub fn avatar(initials: &str, src: Option<&str>) -> String {
-    let wrap =
-        r#"<span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-full">"#;
+    let wrap = r#"<span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-full">"#;
     if let Some(src) = src {
         format!(
             r#"{wrap}<img class="aspect-square h-full w-full" src="{}" alt="{}" /></span>"#,
@@ -297,7 +295,10 @@ pub fn avatar(initials: &str, src: Option<&str>) -> String {
 pub fn table(headings: &[&str], rows: &[Vec<String>]) -> String {
     let mut out = String::new();
     let cls = "w-full caption-bottom text-sm";
-    let _ = write!(out, r#"<div class="relative w-full overflow-auto"><table class="{cls}">"#);
+    let _ = write!(
+        out,
+        r#"<div class="relative w-full overflow-auto"><table class="{cls}">"#
+    );
     let _ = write!(out, r#"<thead class="[&_tr]:border-b"><tr>"#);
     for h in headings {
         let _ = write!(
@@ -306,15 +307,17 @@ pub fn table(headings: &[&str], rows: &[Vec<String>]) -> String {
             esc(h)
         );
     }
-    let _ = write!(out, "</tr></thead><tbody class=\"[&_tr:last-child]:border-0\">");
+    let _ = write!(
+        out,
+        "</tr></thead><tbody class=\"[&_tr:last-child]:border-0\">"
+    );
     for row in rows {
-        let _ = write!(out, r#"<tr class="border-b transition-colors hover:bg-muted/50">"#);
+        let _ = write!(
+            out,
+            r#"<tr class="border-b transition-colors hover:bg-muted/50">"#
+        );
         for cell in row {
-            let _ = write!(
-                out,
-                r#"<td class="p-2 align-middle">{}</td>"#,
-                esc(cell)
-            );
+            let _ = write!(out, r#"<td class="p-2 align-middle">{}</td>"#, esc(cell));
         }
         let _ = write!(out, "</tr>");
     }

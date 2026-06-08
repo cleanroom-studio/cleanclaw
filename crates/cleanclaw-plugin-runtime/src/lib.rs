@@ -23,9 +23,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
+use thiserror::Error;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::Mutex;
-use thiserror::Error;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Error)]
@@ -141,11 +141,7 @@ pub trait Plugin: Send + Sync {
     }
 
     /// `tool.execute` — dispatch by name. Default = unknown tool.
-    async fn tool_execute(
-        &self,
-        name: &str,
-        _args: Value,
-    ) -> Result<ToolResult, PluginError> {
+    async fn tool_execute(&self, name: &str, _args: Value) -> Result<ToolResult, PluginError> {
         Ok(ToolResult {
             output: String::new(),
             error: Some(format!("unknown tool: {name}")),
@@ -283,8 +279,7 @@ pub async fn send_notification(method: &str, params: Value) -> std::io::Result<(
 fn init_tracing() {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_from_env("CLEANCLAW_LOG")
-                .unwrap_or_else(|_| EnvFilter::new("info")),
+            EnvFilter::try_from_env("CLEANCLAW_LOG").unwrap_or_else(|_| EnvFilter::new("info")),
         )
         .with_writer(std::io::stderr)
         .try_init();
@@ -309,10 +304,8 @@ impl<P: Plugin + 'static> InProcPluginClient<P> {
     /// pair of channels so the test can drive the request/response
     /// surface without touching stdin/stdout.
     pub fn spawn(plugin: P) -> Self {
-        let (host_to_plugin_tx, mut host_to_plugin_rx) =
-            tokio::sync::mpsc::channel::<Request>(32);
-        let (plugin_to_host_tx, plugin_to_host_rx) =
-            tokio::sync::mpsc::channel::<Response>(32);
+        let (host_to_plugin_tx, mut host_to_plugin_rx) = tokio::sync::mpsc::channel::<Request>(32);
+        let (plugin_to_host_tx, plugin_to_host_rx) = tokio::sync::mpsc::channel::<Response>(32);
         let (notif_tx, notif_rx) = tokio::sync::mpsc::channel::<Notification>(32);
         let notifications: Arc<Mutex<Vec<Notification>>> = Arc::new(Mutex::new(Vec::new()));
 
@@ -376,12 +369,19 @@ impl<P: Plugin + 'static> InProcPluginClient<P> {
             method: method.to_string(),
             params,
         };
-        self.tx.send(req).await.map_err(|e| PluginError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+        self.tx.send(req).await.map_err(|e| {
+            PluginError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                e.to_string(),
+            ))
+        })?;
         let mut rx = self.rx.lock().await;
-        let resp = rx
-            .recv()
-            .await
-            .ok_or_else(|| PluginError::Io(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "plugin closed")))?;
+        let resp = rx.recv().await.ok_or_else(|| {
+            PluginError::Io(std::io::Error::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "plugin closed",
+            ))
+        })?;
         if let Some(err) = resp.error {
             return Err(PluginError::UnknownMethod(err.message));
         }
@@ -432,11 +432,7 @@ mod tests {
                 source: "plugin".into(),
             }])
         }
-        async fn tool_execute(
-            &self,
-            name: &str,
-            _args: Value,
-        ) -> Result<ToolResult, PluginError> {
+        async fn tool_execute(&self, name: &str, _args: Value) -> Result<ToolResult, PluginError> {
             Ok(ToolResult {
                 output: format!("{name}!"),
                 error: None,
@@ -447,10 +443,17 @@ mod tests {
     #[tokio::test]
     async fn inproc_dispatch_round_trips() {
         let client = InProcPluginClient::spawn(TestPlugin);
-        let v: Vec<ToolDef> = serde_json::from_value(client.call("tool.list", Value::Null).await.unwrap()).unwrap();
+        let v: Vec<ToolDef> =
+            serde_json::from_value(client.call("tool.list", Value::Null).await.unwrap()).unwrap();
         assert_eq!(v.len(), 1);
         assert_eq!(v[0].name, "ping");
-        let r: ToolResult = serde_json::from_value(client.call("tool.execute", serde_json::json!({"name": "ping"})).await.unwrap()).unwrap();
+        let r: ToolResult = serde_json::from_value(
+            client
+                .call("tool.execute", serde_json::json!({"name": "ping"}))
+                .await
+                .unwrap(),
+        )
+        .unwrap();
         assert_eq!(r.output, "ping!");
     }
 

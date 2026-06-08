@@ -43,9 +43,7 @@ pub struct GoalHook {
 
 struct GoalHookInner {
     callback: Arc<
-        dyn Fn(GoalRecord, Arc<dyn GoalSessionLike>) -> tokio::task::JoinHandle<()>
-            + Send
-            + Sync,
+        dyn Fn(GoalRecord, Arc<dyn GoalSessionLike>) -> tokio::task::JoinHandle<()> + Send + Sync,
     >,
 }
 
@@ -58,10 +56,7 @@ impl std::fmt::Debug for GoalHook {
 impl GoalHook {
     pub fn new<F, Fut>(f: F) -> Self
     where
-        F: Fn(GoalRecord, Arc<dyn GoalSessionLike>) -> Fut
-            + Send
-            + Sync
-            + 'static,
+        F: Fn(GoalRecord, Arc<dyn GoalSessionLike>) -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
         let cb = Arc::new(move |g, s| {
@@ -91,9 +86,7 @@ impl Default for GoalHook {
 
 pub struct GoalHookSubscription {
     hook: GoalHook,
-    session_resolver: Arc<
-        dyn Fn(&str, &str) -> Option<Arc<dyn GoalSessionLike>> + Send + Sync,
-    >,
+    session_resolver: Arc<dyn Fn(&str, &str) -> Option<Arc<dyn GoalSessionLike>> + Send + Sync>,
     last_status: Mutex<std::collections::HashMap<String, GoalStatus>>,
 }
 
@@ -108,9 +101,7 @@ impl std::fmt::Debug for GoalHookSubscription {
 impl GoalHookSubscription {
     pub fn new(
         hook: GoalHook,
-        session_resolver: Arc<
-            dyn Fn(&str, &str) -> Option<Arc<dyn GoalSessionLike>> + Send + Sync,
-        >,
+        session_resolver: Arc<dyn Fn(&str, &str) -> Option<Arc<dyn GoalSessionLike>> + Send + Sync>,
     ) -> Self {
         Self {
             hook,
@@ -132,9 +123,7 @@ impl GoalHookSubscription {
             if prev == Some(new_status) {
                 continue;
             }
-            if let Some(session) =
-                (self.session_resolver)(&g.agent_id, &g.session_key)
-            {
+            if let Some(session) = (self.session_resolver)(&g.agent_id, &g.session_key) {
                 self.hook.fire(g, session).await;
                 fired += 1;
             }
@@ -219,10 +208,8 @@ mod tests {
 
     #[tokio::test]
     async fn subscription_fires_when_session_resolves() {
-        let sub = GoalHookSubscription::new(
-            GoalHook::noop(),
-            Arc::new(|_, k| Some(dummy_session(k))),
-        );
+        let sub =
+            GoalHookSubscription::new(GoalHook::noop(), Arc::new(|_, k| Some(dummy_session(k))));
         let n = sub.sweep(vec![goal("g1", "active")]).await;
         assert_eq!(n, 1);
         // Second sweep with same status is a no-op.
@@ -232,10 +219,7 @@ mod tests {
 
     #[tokio::test]
     async fn subscription_no_session_skips_fire() {
-        let sub = GoalHookSubscription::new(
-            GoalHook::noop(),
-            Arc::new(|_, _| None),
-        );
+        let sub = GoalHookSubscription::new(GoalHook::noop(), Arc::new(|_, _| None));
         let n = sub.sweep(vec![goal("g1", "active")]).await;
         assert_eq!(n, 0);
     }

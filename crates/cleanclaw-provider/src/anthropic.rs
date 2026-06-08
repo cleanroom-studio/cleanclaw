@@ -120,10 +120,11 @@ fn build_anthropic_body(req: &ChatRequest, stream: bool) -> Value {
                 }));
             }
             Role::User => {
-                let content = if m.content_parts.is_empty() {
-                    json!(m.content)
-                } else {
-                    json!(m.content_parts.iter().map(|p| match p {
+                let content =
+                    if m.content_parts.is_empty() {
+                        json!(m.content)
+                    } else {
+                        json!(m.content_parts.iter().map(|p| match p {
                         ContentPart::Text { text } => json!({"type": "text", "text": text}),
                         ContentPart::ImageUrl { url } => {
                             json!({"type": "image", "source": {"type": "url", "url": url}})
@@ -133,7 +134,7 @@ fn build_anthropic_body(req: &ChatRequest, stream: bool) -> Value {
                             "source": {"type": "base64", "media_type": media_type, "data": data}
                         }),
                     }).collect::<Vec<_>>())
-                };
+                    };
                 messages.push(json!({"role": "user", "content": content}));
             }
             Role::Assistant => {
@@ -277,8 +278,14 @@ fn parse_anthropic_response(raw: &Value) -> Result<ChatResponse, ProviderError> 
         .to_string();
 
     let usage = raw.get("usage").cloned().unwrap_or(json!({}));
-    let input_tokens = usage.get("input_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-    let output_tokens = usage.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+    let input_tokens = usage
+        .get("input_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0) as u32;
+    let output_tokens = usage
+        .get("output_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0) as u32;
     let cache_read_tokens = usage
         .get("cache_read_input_tokens")
         .and_then(|v| v.as_u64())

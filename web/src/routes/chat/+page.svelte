@@ -5,13 +5,13 @@
   // shared ChatScreen component (same component mounted
   // under /agents/<id>/chat/).
 
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import { listAgents, type AgentInfo } from '$lib/api';
-  import ChatScreen from '$lib/components/ChatScreen.svelte';
+  import { onMount } from "svelte";
+  import { goto } from "$app/navigation";
+  import { page } from "$app/state";
+  import { listAgents, type AgentInfo } from "$lib/api";
+  import ChatScreen from "$lib/components/ChatScreen.svelte";
 
-  const queryAgent = $derived(page.url?.searchParams.get('agent') || '');
+  const queryAgent = $derived(page.url?.searchParams.get("agent") || "");
 
   let agents = $state<AgentInfo[]>([]);
   let loading = $state(true);
@@ -25,7 +25,9 @@
       // zero agents exist (in which case we render the empty
       // hint below).
       if (!queryAgent && agents.length > 0) {
-        await goto(`/chat/?agent=${encodeURIComponent(agents[0].id)}`, { replaceState: true });
+        await goto(`/chat/?agent=${encodeURIComponent(agents[0].id)}`, {
+          replaceState: true,
+        });
       }
     } finally {
       loading = false;
@@ -39,7 +41,9 @@
   <div class="p-6 max-w-2xl mx-auto space-y-4">
     <h1 class="text-2xl font-bold">Chat</h1>
     <p class="text-sm text-zinc-400">
-      No agents yet. <a href="/agents/" class="text-violet-300 hover:underline">Create one</a> to start chatting.
+      No agents yet. <a href="/agents/" class="text-violet-300 hover:underline"
+        >Create one</a
+      > to start chatting.
     </p>
   </div>
 {:else}

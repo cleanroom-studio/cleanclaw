@@ -1,44 +1,64 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { listAgents, listCron, createCron, deleteCron, type AgentInfo, type CronJobInfo } from '$lib/api';
-  import Card from '$lib/components/ui/Card.svelte';
-  import Button from '$lib/components/ui/Button.svelte';
+  import { onMount } from "svelte";
+  import {
+    listAgents,
+    listCron,
+    createCron,
+    deleteCron,
+    type AgentInfo,
+    type CronJobInfo,
+  } from "$lib/api";
+  import Card from "$lib/components/ui/Card.svelte";
+  import Button from "$lib/components/ui/Button.svelte";
 
   let agents = $state<AgentInfo[]>([]);
-  let selected = $state('');
+  let selected = $state("");
   let jobs = $state<CronJobInfo[]>([]);
-  let name = $state('');
-  let type = $state('interval');
-  let schedule = $state('5m');
-  let message = $state('');
-  let channel = $state('web');
-  let chatId = $state('admin');
+  let name = $state("");
+  let type = $state("interval");
+  let schedule = $state("5m");
+  let message = $state("");
+  let channel = $state("web");
+  let chatId = $state("admin");
   let creating = $state(false);
-  let error = $state('');
+  let error = $state("");
 
   async function refresh() {
     if (!selected) return;
     try {
       const r = await listCron(selected);
       jobs = r.jobs ?? [];
-    } catch (e) { error = (e as Error).message; }
+    } catch (e) {
+      error = (e as Error).message;
+    }
   }
 
   async function create(e: Event) {
     e.preventDefault();
     if (!selected) return;
-    creating = true; error = '';
+    creating = true;
+    error = "";
     try {
-      await createCron(selected, { name, type, schedule, message, channel, chat_id: chatId } as any);
-      name = ''; message = '';
+      await createCron(selected, {
+        name,
+        type,
+        schedule,
+        message,
+        channel,
+        chat_id: chatId,
+      } as any);
+      name = "";
+      message = "";
       await refresh();
     } catch (e) {
-      error = (e as Error).message || 'create failed';
-    } finally { creating = false; }
+      error = (e as Error).message || "create failed";
+    } finally {
+      creating = false;
+    }
   }
 
   async function rm(id: string) {
-    if (!confirm('Delete this scheduled job?')) return;
+    if (!confirm("Delete this scheduled job?")) return;
     try {
       await deleteCron(selected, id);
       await refresh();
@@ -54,7 +74,9 @@
     } catch {}
   });
 
-  $effect(() => { if (selected) void refresh(); });
+  $effect(() => {
+    if (selected) void refresh();
+  });
 </script>
 
 <div class="p-6 max-w-4xl mx-auto space-y-4">
@@ -66,8 +88,11 @@
   <Card>
     <div class="flex items-center gap-3 mb-3">
       <label for="cr-a" class="text-xs text-zinc-400">Agent</label>
-      <select id="cr-a" bind:value={selected}
-        class="flex-1 h-9 bg-zinc-900 border border-zinc-700 rounded px-2 text-sm">
+      <select
+        id="cr-a"
+        bind:value={selected}
+        class="flex-1 h-9 bg-zinc-900 border border-zinc-700 rounded px-2 text-sm"
+      >
         {#each agents as a (a.id)}
           <option value={a.id}>{a.name || a.id}</option>
         {/each}
@@ -76,11 +101,20 @@
     <form onsubmit={create} class="grid grid-cols-2 gap-3">
       <div>
         <label for="cr-n" class="text-xs text-zinc-400">Name</label>
-        <input id="cr-n" bind:value={name} required class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-3 text-sm" />
+        <input
+          id="cr-n"
+          bind:value={name}
+          required
+          class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-3 text-sm"
+        />
       </div>
       <div>
         <label for="cr-t" class="text-xs text-zinc-400">Type</label>
-        <select id="cr-t" bind:value={type} class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-2 text-sm">
+        <select
+          id="cr-t"
+          bind:value={type}
+          class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-2 text-sm"
+        >
           <option value="interval">interval</option>
           <option value="cron">cron</option>
           <option value="once">once</option>
@@ -88,19 +122,36 @@
       </div>
       <div>
         <label for="cr-s" class="text-xs text-zinc-400">Schedule</label>
-        <input id="cr-s" bind:value={schedule} placeholder="5m / 0 9 * * * / ISO" required class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-3 text-sm" />
+        <input
+          id="cr-s"
+          bind:value={schedule}
+          placeholder="5m / 0 9 * * * / ISO"
+          required
+          class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-3 text-sm"
+        />
       </div>
       <div>
         <label for="cr-c" class="text-xs text-zinc-400">Channel</label>
-        <input id="cr-c" bind:value={channel} class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-3 text-sm" />
+        <input
+          id="cr-c"
+          bind:value={channel}
+          class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-3 text-sm"
+        />
       </div>
       <div class="col-span-2">
         <label for="cr-m" class="text-xs text-zinc-400">Message (prompt)</label>
-        <input id="cr-m" bind:value={message} required class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-3 text-sm" />
+        <input
+          id="cr-m"
+          bind:value={message}
+          required
+          class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-3 text-sm"
+        />
       </div>
       {#if error}<p class="col-span-2 text-sm text-red-400">{error}</p>{/if}
       <div class="col-span-2">
-        <Button type="submit" disabled={creating || !selected}>{creating ? 'Creating…' : 'Schedule'}</Button>
+        <Button type="submit" disabled={creating || !selected}
+          >{creating ? "Creating…" : "Schedule"}</Button
+        >
       </div>
     </form>
   </Card>
@@ -126,9 +177,14 @@
               <td class="py-2">{j.name}</td>
               <td class="py-2">{j.type}</td>
               <td class="py-2 font-mono text-xs">{j.schedule}</td>
-              <td class="py-2 text-xs text-zinc-400 truncate max-w-xs">{j.message}</td>
+              <td class="py-2 text-xs text-zinc-400 truncate max-w-xs"
+                >{j.message}</td
+              >
               <td class="py-2 text-right">
-                <button class="text-xs text-red-400 hover:underline" onclick={() => rm(j.id)}>Delete</button>
+                <button
+                  class="text-xs text-red-400 hover:underline"
+                  onclick={() => rm(j.id)}>Delete</button
+                >
               </td>
             </tr>
           {/each}

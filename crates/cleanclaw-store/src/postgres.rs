@@ -109,30 +109,23 @@ impl Store for PostgresStore {
     }
 
     async fn get_user_by_login(&self, login: &str) -> Result<UserRecord> {
-        let row = sqlx::query(
-            "SELECT * FROM users WHERE username = $1 OR email = $2 LIMIT 1",
-        )
-        .bind(login)
-        .bind(login)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(CleanClawError::NotFound(format!("user {login}")))?;
+        let row = sqlx::query("SELECT * FROM users WHERE username = $1 OR email = $2 LIMIT 1")
+            .bind(login)
+            .bind(login)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(CleanClawError::NotFound(format!("user {login}")))?;
         Ok(row_to_user(&row))
     }
 
-    async fn get_user_by_external(
-        &self,
-        apikey_id: &str,
-        external_id: &str,
-    ) -> Result<UserRecord> {
-        let row = sqlx::query(
-            "SELECT * FROM users WHERE apikey_id = $1 AND external_id = $2 LIMIT 1",
-        )
-        .bind(apikey_id)
-        .bind(external_id)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(CleanClawError::NotFound("app_user".into()))?;
+    async fn get_user_by_external(&self, apikey_id: &str, external_id: &str) -> Result<UserRecord> {
+        let row =
+            sqlx::query("SELECT * FROM users WHERE apikey_id = $1 AND external_id = $2 LIMIT 1")
+                .bind(apikey_id)
+                .bind(external_id)
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or(CleanClawError::NotFound("app_user".into()))?;
         Ok(row_to_user(&row))
     }
 
@@ -222,8 +215,7 @@ impl Store for PostgresStore {
 
     async fn delete_expired_web_sessions(&self, before: Duration) -> Result<()> {
         let cutoff = Utc::now()
-            - chrono::Duration::from_std(before)
-                .unwrap_or_else(|_| chrono::Duration::seconds(0));
+            - chrono::Duration::from_std(before).unwrap_or_else(|_| chrono::Duration::seconds(0));
         sqlx::query("DELETE FROM web_sessions WHERE expires_at < $1")
             .bind(cutoff)
             .execute(&self.pool)
@@ -234,12 +226,10 @@ impl Store for PostgresStore {
     // ---- API keys ----
 
     async fn list_api_keys(&self, user_id: &str) -> Result<Vec<ApiKeyRecord>> {
-        let rows = sqlx::query(
-            "SELECT * FROM apikeys WHERE user_id = $1 ORDER BY created_at DESC",
-        )
-        .bind(user_id)
-        .fetch_all(&self.pool)
-        .await?;
+        let rows = sqlx::query("SELECT * FROM apikeys WHERE user_id = $1 ORDER BY created_at DESC")
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
         Ok(rows.iter().map(row_to_api_key).collect())
     }
 
@@ -286,18 +276,12 @@ impl Store for PostgresStore {
         Ok(())
     }
 
-    async fn rotate_api_key(
-        &self,
-        id: &str,
-        key_hash: &str,
-        key_prefix: &str,
-    ) -> Result<()> {
+    async fn rotate_api_key(&self, id: &str, key_hash: &str, key_prefix: &str) -> Result<()> {
         let mut tx = self.pool.begin().await?;
-        let prev: Option<String> =
-            sqlx::query_scalar("SELECT key_hash FROM apikeys WHERE id = $1")
-                .bind(id)
-                .fetch_optional(&mut *tx)
-                .await?;
+        let prev: Option<String> = sqlx::query_scalar("SELECT key_hash FROM apikeys WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await?;
         if let Some(prev) = prev {
             sqlx::query(
                 r#"UPDATE apikeys
@@ -332,11 +316,7 @@ impl Store for PostgresStore {
         Ok(row_to_api_key(&row))
     }
 
-    async fn set_api_key_agents(
-        &self,
-        apikey_id: &str,
-        agent_ids: &[String],
-    ) -> Result<()> {
+    async fn set_api_key_agents(&self, apikey_id: &str, agent_ids: &[String]) -> Result<()> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("DELETE FROM apikey_agents WHERE apikey_id = $1")
             .bind(apikey_id)
@@ -360,7 +340,10 @@ impl Store for PostgresStore {
             .bind(apikey_id)
             .fetch_all(&self.pool)
             .await?;
-        Ok(rows.iter().map(|r| r.get::<String, _>("agent_id")).collect())
+        Ok(rows
+            .iter()
+            .map(|r| r.get::<String, _>("agent_id"))
+            .collect())
     }
 
     // ---- Agents ----
@@ -557,11 +540,7 @@ impl Store for PostgresStore {
         Ok(())
     }
 
-    async fn list_sessions(
-        &self,
-        user_id: &str,
-        agent_id: &str,
-    ) -> Result<Vec<SessionMeta>> {
+    async fn list_sessions(&self, user_id: &str, agent_id: &str) -> Result<Vec<SessionMeta>> {
         let rows = sqlx::query(
             r#"SELECT session_key, channel, account_id, chat_id, project_id,
                       title, message_count, updated_at
@@ -590,12 +569,7 @@ impl Store for PostgresStore {
             .collect())
     }
 
-    async fn delete_session(
-        &self,
-        user_id: &str,
-        agent_id: &str,
-        session_key: &str,
-    ) -> Result<()> {
+    async fn delete_session(&self, user_id: &str, agent_id: &str, session_key: &str) -> Result<()> {
         let mut tx = self.pool.begin().await?;
         sqlx::query(
             "DELETE FROM sessions WHERE user_id = $1 AND agent_id = $2 AND session_key = $3",
@@ -761,14 +735,13 @@ impl Store for PostgresStore {
         user_id: &str,
         agent_id: &str,
     ) -> Result<Vec<ConfigRecord>> {
-        let rows = sqlx::query(
-            "SELECT * FROM configs WHERE kind = $1 AND user_id = $2 AND agent_id = $3",
-        )
-        .bind(kind)
-        .bind(user_id)
-        .bind(agent_id)
-        .fetch_all(&self.pool)
-        .await?;
+        let rows =
+            sqlx::query("SELECT * FROM configs WHERE kind = $1 AND user_id = $2 AND agent_id = $3")
+                .bind(kind)
+                .bind(user_id)
+                .bind(agent_id)
+                .fetch_all(&self.pool)
+                .await?;
         Ok(rows.iter().map(row_to_config).collect())
     }
 
@@ -846,11 +819,7 @@ impl Store for PostgresStore {
 
     // ---- Projects ----
 
-    async fn list_projects(
-        &self,
-        user_id: &str,
-        agent_id: &str,
-    ) -> Result<Vec<ProjectRecord>> {
+    async fn list_projects(&self, user_id: &str, agent_id: &str) -> Result<Vec<ProjectRecord>> {
         let rows = sqlx::query(
             "SELECT * FROM projects WHERE user_id = $1 AND agent_id = $2 ORDER BY updated_at DESC",
         )
@@ -901,12 +870,7 @@ impl Store for PostgresStore {
         Ok(())
     }
 
-    async fn delete_project(
-        &self,
-        user_id: &str,
-        agent_id: &str,
-        project_id: &str,
-    ) -> Result<()> {
+    async fn delete_project(&self, user_id: &str, agent_id: &str, project_id: &str) -> Result<()> {
         sqlx::query(
             "DELETE FROM projects WHERE user_id = $1 AND agent_id = $2 AND project_id = $3",
         )
@@ -955,24 +919,21 @@ impl Store for PostgresStore {
     }
 
     async fn get_goal(&self, agent_id: &str, session_key: &str) -> Result<GoalRecord> {
-        let row = sqlx::query(
-            "SELECT * FROM agent_goals WHERE agent_id = $1 AND session_key = $2",
-        )
-        .bind(agent_id)
-        .bind(session_key)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(CleanClawError::NotFound("goal".into()))?;
+        let row = sqlx::query("SELECT * FROM agent_goals WHERE agent_id = $1 AND session_key = $2")
+            .bind(agent_id)
+            .bind(session_key)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(CleanClawError::NotFound("goal".into()))?;
         Ok(row_to_goal(&row))
     }
 
     async fn list_goals(&self, agent_id: &str) -> Result<Vec<GoalRecord>> {
-        let rows = sqlx::query(
-            "SELECT * FROM agent_goals WHERE agent_id = $1 ORDER BY created_at DESC",
-        )
-        .bind(agent_id)
-        .fetch_all(&self.pool)
-        .await?;
+        let rows =
+            sqlx::query("SELECT * FROM agent_goals WHERE agent_id = $1 ORDER BY created_at DESC")
+                .bind(agent_id)
+                .fetch_all(&self.pool)
+                .await?;
         Ok(rows.iter().map(row_to_goal).collect())
     }
 
@@ -1047,24 +1008,16 @@ impl Store for PostgresStore {
         Ok(row_to_cron(&row))
     }
 
-    async fn list_cron_jobs_by_agent(
-        &self,
-        agent_id: &str,
-    ) -> Result<Vec<CronJobRecord>> {
-        let rows = sqlx::query(
-            "SELECT * FROM cron_jobs WHERE agent_id = $1 ORDER BY created_at DESC",
-        )
-        .bind(agent_id)
-        .fetch_all(&self.pool)
-        .await?;
+    async fn list_cron_jobs_by_agent(&self, agent_id: &str) -> Result<Vec<CronJobRecord>> {
+        let rows =
+            sqlx::query("SELECT * FROM cron_jobs WHERE agent_id = $1 ORDER BY created_at DESC")
+                .bind(agent_id)
+                .fetch_all(&self.pool)
+                .await?;
         Ok(rows.iter().map(row_to_cron).collect())
     }
 
-    async fn list_due_cron_jobs(
-        &self,
-        _now_unix: i64,
-        _limit: i64,
-    ) -> Result<Vec<CronJobRecord>> {
+    async fn list_due_cron_jobs(&self, _now_unix: i64, _limit: i64) -> Result<Vec<CronJobRecord>> {
         let now: DateTime<Utc> = Utc::now();
         let rows = sqlx::query(
             "SELECT * FROM cron_jobs WHERE enabled = true AND (next_run IS NULL OR next_run <= $1)
@@ -1220,10 +1173,7 @@ impl Store for PostgresStore {
         Ok(())
     }
 
-    async fn list_token_usage(
-        &self,
-        since_day: NaiveDate,
-    ) -> Result<Vec<TokenUsageRecord>> {
+    async fn list_token_usage(&self, since_day: NaiveDate) -> Result<Vec<TokenUsageRecord>> {
         let rows = sqlx::query("SELECT * FROM token_usage_daily WHERE day >= $1 ORDER BY day ASC")
             .bind(since_day)
             .fetch_all(&self.pool)

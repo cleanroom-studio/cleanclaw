@@ -145,9 +145,8 @@ fn logs(lines: usize) -> Result<()> {
 }
 
 fn install() -> Result<()> {
-    let exe = std::env::current_exe().map_err(|e| {
-        cleanclaw_core::CleanClawError::Internal(format!("current_exe: {e}"))
-    })?;
+    let exe = std::env::current_exe()
+        .map_err(|e| cleanclaw_core::CleanClawError::Internal(format!("current_exe: {e}")))?;
     cleanclaw_daemon::install(&exe).map_err(ioe)?;
     println!("installed");
     Ok(())
@@ -167,7 +166,9 @@ fn de(e: cleanclaw_daemon::DaemonError) -> cleanclaw_core::CleanClawError {
     use cleanclaw_daemon::DaemonError::*;
     match e {
         Io(io) => cleanclaw_core::CleanClawError::Internal(format!("io: {io}")),
-        AlreadyRunning(pid) => cleanclaw_core::CleanClawError::Conflict(format!("already running: {pid}")),
+        AlreadyRunning(pid) => {
+            cleanclaw_core::CleanClawError::Conflict(format!("already running: {pid}"))
+        }
         NotRunning => cleanclaw_core::CleanClawError::NotFound("not running".into()),
         StalePid => cleanclaw_core::CleanClawError::Conflict("stale pid file".into()),
         SignalFailed(msg) => cleanclaw_core::CleanClawError::Internal(format!("signal: {msg}")),

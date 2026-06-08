@@ -70,17 +70,14 @@ impl Resolver {
             .get(axum::http::header::COOKIE)
             .and_then(|v| v.to_str().ok())
             .and_then(|cookies| {
-                cookies
-                    .split(';')
-                    .map(|s| s.trim())
-                    .find_map(|c| {
-                        let (k, v) = c.split_once('=')?;
-                        if k == SESSION_COOKIE_NAME {
-                            Some(v.to_string())
-                        } else {
-                            None
-                        }
-                    })
+                cookies.split(';').map(|s| s.trim()).find_map(|c| {
+                    let (k, v) = c.split_once('=')?;
+                    if k == SESSION_COOKIE_NAME {
+                        Some(v.to_string())
+                    } else {
+                        None
+                    }
+                })
             });
         self.resolve(bearer.as_deref(), cookie.as_deref()).await
     }
@@ -198,4 +195,3 @@ mod tests {
         assert_eq!(SESSION_TTL, Duration::from_secs(30 * 24 * 3600));
     }
 }
-

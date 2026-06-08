@@ -180,7 +180,9 @@ fn ordered_item(s: &str) -> Option<&str> {
         return None;
     }
     let rest_start = digits.len();
-    if s.as_bytes().get(rest_start) == Some(&b'.') && s.as_bytes().get(rest_start + 1) == Some(&b' ') {
+    if s.as_bytes().get(rest_start) == Some(&b'.')
+        && s.as_bytes().get(rest_start + 1) == Some(&b' ')
+    {
         Some(&s[rest_start + 2..])
     } else {
         None
@@ -339,7 +341,14 @@ fn scan_url_end(bytes: &[u8], start: usize) -> usize {
     let mut i = start;
     while i < bytes.len() {
         let b = bytes[i];
-        if b == b' ' || b == b'\n' || b == b'\r' || b == b'<' || b == b'>' || b == b'"' || b == b'\'' {
+        if b == b' '
+            || b == b'\n'
+            || b == b'\r'
+            || b == b'<'
+            || b == b'>'
+            || b == b'"'
+            || b == b'\''
+        {
             break;
         }
         i += 1;
@@ -385,7 +394,11 @@ fn is_safe_url(url: &str) -> bool {
     if url.is_empty() {
         return false;
     }
-    if url.starts_with("//") || url.starts_with("javascript:") || url.starts_with("data:") || url.starts_with("vbscript:") {
+    if url.starts_with("//")
+        || url.starts_with("javascript:")
+        || url.starts_with("data:")
+        || url.starts_with("vbscript:")
+    {
         return false;
     }
     if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("mailto:") {

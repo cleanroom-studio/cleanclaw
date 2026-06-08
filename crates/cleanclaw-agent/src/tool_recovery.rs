@@ -117,8 +117,7 @@ fn function_calls_re() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
     R.get_or_init(|| {
         // Anthropic-style: <function_calls>...<invoke name="x">...</invoke>...</function_calls>
-        Regex::new(r"(?s)<function_calls>.*?</function_calls>")
-            .expect("static regex")
+        Regex::new(r"(?s)<function_calls>.*?</function_calls>").expect("static regex")
     })
 }
 
@@ -250,7 +249,10 @@ mod tests {
     fn existing_structured_calls_block_recovery() {
         let raw = "<function_calls><invoke name=\"foo\"><x>1</x></invoke></function_calls>";
         let out = recover_tool_calls_from_text(raw, &[tc("foo")]);
-        assert!(out.is_empty(), "should not double-recover when structured calls present");
+        assert!(
+            out.is_empty(),
+            "should not double-recover when structured calls present"
+        );
     }
 
     #[test]
@@ -272,7 +274,8 @@ mod tests {
 
     #[test]
     fn recovers_short_form() {
-        let raw = r#"<function_calls><invoke name="echo"><text>hi</text></invoke></function_calls>"#;
+        let raw =
+            r#"<function_calls><invoke name="echo"><text>hi</text></invoke></function_calls>"#;
         let out = recover_tool_calls_from_text(raw, &[]);
         assert_eq!(out.len(), 1);
         assert_eq!(out[0].call.name, "echo");
@@ -340,7 +343,9 @@ mod tests {
         tf.record("read", &args, "no such file");
         assert_eq!(tf.prior_failure("read", &args), Some("no such file".into()));
         // Different args = no hit
-        assert!(tf.prior_failure("read", &serde_json::json!({"path": "/y"})).is_none());
+        assert!(tf
+            .prior_failure("read", &serde_json::json!({"path": "/y"}))
+            .is_none());
         // Different tool = no hit
         assert!(tf.prior_failure("write", &args).is_none());
         tf.reset();

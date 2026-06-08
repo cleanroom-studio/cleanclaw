@@ -1,5 +1,6 @@
 <script lang="ts">
-  let { children, label = 'Tooltip' }: { children?: any; label?: string } = $props();
+  let { children, label = "Tooltip" }: { children?: any; label?: string } =
+    $props();
   let visible = $state(false);
 </script>
 

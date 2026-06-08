@@ -178,8 +178,8 @@ pub struct BoxLiteFileResponse {
 /// stdout/stderr/exit chunks.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BoxLiteShellFrame {
-    pub kind: String, // "stdout" | "stderr" | "exit" | "signal"
-    pub data: Option<String>, // text or base64 depending on `encoding`
+    pub kind: String,             // "stdout" | "stderr" | "exit" | "signal"
+    pub data: Option<String>,     // text or base64 depending on `encoding`
     pub encoding: Option<String>, // "text" | "base64"
     pub exit_code: Option<i32>,
     pub signal: Option<String>,

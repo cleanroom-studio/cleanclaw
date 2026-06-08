@@ -32,8 +32,8 @@ const BUFFER_CAP: usize = 4 * 1024 * 1024; // 4 MiB per session
 /// output was lost.
 pub struct OutputBuffer {
     data: Vec<u8>,
-    head: usize,   // absolute offset of data[0]
-    total: usize,  // absolute offset past data[end]
+    head: usize,  // absolute offset of data[0]
+    total: usize, // absolute offset past data[end]
     max_bytes: usize,
 }
 
@@ -69,7 +69,11 @@ impl OutputBuffer {
             if start >= self.data.len() {
                 (Vec::new(), false, since)
             } else {
-                (self.data[start..].to_vec(), false, self.head + self.data.len())
+                (
+                    self.data[start..].to_vec(),
+                    false,
+                    self.head + self.data.len(),
+                )
             }
         }
     }
@@ -196,7 +200,9 @@ impl BashRegistry {
     /// Kill a session. Idempotent.
     pub async fn kill(&self, id: &str) -> Result<(), String> {
         let mut sessions = self.sessions.lock().await;
-        let session = sessions.get_mut(id).ok_or_else(|| format!("no such bash_id: {id}"))?;
+        let session = sessions
+            .get_mut(id)
+            .ok_or_else(|| format!("no such bash_id: {id}"))?;
         if let Some(mut child) = session.child.take() {
             let _ = child.start_kill();
             let _ = child.wait().await;
@@ -234,7 +240,10 @@ impl BashRegistry {
         // Arc-shared buffer's content. The fields are still
         // observable here so callers can verify the
         // spawn/registry shape.
-        Some((session.buffer.data.iter().map(|&b| b as char).collect(), session.exit_code))
+        Some((
+            session.buffer.data.iter().map(|&b| b as char).collect(),
+            session.exit_code,
+        ))
     }
 }
 
@@ -251,11 +260,7 @@ fn _silence_unused_warning(_m: OutboundMessage) {}
 
 /// Render a bash_output response as a single string. Used by the
 /// `bash_output` tool wrapper (which lives in `tools/exec.rs`).
-pub fn render_output(
-    new_bytes: &[u8],
-    dropped: bool,
-    status: Option<i32>,
-) -> serde_json::Value {
+pub fn render_output(new_bytes: &[u8], dropped: bool, status: Option<i32>) -> serde_json::Value {
     let text = String::from_utf8_lossy(new_bytes).to_string();
     let status_line = match status {
         Some(code) if code == 0 => "[status] exited (code=0)".to_string(),

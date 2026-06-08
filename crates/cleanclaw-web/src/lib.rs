@@ -48,16 +48,16 @@
 //! W1 only wires `/` + `/overview` + `/favicon.ico` + the global CSS.
 //! Subsequent phases fill in the rest.
 
+pub mod client;
 pub mod css;
-pub mod html;
 pub mod hooks;
+pub mod html;
 pub mod layout;
 pub mod markdown;
-pub mod scope_picker;
-pub mod types;
-pub mod client;
 pub mod pages;
+pub mod scope_picker;
 pub mod server;
+pub mod types;
 
 pub use server::serve;
 
@@ -70,6 +70,14 @@ mod tests {
     #[test]
     fn crate_links() {
         // Smoke test: make sure the public types compile and link.
-        let _: fn() -> String = || super::layout::render("t", super::layout::NavKey::Overview, "", None, super::Theme::Light);
+        let _: fn() -> String = || {
+            super::layout::render(
+                "t",
+                super::layout::NavKey::Overview,
+                "",
+                None,
+                super::Theme::Light,
+            )
+        };
     }
 }

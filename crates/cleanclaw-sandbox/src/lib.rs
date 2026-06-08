@@ -53,11 +53,7 @@ pub enum SandboxError {
 
 #[async_trait]
 pub trait Executor: Send + Sync {
-    async fn exec(
-        &self,
-        command: &str,
-        timeout: Duration,
-    ) -> Result<SandboxExec, SandboxError>;
+    async fn exec(&self, command: &str, timeout: Duration) -> Result<SandboxExec, SandboxError>;
     async fn read_file(&self, path: &str) -> Result<Bytes, SandboxError>;
     async fn write_file(&self, path: &str, content: &[u8]) -> Result<(), SandboxError>;
     async fn list_dir(&self, path: &str) -> Result<Vec<SandboxEntry>, SandboxError>;
@@ -117,11 +113,7 @@ impl LocalExecutor {
 
 #[async_trait]
 impl Executor for LocalExecutor {
-    async fn exec(
-        &self,
-        command: &str,
-        timeout: Duration,
-    ) -> Result<SandboxExec, SandboxError> {
+    async fn exec(&self, command: &str, timeout: Duration) -> Result<SandboxExec, SandboxError> {
         let start = std::time::Instant::now();
         let result = tokio::time::timeout(
             timeout,
@@ -250,8 +242,8 @@ impl ExecutorPool for LocalExecutorPool {
                     project_id
                 },
                 if session_id.is_empty() {
-                    "_" }
-                else {
+                    "_"
+                } else {
                     session_id
                 }
             ));
@@ -343,10 +335,7 @@ impl LifecyclePool {
         for k in stale {
             let parts: Vec<&str> = k.splitn(3, '|').collect();
             if parts.len() == 3 {
-                let _ = self
-                    .inner
-                    .release(parts[0], parts[1], parts[2])
-                    .await;
+                let _ = self.inner.release(parts[0], parts[1], parts[2]).await;
                 self.state.lock().await.remove(&k);
                 released += 1;
             }
@@ -510,12 +499,7 @@ impl AnyExt for RequestContext {
 pub trait WorkspaceStore: Send + Sync {
     async fn list_paths(&self, user_id: &str) -> Result<Vec<String>, SandboxError>;
     async fn get(&self, user_id: &str, path: &str) -> Result<Bytes, SandboxError>;
-    async fn put(
-        &self,
-        user_id: &str,
-        path: &str,
-        content: Bytes,
-    ) -> Result<(), SandboxError>;
+    async fn put(&self, user_id: &str, path: &str, content: Bytes) -> Result<(), SandboxError>;
     async fn delete(&self, user_id: &str, path: &str) -> Result<(), SandboxError>;
 }
 
@@ -540,12 +524,7 @@ impl WorkspaceStore for WorkspaceStoreAdapter {
             .await
             .map_err(|e| SandboxError::Workspace(e))
     }
-    async fn put(
-        &self,
-        user_id: &str,
-        path: &str,
-        content: Bytes,
-    ) -> Result<(), SandboxError> {
+    async fn put(&self, user_id: &str, path: &str, content: Bytes) -> Result<(), SandboxError> {
         self.inner
             .put(user_id, "", "", path, content, "application/octet-stream")
             .await
@@ -573,11 +552,7 @@ impl WorkspaceSync {
 
     /// Copy every workspace file for `user_id` into `local_dir`.
     /// Returns the number of files copied.
-    pub async fn hydrate(
-        &self,
-        user_id: &str,
-        local_dir: &Path,
-    ) -> Result<usize, SandboxError> {
+    pub async fn hydrate(&self, user_id: &str, local_dir: &Path) -> Result<usize, SandboxError> {
         let files = self.store.list_paths(user_id).await?;
         let mut count = 0;
         for path in files {
@@ -601,11 +576,7 @@ impl WorkspaceSync {
     /// Walk `local_dir` and upload every regular file to the
     /// store, skipping hidden files. Returns the number of files
     /// uploaded.
-    pub async fn flush(
-        &self,
-        user_id: &str,
-        local_dir: &Path,
-    ) -> Result<usize, SandboxError> {
+    pub async fn flush(&self, user_id: &str, local_dir: &Path) -> Result<usize, SandboxError> {
         if !local_dir.is_dir() {
             return Ok(0);
         }
@@ -620,10 +591,7 @@ impl WorkspaceSync {
                     stack.push(from);
                 } else {
                     // Skip hidden files.
-                    if e.file_name()
-                        .to_string_lossy()
-                        .starts_with('.')
-                    {
+                    if e.file_name().to_string_lossy().starts_with('.') {
                         continue;
                     }
                     let rel = match from.strip_prefix(local_dir) {
@@ -733,12 +701,7 @@ mod workspace_sync_tests {
                 .and_then(|m| m.get(path).cloned())
                 .ok_or_else(|| SandboxError::NotFound(path.to_string()))
         }
-        async fn put(
-            &self,
-            user_id: &str,
-            path: &str,
-            content: Bytes,
-        ) -> Result<(), SandboxError> {
+        async fn put(&self, user_id: &str, path: &str, content: Bytes) -> Result<(), SandboxError> {
             let mut g = self.files.lock().await;
             g.entry(user_id.to_string())
                 .or_default()
@@ -852,10 +815,7 @@ mod tests {
     async fn local_exec_captures_exit_code() {
         let dir = tmpdir();
         let e = LocalExecutor::new(dir.clone());
-        let res = e
-            .exec("exit 7", Duration::from_secs(5))
-            .await
-            .unwrap();
+        let res = e.exec("exit 7", Duration::from_secs(5)).await.unwrap();
         assert_eq!(res.exit_code, 7);
         let _ = std::fs::remove_dir_all(dir);
     }
@@ -969,10 +929,7 @@ mod tests {
     async fn lifecycle_pool_sweep_releases_idle() {
         let dir = tmpdir();
         let inner = Arc::new(LocalExecutorPool::new(dir.clone()));
-        let lc = Arc::new(LifecyclePool::new(
-            inner.clone(),
-            Duration::from_millis(0),
-        ));
+        let lc = Arc::new(LifecyclePool::new(inner.clone(), Duration::from_millis(0)));
         let _ = lc.get("a1", "", "s1").await.unwrap();
         // Backdate the lastUsed to force idle.
         {
@@ -1156,11 +1113,7 @@ impl DockerExecutor {
 
 #[async_trait::async_trait]
 impl Executor for DockerExecutor {
-    async fn exec(
-        &self,
-        command: &str,
-        _timeout: Duration,
-    ) -> Result<SandboxExec, SandboxError> {
+    async fn exec(&self, command: &str, _timeout: Duration) -> Result<SandboxExec, SandboxError> {
         // If no container is bound, fall back to the historical
         // NotConfigured so callers that haven't wired the gateway
         // sandbox runtime keep their existing semantics. When a
@@ -1225,9 +1178,7 @@ impl Executor for DockerExecutor {
         let container = self.bound().ok_or(SandboxError::NotConfigured("docker"))?;
         // `ls -1` one entry per line; the -a flag exposes dotfiles
         // too. Mirrors the Go `ListDir` shape.
-        let out = self
-            .docker_exec(&container, &["ls", "-1a", path])
-            .await?;
+        let out = self.docker_exec(&container, &["ls", "-1a", path]).await?;
         if out.exit_code != 0 {
             return Ok(Vec::new());
         }
@@ -1386,15 +1337,17 @@ impl E2BExecutor {
 
     /// `POST /sandboxes` — create a fresh E2B sandbox. Mirrors the
     /// Go daemon's `E2b.Create()`.
-    pub async fn create_sandbox(
-        &self,
-    ) -> Result<crate::remote::E2BSandbox, SandboxError> {
+    pub async fn create_sandbox(&self) -> Result<crate::remote::E2BSandbox, SandboxError> {
         let client = self.require_client()?;
         let url = format!("{}/sandboxes", self.base_url);
         let body = serde_json::json!({ "template": self.template });
         let resp = client
             .post(&url)
-            .headers(self.auth_headers().try_into_http().map_err(SandboxError::Http)?)
+            .headers(
+                self.auth_headers()
+                    .try_into_http()
+                    .map_err(SandboxError::Http)?,
+            )
             .json(&body)
             .send()
             .await
@@ -1425,7 +1378,11 @@ impl E2BExecutor {
         let body = crate::remote::E2BExecRequest::new(command);
         let resp = client
             .post(&url)
-            .headers(self.auth_headers().try_into_http().map_err(SandboxError::Http)?)
+            .headers(
+                self.auth_headers()
+                    .try_into_http()
+                    .map_err(SandboxError::Http)?,
+            )
             .json(&body)
             .send()
             .await
@@ -1455,7 +1412,11 @@ impl E2BExecutor {
         let url = format!("{}/sandboxes/{}/files/{}", self.base_url, sandbox_id, path);
         let resp = client
             .get(&url)
-            .headers(self.auth_headers().try_into_http().map_err(SandboxError::Http)?)
+            .headers(
+                self.auth_headers()
+                    .try_into_http()
+                    .map_err(SandboxError::Http)?,
+            )
             .send()
             .await
             .map_err(|e| SandboxError::Upstream(format!("e2b read: {e}")))?;
@@ -1487,7 +1448,11 @@ impl E2BExecutor {
         };
         let resp = client
             .post(&url)
-            .headers(self.auth_headers().try_into_http().map_err(SandboxError::Http)?)
+            .headers(
+                self.auth_headers()
+                    .try_into_http()
+                    .map_err(SandboxError::Http)?,
+            )
             .json(&body)
             .send()
             .await
@@ -1504,15 +1469,16 @@ impl E2BExecutor {
 
     /// `DELETE /sandboxes/{id}` — kill the sandbox. Mirrors
     /// `E2b.Kill()`.
-    pub async fn kill_sandbox_remote(
-        &self,
-        sandbox_id: &str,
-    ) -> Result<(), SandboxError> {
+    pub async fn kill_sandbox_remote(&self, sandbox_id: &str) -> Result<(), SandboxError> {
         let client = self.require_client()?;
         let url = format!("{}/sandboxes/{}", self.base_url, sandbox_id);
         let resp = client
             .delete(&url)
-            .headers(self.auth_headers().try_into_http().map_err(SandboxError::Http)?)
+            .headers(
+                self.auth_headers()
+                    .try_into_http()
+                    .map_err(SandboxError::Http)?,
+            )
             .send()
             .await
             .map_err(|e| SandboxError::Upstream(format!("e2b kill: {e}")))?;
@@ -1528,11 +1494,7 @@ impl E2BExecutor {
 
 #[async_trait::async_trait]
 impl Executor for E2BExecutor {
-    async fn exec(
-        &self,
-        _command: &str,
-        _timeout: Duration,
-    ) -> Result<SandboxExec, SandboxError> {
+    async fn exec(&self, _command: &str, _timeout: Duration) -> Result<SandboxExec, SandboxError> {
         // The trait path needs a bound sandbox id; the gateway
         // is responsible for that. Operators that wired a client
         // use `exec_remote()` after binding an id.
@@ -1640,15 +1602,17 @@ impl BoxLiteExecutor {
     }
 
     /// `POST /sandboxes`. Mirrors the Go `Boxlite.Create()`.
-    pub async fn create_sandbox(
-        &self,
-    ) -> Result<crate::remote::BoxLiteSandbox, SandboxError> {
+    pub async fn create_sandbox(&self) -> Result<crate::remote::BoxLiteSandbox, SandboxError> {
         let client = self.require_client()?;
         let url = format!("{}/sandboxes", self.base_url);
         let body = serde_json::json!({ "template": self.image });
         let resp = client
             .post(&url)
-            .headers(self.auth_headers().try_into_http().map_err(SandboxError::Http)?)
+            .headers(
+                self.auth_headers()
+                    .try_into_http()
+                    .map_err(SandboxError::Http)?,
+            )
             .json(&body)
             .send()
             .await
@@ -1678,7 +1642,11 @@ impl BoxLiteExecutor {
         let body = crate::remote::BoxLiteExecRequest::new(command);
         let resp = client
             .post(&url)
-            .headers(self.auth_headers().try_into_http().map_err(SandboxError::Http)?)
+            .headers(
+                self.auth_headers()
+                    .try_into_http()
+                    .map_err(SandboxError::Http)?,
+            )
             .json(&body)
             .send()
             .await
@@ -1707,7 +1675,11 @@ impl BoxLiteExecutor {
         let url = format!("{}/sandboxes/{}/files", self.base_url, sandbox_id);
         let resp = client
             .get(&url)
-            .headers(self.auth_headers().try_into_http().map_err(SandboxError::Http)?)
+            .headers(
+                self.auth_headers()
+                    .try_into_http()
+                    .map_err(SandboxError::Http)?,
+            )
             .query(&[("path", path)])
             .send()
             .await
@@ -1765,10 +1737,7 @@ impl BoxLiteExecutor {
     }
 
     /// `DELETE /sandboxes/{id}`. Mirrors the Go `Boxlite.Close()`.
-    pub async fn delete_sandbox_remote(
-        &self,
-        sandbox_id: &str,
-    ) -> Result<(), SandboxError> {
+    pub async fn delete_sandbox_remote(&self, sandbox_id: &str) -> Result<(), SandboxError> {
         let client = self.require_client()?;
         let url = format!("{}/sandboxes/{}", self.base_url, sandbox_id);
         let mut headers = reqwest::header::HeaderMap::new();
@@ -1809,8 +1778,7 @@ impl TryIntoHeaderMap for std::collections::HashMap<&'static str, String> {
         for (k, v) in self {
             let name = reqwest::header::HeaderName::from_bytes(k.as_bytes())
                 .map_err(|e| format!("{e}"))?;
-            let val = reqwest::header::HeaderValue::from_str(&v)
-                .map_err(|e| format!("{e}"))?;
+            let val = reqwest::header::HeaderValue::from_str(&v).map_err(|e| format!("{e}"))?;
             h.insert(name, val);
         }
         Ok(h)
@@ -1819,11 +1787,7 @@ impl TryIntoHeaderMap for std::collections::HashMap<&'static str, String> {
 
 #[async_trait::async_trait]
 impl Executor for BoxLiteExecutor {
-    async fn exec(
-        &self,
-        _command: &str,
-        _timeout: Duration,
-    ) -> Result<SandboxExec, SandboxError> {
+    async fn exec(&self, _command: &str, _timeout: Duration) -> Result<SandboxExec, SandboxError> {
         // Without a bound sandbox id there's no remote to talk to.
         // The exec_remote() method is the real path; this method
         // exists to satisfy the trait + the offline build.
@@ -1909,7 +1873,8 @@ mod docker_e2b_boxlite_tests {
             "cleanclaw-sandbox-dockerpool-{}",
             Utc::now().timestamp_nanos_opt().unwrap_or_default()
         ));
-        let p = DockerExecutorPool::new("img", dir.to_string_lossy().to_string(), Policy::default());
+        let p =
+            DockerExecutorPool::new("img", dir.to_string_lossy().to_string(), Policy::default());
         let _exec = p.get("a1", "", "s1").await.unwrap();
         let _ = std::fs::remove_dir_all(dir);
     }
@@ -1945,8 +1910,7 @@ mod docker_e2b_boxlite_tests {
 
     #[test]
     fn boxlite_executor_with_endpoint_overrides_default() {
-        let e = BoxLiteExecutor::new("alpine")
-            .with_endpoint("https://internal.boxlite.local:9000");
+        let e = BoxLiteExecutor::new("alpine").with_endpoint("https://internal.boxlite.local:9000");
         assert_eq!(e.base_url(), "https://internal.boxlite.local:9000");
     }
 
@@ -1965,7 +1929,10 @@ mod docker_e2b_boxlite_tests {
             .unwrap();
         rt.block_on(async {
             let e = BoxLiteExecutor::new("alpine");
-            let err = e.exec("ls", std::time::Duration::from_secs(5)).await.unwrap_err();
+            let err = e
+                .exec("ls", std::time::Duration::from_secs(5))
+                .await
+                .unwrap_err();
             assert!(matches!(err, SandboxError::NotConfigured("boxlite client")));
         });
     }
@@ -1982,7 +1949,10 @@ mod docker_e2b_boxlite_tests {
             // No bound sandbox id, so even with a client, the trait
             // path refuses — the gateway has to use exec_remote()
             // after binding an id.
-            let err = e.exec("ls", std::time::Duration::from_secs(5)).await.unwrap_err();
+            let err = e
+                .exec("ls", std::time::Duration::from_secs(5))
+                .await
+                .unwrap_err();
             assert!(matches!(err, SandboxError::NotConfigured(_)));
         });
     }
@@ -2048,8 +2018,7 @@ mod docker_e2b_boxlite_tests {
 
     #[test]
     fn e2b_executor_with_endpoint_overrides_default() {
-        let e = E2BExecutor::new("sk", "base")
-            .with_endpoint("https://internal.e2b.local:8080");
+        let e = E2BExecutor::new("sk", "base").with_endpoint("https://internal.e2b.local:8080");
         assert_eq!(e.base_url(), "https://internal.e2b.local:8080");
     }
 
@@ -2066,7 +2035,10 @@ mod docker_e2b_boxlite_tests {
             .build()
             .unwrap();
         rt.block_on(async {
-            let err = e.exec("ls", std::time::Duration::from_secs(5)).await.unwrap_err();
+            let err = e
+                .exec("ls", std::time::Duration::from_secs(5))
+                .await
+                .unwrap_err();
             match err {
                 SandboxError::NotConfigured(msg) => {
                     assert!(msg.contains("bound sandbox id"), "{msg}");
@@ -2085,7 +2057,10 @@ mod docker_e2b_boxlite_tests {
             .unwrap();
         rt.block_on(async {
             let e = E2BExecutor::new("sk", "base");
-            let err = e.exec("ls", std::time::Duration::from_secs(5)).await.unwrap_err();
+            let err = e
+                .exec("ls", std::time::Duration::from_secs(5))
+                .await
+                .unwrap_err();
             assert!(matches!(err, SandboxError::NotConfigured("e2b client")));
         });
     }

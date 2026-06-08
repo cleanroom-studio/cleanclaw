@@ -154,12 +154,7 @@ async fn handle_chat_socket(socket: WebSocket, state: ApiState) {
             return;
         }
     };
-    let _ = respond_ok(
-        &mut tx,
-        first_frame.id.as_deref().unwrap_or(""),
-        json!({}),
-    )
-    .await;
+    let _ = respond_ok(&mut tx, first_frame.id.as_deref().unwrap_or(""), json!({})).await;
 
     // Main loop: read `chat.send` frames, drive a turn each.
     while let Some(msg) = rx.next().await {
@@ -331,14 +326,22 @@ async fn run_turn_and_stream(
                         payload = json!({"delta": delta});
                         is_done = false;
                     }
-                    AgentEvent::ToolCall { name, id, arguments } => {
+                    AgentEvent::ToolCall {
+                        name,
+                        id,
+                        arguments,
+                    } => {
                         let tc = json!({"name": name, "id": id, "arguments": arguments});
                         acc_tool_calls.push(tc.clone());
                         ev_name = "chat.tool_call";
                         payload = json!({"name": name, "id": id, "arguments": arguments});
                         is_done = false;
                     }
-                    AgentEvent::ToolResult { id, content, is_error } => {
+                    AgentEvent::ToolResult {
+                        id,
+                        content,
+                        is_error,
+                    } => {
                         acc_tool_results.push(json!({
                             "id": id,
                             "content": content,
@@ -348,7 +351,10 @@ async fn run_turn_and_stream(
                         payload = json!({"id": id, "content": content, "is_error": is_error});
                         is_done = false;
                     }
-                    AgentEvent::Done { finish_reason, usage } => {
+                    AgentEvent::Done {
+                        finish_reason,
+                        usage,
+                    } => {
                         final_finish = finish_reason.clone();
                         final_usage = usage.clone();
                         ev_name = "chat.done";
@@ -428,7 +434,13 @@ async fn run_turn_and_stream(
         }
     }
     if let Some(msg) = turn_error {
-        let _ = send_event(tx, request_id, "chat.error", json!({"message": msg.clone()})).await;
+        let _ = send_event(
+            tx,
+            request_id,
+            "chat.error",
+            json!({"message": msg.clone()}),
+        )
+        .await;
         // Persist the error so the next page load shows it.
         if final_reply_for_persist.is_empty() {
             final_reply_for_persist = format!("[error] {msg}");
@@ -502,7 +514,10 @@ async fn persist_turn(
         chatter_user_id: user_id.to_string(),
     };
     if let Err(e) = state.store.append_session_message(&user_msg).await {
-        warn!(?e, user_id, agent_id, session_key, "persist user msg failed");
+        warn!(
+            ?e,
+            user_id, agent_id, session_key, "persist user msg failed"
+        );
     }
 
     // Append the assistant message.
@@ -530,7 +545,10 @@ async fn persist_turn(
         chatter_user_id: user_id.to_string(),
     };
     if let Err(e) = state.store.append_session_message(&assistant_msg).await {
-        warn!(?e, user_id, agent_id, session_key, "persist assistant msg failed");
+        warn!(
+            ?e,
+            user_id, agent_id, session_key, "persist assistant msg failed"
+        );
     }
 
     // Upsert the SessionRecord. The `message_count` is the
@@ -596,7 +614,10 @@ async fn persist_turn(
         .save_session(user_id, agent_id, session_key, &rec)
         .await
     {
-        warn!(?e, user_id, agent_id, session_key, "persist session record failed");
+        warn!(
+            ?e,
+            user_id, agent_id, session_key, "persist session record failed"
+        );
     }
 }
 

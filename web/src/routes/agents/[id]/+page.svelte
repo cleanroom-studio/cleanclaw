@@ -8,8 +8,8 @@
   // equivalent: the browser preserves the DOM when only the
   // session-id query / project-id path changes.
 
-  import { page } from '$app/state';
-  import ChatScreen from '$lib/components/ChatScreen.svelte';
+  import { page } from "$app/state";
+  import ChatScreen from "$lib/components/ChatScreen.svelte";
 
   let { params }: { params: { id: string } } = $props();
   const agentId = $derived(params.id);

@@ -137,7 +137,11 @@ impl Server {
         user_lookup: Option<Arc<dyn UserLookup>>,
     ) -> Self {
         let path = path.into();
-        let path = if path.is_empty() { "/hooks".to_string() } else { path };
+        let path = if path.is_empty() {
+            "/hooks".to_string()
+        } else {
+            path
+        };
         Self {
             path,
             state: Arc::new(ServerState {
@@ -205,10 +209,18 @@ async fn handle_webhook(
         } else if let Some(lookup) = &state.user_lookup {
             match lookup.lookup_by_token(token).await {
                 Some(uid) => owner_user_id = uid,
-                None => return (StatusCode::UNAUTHORIZED, Json(WebhookResponse::err("unauthorized"))),
+                None => {
+                    return (
+                        StatusCode::UNAUTHORIZED,
+                        Json(WebhookResponse::err("unauthorized")),
+                    )
+                }
             }
         } else {
-            return (StatusCode::UNAUTHORIZED, Json(WebhookResponse::err("unauthorized")));
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(WebhookResponse::err("unauthorized")),
+            );
         }
     }
 
@@ -225,7 +237,11 @@ async fn handle_webhook(
         );
     }
 
-    let channel = if req.channel.is_empty() { "webhook".to_string() } else { req.channel };
+    let channel = if req.channel.is_empty() {
+        "webhook".to_string()
+    } else {
+        req.channel
+    };
     let chat_id = if req.chat_id.is_empty() {
         "webhook-default".to_string()
     } else {
@@ -361,8 +377,12 @@ mod tests {
 
     #[tokio::test]
     async fn bearer_token_via_user_lookup() {
-        let server =
-            Server::with_user_lookup("admin-tok", "/hooks", ok_handler(), Some(granting_lookup("user-1")));
+        let server = Server::with_user_lookup(
+            "admin-tok",
+            "/hooks",
+            ok_handler(),
+            Some(granting_lookup("user-1")),
+        );
         let app = server.router();
         let body = json!({"agentId": "a1", "message": "hi"}).to_string();
         let req = Request::builder()
@@ -381,12 +401,8 @@ mod tests {
 
     #[tokio::test]
     async fn invalid_token_returns_unauthorized() {
-        let server = Server::with_user_lookup(
-            "admin-tok",
-            "/hooks",
-            ok_handler(),
-            Some(failing_lookup()),
-        );
+        let server =
+            Server::with_user_lookup("admin-tok", "/hooks", ok_handler(), Some(failing_lookup()));
         let app = server.router();
         let body = json!({"agentId": "a1", "message": "hi"}).to_string();
         let req = Request::builder()
@@ -461,8 +477,7 @@ mod tests {
             Some(granting_lookup("from-token")),
         );
         let app = server.router();
-        let body =
-            json!({"agentId": "a1", "message": "hi", "userId": "from-body"}).to_string();
+        let body = json!({"agentId": "a1", "message": "hi", "userId": "from-body"}).to_string();
         let req = Request::builder()
             .method("POST")
             .uri("/hooks")

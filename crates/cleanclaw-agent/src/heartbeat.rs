@@ -47,11 +47,7 @@ impl HeartbeatTick {
     /// Run one heartbeat tick for the given agent. Returns the
     /// "system reply" the gateway should surface (empty if nothing
     /// to report).
-    pub async fn run(
-        &self,
-        workspace_root: &str,
-        agent_id: &str,
-    ) -> Result<Option<String>> {
+    pub async fn run(&self, workspace_root: &str, agent_id: &str) -> Result<Option<String>> {
         let path = Path::new(workspace_root).join(HEARTBEAT_FILE);
         if !path.exists() {
             debug!(agent = agent_id, "no HEARTBEAT.md; skipping tick");
@@ -123,9 +119,16 @@ mod tests {
     #[tokio::test]
     async fn heartbeat_runs_and_returns_acknowledgment() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("HEARTBEAT.md"), "- check inbox\n- review metrics\n").unwrap();
+        std::fs::write(
+            dir.path().join("HEARTBEAT.md"),
+            "- check inbox\n- review metrics\n",
+        )
+        .unwrap();
         let tick = HeartbeatTick::new(HeartbeatConfig::default());
-        let out = tick.run(dir.path().to_str().unwrap(), "agt_1").await.unwrap();
+        let out = tick
+            .run(dir.path().to_str().unwrap(), "agt_1")
+            .await
+            .unwrap();
         assert!(out.is_some());
         assert!(out.unwrap().contains("heartbeat"));
     }
@@ -134,13 +137,19 @@ mod tests {
     async fn heartbeat_skips_when_no_file() {
         let dir = tempfile::tempdir().unwrap();
         let tick = HeartbeatTick::new(HeartbeatConfig::default());
-        let out = tick.run(dir.path().to_str().unwrap(), "agt_1").await.unwrap();
+        let out = tick
+            .run(dir.path().to_str().unwrap(), "agt_1")
+            .await
+            .unwrap();
         assert!(out.is_none());
     }
 
     #[test]
     fn scheduler_fires_then_cools_down() {
-        let s = HeartbeatScheduler::new(HeartbeatConfig { every_n_minutes: 5, model: None });
+        let s = HeartbeatScheduler::new(HeartbeatConfig {
+            every_n_minutes: 5,
+            model: None,
+        });
         let now = Utc::now();
         assert!(s.is_due("a", now));
         // Same instant: not due again.

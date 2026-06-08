@@ -111,9 +111,7 @@ fn connect(name: &str) -> Result<()> {
 }
 
 fn destroy(name: &str) -> Result<()> {
-    let status = Command::new("docker")
-        .args(["stop", name])
-        .status()?;
+    let status = Command::new("docker").args(["stop", name]).status()?;
     if !status.success() {
         return Err(cleanclaw_core::CleanClawError::Internal(format!(
             "docker stop failed: {}",

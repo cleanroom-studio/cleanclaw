@@ -72,9 +72,7 @@ struct AdminChatRow {
     last_activity: String,
 }
 
-async fn admin_chats(
-    State(state): State<Arc<ServerState>>,
-) -> impl IntoResponse {
+async fn admin_chats(State(state): State<Arc<ServerState>>) -> impl IntoResponse {
     let pairs = match state.store.list_session_owner_pairs().await {
         Ok(p) => p,
         Err(e) => return internal(e).into_response(),
@@ -119,9 +117,7 @@ async fn admin_usage(
         .as_deref()
         .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
         .map(|d| d.date_naive())
-        .unwrap_or_else(|| {
-            chrono::Utc::now().date_naive() - chrono::Duration::days(30)
-        });
+        .unwrap_or_else(|| chrono::Utc::now().date_naive() - chrono::Duration::days(30));
     match state.store.list_token_usage(since_date).await {
         Ok(rows) => {
             let total_input: i64 = rows.iter().map(|r| r.input_tokens).sum();
@@ -168,7 +164,11 @@ struct AdminUser {
 async fn admin_list_users(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<Vec<AdminUser>>, axum::http::StatusCode> {
-    let users = state.store.list_users().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let users = state
+        .store
+        .list_users()
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     let out: Vec<AdminUser> = users
         .into_iter()
         .map(|u| AdminUser {
@@ -188,23 +188,40 @@ async fn admin_delete_user(
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, String)> {
     if id.is_empty() {
-        return Err((axum::http::StatusCode::BAD_REQUEST, "user_id required".into()));
+        return Err((
+            axum::http::StatusCode::BAD_REQUEST,
+            "user_id required".into(),
+        ));
     }
     if let Ok(user) = state.store.get_user(&id).await {
         if user.role == "super_admin" {
-            let all = state.store.list_users().await.map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let all = state
+                .store
+                .list_users()
+                .await
+                .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             let super_admin_count = all.iter().filter(|u| u.role == "super_admin").count();
             if super_admin_count <= 1 {
-                return Err((axum::http::StatusCode::CONFLICT, "cannot remove last super admin".into()));
+                return Err((
+                    axum::http::StatusCode::CONFLICT,
+                    "cannot remove last super admin".into(),
+                ));
             }
         }
     }
-    state.accounts.delete(&id).await.map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("{e}")))?;
+    state.accounts.delete(&id).await.map_err(|e| {
+        (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("{e}"),
+        )
+    })?;
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 
 #[derive(Deserialize)]
-struct SetRoleRequest { role: String }
+struct SetRoleRequest {
+    role: String,
+}
 
 async fn admin_set_role(
     State(state): State<Arc<ServerState>>,
@@ -212,18 +229,36 @@ async fn admin_set_role(
     Json(body): Json<SetRoleRequest>,
 ) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, String)> {
     if !["super_admin", "admin", "user"].contains(&body.role.as_str()) {
-        return Err((axum::http::StatusCode::BAD_REQUEST, format!("invalid role: {}", body.role)));
+        return Err((
+            axum::http::StatusCode::BAD_REQUEST,
+            format!("invalid role: {}", body.role),
+        ));
     }
-    let mut u = state.store.get_user(&id).await.map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let mut u = state
+        .store
+        .get_user(&id)
+        .await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     if u.role == "super_admin" && body.role != "super_admin" {
-        let all = state.store.list_users().await.map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        let all = state
+            .store
+            .list_users()
+            .await
+            .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         let super_admin_count = all.iter().filter(|u| u.role == "super_admin").count();
         if super_admin_count <= 1 {
-            return Err((axum::http::StatusCode::CONFLICT, "cannot demote last super admin".into()));
+            return Err((
+                axum::http::StatusCode::CONFLICT,
+                "cannot demote last super admin".into(),
+            ));
         }
     }
     u.role = body.role;
-    state.store.update_user(&u).await.map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    state
+        .store
+        .update_user(&u)
+        .await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(Json(serde_json::json!({ "ok": true, "role": u.role })))
 }
 

@@ -8,7 +8,7 @@
 //! `cleanclaw-store` results.
 
 use crate::html::{
-    badge, card_open, card_close, card_header, card_title, card_content, esc, tabs, Theme,
+    badge, card_close, card_content, card_header, card_open, card_title, esc, tabs, Theme,
 };
 use crate::layout::{render, NavKey};
 use crate::types::TokenUsageReport;
@@ -39,11 +39,7 @@ impl AdminTab {
 }
 
 pub fn admin_tabs(active: AdminTab) -> String {
-    let labels: [(&str, &str); 3] = [
-        ("users", "Users"),
-        ("usage", "Usage"),
-        ("chats", "Chats"),
-    ];
+    let labels: [(&str, &str); 3] = [("users", "Users"), ("usage", "Usage"), ("chats", "Chats")];
     tabs(&labels, active.label())
 }
 
@@ -57,7 +53,13 @@ fn shell(active: AdminTab, body: &str, theme: Theme) -> String {
         tabs = admin_tabs(active),
         body = body,
     );
-    render("Admin · CleanClaw", NavKey::AdminUsers, &inner, Some(("Ada", "admin")), theme)
+    render(
+        "Admin · CleanClaw",
+        NavKey::AdminUsers,
+        &inner,
+        Some(("Ada", "admin")),
+        theme,
+    )
 }
 
 /// `/admin/users` — list + create / delete.
@@ -72,10 +74,7 @@ pub fn users(theme: Theme, rows: &[UserRow]) -> String {
             r.status.clone(),
         ]);
     }
-    let table = crate::html::table(
-        &["ID", "Username", "Email", "Role", "Status"],
-        &table_rows,
-    );
+    let table = crate::html::table(&["ID", "Username", "Email", "Role", "Status"], &table_rows);
     let body = format!(
         r#"{card_open}
 {card_header}
@@ -89,7 +88,12 @@ pub fn users(theme: Theme, rows: &[UserRow]) -> String {
         card_header = card_header(),
         card_title = card_title("Users"),
         card_content = card_content(""),
-        create_btn = crate::html::button("Create user", crate::html::ButtonVariant::Default, crate::html::ButtonSize::Sm, Some("/admin/users/new")),
+        create_btn = crate::html::button(
+            "Create user",
+            crate::html::ButtonVariant::Default,
+            crate::html::ButtonSize::Sm,
+            Some("/admin/users/new")
+        ),
         table = table,
         card_close = card_close(),
     );
@@ -108,11 +112,19 @@ pub fn usage(theme: Theme, report: Option<&TokenUsageReport>) -> String {
 fn usage_table(r: &TokenUsageReport) -> String {
     let mut agents: Vec<Vec<String>> = Vec::new();
     for a in &r.top_agents {
-        agents.push(vec![a.key.clone(), a.tokens.to_string(), a.request_count.to_string()]);
+        agents.push(vec![
+            a.key.clone(),
+            a.tokens.to_string(),
+            a.request_count.to_string(),
+        ]);
     }
     let mut users: Vec<Vec<String>> = Vec::new();
     for u in &r.top_users {
-        users.push(vec![u.key.clone(), u.tokens.to_string(), u.request_count.to_string()]);
+        users.push(vec![
+            u.key.clone(),
+            u.tokens.to_string(),
+            u.request_count.to_string(),
+        ]);
     }
     format!(
         r#"{card_open}
@@ -182,7 +194,10 @@ pub fn chats(theme: Theme, rows: &[ChatRow]) -> String {
         card_header = card_header(),
         card_title = card_title("Chats"),
         card_content = card_content(""),
-        table = crate::html::table(&["ID", "Agent", "Agent name", "Owner", "Preview"], &table_rows),
+        table = crate::html::table(
+            &["ID", "Agent", "Agent name", "Owner", "Preview"],
+            &table_rows
+        ),
         card_close = card_close(),
     );
     shell(AdminTab::Chats, &body, theme)

@@ -210,9 +210,7 @@ impl FtsStore {
 /// user query. Otherwise an input like `"OR rust"` would parse as a
 /// boolean expression and 500. Keep this list aligned with the FTS5
 /// reference (`https://www.sqlite.org/fts5.html#fts5_strings`).
-const FTS5_KEYWORDS: &[&str] = &[
-    "AND", "OR", "NOT", "NEAR",
-];
+const FTS5_KEYWORDS: &[&str] = &["AND", "OR", "NOT", "NEAR"];
 
 /// Escape a free-form query string into a safe FTS5 prefix query.
 /// Strips characters that have special meaning in FTS5, drops the
@@ -308,7 +306,9 @@ mod tests {
     #[tokio::test]
     async fn clear_removes_rows() {
         let s = open_memory().await.unwrap();
-        s.index("a", "c", "user", "alpha", Utc::now()).await.unwrap();
+        s.index("a", "c", "user", "alpha", Utc::now())
+            .await
+            .unwrap();
         s.clear().await.unwrap();
         let hits = s.search("alpha", 10).await.unwrap();
         assert!(hits.is_empty());
@@ -318,10 +318,7 @@ mod tests {
     #[tokio::test]
     async fn index_rejects_empty_content() {
         let s = open_memory().await.unwrap();
-        let err = s
-            .index("a", "c", "user", "", Utc::now())
-            .await
-            .unwrap_err();
+        let err = s.index("a", "c", "user", "", Utc::now()).await.unwrap_err();
         assert!(matches!(err, CleanClawError::InvalidArgument(_)));
         s.close().await;
     }

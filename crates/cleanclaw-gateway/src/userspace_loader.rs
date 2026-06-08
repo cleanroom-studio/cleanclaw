@@ -99,10 +99,7 @@ impl UserSpace {
     /// Pick an agent for an inbound message: explicit `msg.agent_id`
     /// wins, then bindings, then the first loaded agent (no
     /// "default" marker in the Rust port yet).
-    pub async fn match_agent(
-        &self,
-        msg: &InboundMessage,
-    ) -> Option<Arc<cleanclaw_agent::Agent>> {
+    pub async fn match_agent(&self, msg: &InboundMessage) -> Option<Arc<cleanclaw_agent::Agent>> {
         if !msg.agent_id.is_empty() {
             if let Some(a) = self.agents.get(&msg.agent_id).await {
                 return Some(a);
@@ -137,9 +134,8 @@ impl UserSpace {
         if self.has_agent(agent_id).await {
             return Ok(());
         }
-        let store = store.ok_or_else(|| {
-            UserSpaceError::Store("ensure_agent: store not wired".to_string())
-        })?;
+        let store = store
+            .ok_or_else(|| UserSpaceError::Store("ensure_agent: store not wired".to_string()))?;
         let rec = store
             .get_agent(agent_id)
             .await
@@ -228,11 +224,9 @@ pub async fn load_user_space(
 /// own provider handle, which is patched by the user space loader
 /// when the real config becomes available.
 pub fn build_noop_provider() -> Arc<dyn cleanclaw_provider::Provider> {
-    use cleanclaw_provider::message::{ChatResponse, Message};
-    use cleanclaw_provider::{
-        ChatRequest, ProviderError, ProviderStream, StreamEvent, Usage,
-    };
     use async_stream::stream;
+    use cleanclaw_provider::message::{ChatResponse, Message};
+    use cleanclaw_provider::{ChatRequest, ProviderError, ProviderStream, StreamEvent, Usage};
 
     struct NoopProvider;
     #[async_trait::async_trait]
@@ -240,10 +234,7 @@ pub fn build_noop_provider() -> Arc<dyn cleanclaw_provider::Provider> {
         fn name(&self) -> &str {
             "noop"
         }
-        async fn chat(
-            &self,
-            _req: &ChatRequest,
-        ) -> Result<ChatResponse, ProviderError> {
+        async fn chat(&self, _req: &ChatRequest) -> Result<ChatResponse, ProviderError> {
             Ok(ChatResponse {
                 id: String::new(),
                 model: String::new(),
@@ -253,10 +244,7 @@ pub fn build_noop_provider() -> Arc<dyn cleanclaw_provider::Provider> {
                 raw: serde_json::Value::Null,
             })
         }
-        async fn chat_stream(
-            &self,
-            _req: &ChatRequest,
-        ) -> Result<ProviderStream, ProviderError> {
+        async fn chat_stream(&self, _req: &ChatRequest) -> Result<ProviderStream, ProviderError> {
             let s = stream! {
                 yield Ok(StreamEvent::ContentDelta {
                     delta: "(no provider configured)".into()

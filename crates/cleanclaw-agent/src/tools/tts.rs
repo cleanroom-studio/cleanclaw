@@ -19,10 +19,7 @@ pub struct TtsTool {
 }
 
 impl TtsTool {
-    pub fn new(
-        provider: Arc<dyn cleanclaw_toolprov::Provider>,
-        config: ProviderConfig,
-    ) -> Self {
+    pub fn new(provider: Arc<dyn cleanclaw_toolprov::Provider>, config: ProviderConfig) -> Self {
         Self { provider, config }
     }
 }
@@ -46,7 +43,11 @@ impl Tool for TtsTool {
         })
     }
 
-    async fn call(&self, _ctx: &ToolContext, args: Value) -> std::result::Result<Value, CleanClawError> {
+    async fn call(
+        &self,
+        _ctx: &ToolContext,
+        args: Value,
+    ) -> std::result::Result<Value, CleanClawError> {
         let text = match args.get("text").and_then(|v| v.as_str()) {
             Some(s) if !s.trim().is_empty() => s,
             _ => return Ok(Value::String("tts: text is required".into())),
@@ -76,8 +77,12 @@ mod tts_tests {
     struct Stub;
     #[async_trait::async_trait]
     impl Provider for Stub {
-        fn category(&self) -> &'static str { "tts" }
-        fn name(&self) -> &'static str { "stub" }
+        fn category(&self) -> &'static str {
+            "tts"
+        }
+        fn name(&self) -> &'static str {
+            "stub"
+        }
         async fn execute(
             &self,
             _req: ProviderRequest,
@@ -112,6 +117,9 @@ mod tts_tests {
         let tool = TtsTool::new(Arc::new(Stub), ProviderConfig::default());
         let d = tool.parameters();
         let req = d.get("required").unwrap();
-        assert!(req.as_array().unwrap().contains(&Value::String("text".into())));
+        assert!(req
+            .as_array()
+            .unwrap()
+            .contains(&Value::String("text".into())));
     }
 }

@@ -11,9 +11,7 @@
 //! env vars in the deployment manifest to flip on the real path.
 
 use async_trait::async_trait;
-use cleanclaw_plugin_runtime::{
-    HookRegistration, Plugin, PluginError,
-};
+use cleanclaw_plugin_runtime::{HookRegistration, Plugin, PluginError};
 use serde_json::Value;
 use std::sync::Mutex;
 
@@ -57,20 +55,13 @@ impl Plugin for Mem0Plugin {
         if let Some(k) = params.get("topK").and_then(|v| v.as_u64()) {
             cfg.top_k = k as u32;
         }
-        tracing::info!(
-            "mem0 initialized with url={}, topK={}",
-            cfg.url,
-            cfg.top_k
-        );
+        tracing::info!("mem0 initialized with url={}, topK={}", cfg.url, cfg.top_k);
         Ok(serde_json::json!({ "status": "ok" }))
     }
 
     async fn hook_register(&self) -> Result<HookRegistration, PluginError> {
         Ok(HookRegistration {
-            points: vec![
-                "before_model_call".into(),
-                "after_model_call".into(),
-            ],
+            points: vec!["before_model_call".into(), "after_model_call".into()],
         })
     }
 
@@ -98,10 +89,7 @@ impl Mem0Plugin {
             .and_then(|v| v.as_array())
             .map(|a| a.len())
             .unwrap_or(0);
-        let chat_id = params
-            .get("chatId")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let chat_id = params.get("chatId").and_then(|v| v.as_str()).unwrap_or("");
         tracing::info!(
             "mem0 before_model_call: chat_id={chat_id} messages={messages} (no-op stub)"
         );
@@ -131,10 +119,8 @@ mod tests {
     #[tokio::test]
     async fn register_returns_hook_points() {
         let c = InProcPluginClient::spawn(Mem0Plugin::default());
-        let reg: HookRegistration = serde_json::from_value(
-            c.call("hook.register", Value::Null).await.unwrap(),
-        )
-        .unwrap();
+        let reg: HookRegistration =
+            serde_json::from_value(c.call("hook.register", Value::Null).await.unwrap()).unwrap();
         assert!(reg.points.contains(&"before_model_call".to_string()));
         assert!(reg.points.contains(&"after_model_call".to_string()));
     }

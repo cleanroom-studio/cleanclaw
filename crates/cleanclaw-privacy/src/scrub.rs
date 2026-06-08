@@ -6,18 +6,14 @@ use serde::{Deserialize, Serialize};
 
 use cleanclaw_provider::message::{ContentPart, Message};
 
-static EMAIL_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}").unwrap()
-});
-static PHONE_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?:\+\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}").unwrap()
-});
-static CREDIT_CARD_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b").unwrap()
-});
+static EMAIL_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}").unwrap());
+static PHONE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?:\+\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}").unwrap());
+static CREDIT_CARD_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b").unwrap());
 static SSN_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").unwrap());
-static IP_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\b(?:\d{1,3}\.){3}\d{1,3}\b").unwrap());
+static IP_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b(?:\d{1,3}\.){3}\d{1,3}\b").unwrap());
 static API_KEY_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(
         r"\b(?:sk-[A-Za-z0-9_\-]{20,}|AIza[A-Za-z0-9_\-]{30,}|ghp_[A-Za-z0-9]{36,}|AKIA[A-Z0-9]{16}|xoxb-[A-Za-z0-9\-]+)\b",
@@ -38,7 +34,9 @@ static PASSWORD_RE: Lazy<Regex> =
 /// more specific patterns first so e.g. a JWT inside a private key
 /// block doesn't get double-substituted.
 pub fn scrub(text: &str) -> String {
-    let mut s = PRIVATE_KEY_RE.replace_all(text, "[PRIVATE_KEY]").into_owned();
+    let mut s = PRIVATE_KEY_RE
+        .replace_all(text, "[PRIVATE_KEY]")
+        .into_owned();
     s = JWT_RE.replace_all(&s, "[TOKEN]").into_owned();
     s = API_KEY_RE.replace_all(&s, "[API_KEY]").into_owned();
     s = CREDIT_CARD_RE.replace_all(&s, "[CARD]").into_owned();
@@ -117,10 +115,7 @@ mod tests {
 
     #[test]
     fn scrubs_credit_card() {
-        assert_eq!(
-            scrub("card 4111 1111 1111 1111 done"),
-            "card [CARD] done"
-        );
+        assert_eq!(scrub("card 4111 1111 1111 1111 done"), "card [CARD] done");
     }
 
     #[test]
@@ -149,7 +144,8 @@ mod tests {
 
     #[test]
     fn scrubs_private_key_block() {
-        let pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----";
+        let pem =
+            "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----";
         let out = scrub(pem);
         assert!(out.contains("[PRIVATE_KEY]"));
         assert!(!out.contains("BEGIN"));

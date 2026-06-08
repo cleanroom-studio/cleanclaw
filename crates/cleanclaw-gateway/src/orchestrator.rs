@@ -216,9 +216,7 @@ impl Orchestrator {
         user_id: &str,
     ) -> Result<Option<Arc<UserSpace>>, OrchestratorError> {
         if user_id.is_empty() {
-            return Err(OrchestratorError::UserSpace(
-                "user_id required".to_string(),
-            ));
+            return Err(OrchestratorError::UserSpace("user_id required".to_string()));
         }
         let store = self.store.as_ref().ok_or_else(|| {
             OrchestratorError::Store("user_space_for: store not wired".to_string())
@@ -327,19 +325,19 @@ impl Orchestrator {
         // would have wired the scheduler as the sole owner.
         if let Some(scheduler) = self.scheduler.as_ref() {
             if Arc::strong_count(scheduler) == 1 {
-            let arc = Arc::clone(scheduler);
-            let cancel_c = cancel.clone();
-            let _h_cron = tokio::spawn(async move {
-                match Arc::try_unwrap(arc) {
-                    Ok(s) => {
-                        let _ = s.run(cancel_c).await;
+                let arc = Arc::clone(scheduler);
+                let cancel_c = cancel.clone();
+                let _h_cron = tokio::spawn(async move {
+                    match Arc::try_unwrap(arc) {
+                        Ok(s) => {
+                            let _ = s.run(cancel_c).await;
+                        }
+                        Err(arc) => {
+                            let _ = cancel_c.cancelled().await;
+                            drop(arc);
+                        }
                     }
-                    Err(arc) => {
-                        let _ = cancel_c.cancelled().await;
-                        drop(arc);
-                    }
-                }
-            });
+                });
             }
         }
 
@@ -356,10 +354,7 @@ impl Orchestrator {
 impl Orchestrator {
     /// Drain `bus.Inbound` and dispatch each message. Mirrors
     /// `routing.go::processInbound`.
-    pub async fn process_inbound_loop(
-        self: Arc<Self>,
-        cancel: CancellationToken,
-    ) {
+    pub async fn process_inbound_loop(self: Arc<Self>, cancel: CancellationToken) {
         loop {
             tokio::select! {
                 _ = cancel.cancelled() => break,
@@ -382,10 +377,7 @@ impl Orchestrator {
     /// enqueue turn. The actual `run_turn` call is left to the agent
     /// runtime via a per-chat task queue that ships with the agent
     /// crate; this function only does the routing-side decisions.
-    pub async fn handle_inbound(
-        &self,
-        msg: &mut InboundMessage,
-    ) -> Result<(), OrchestratorError> {
+    pub async fn handle_inbound(&self, msg: &mut InboundMessage) -> Result<(), OrchestratorError> {
         if self.dedup.is_duplicate(msg).await {
             tracing::debug!(message_id = %msg.message_id, "dedup: dropping");
             return Ok(());
@@ -414,10 +406,7 @@ impl Orchestrator {
             .user_space_for(&msg.owner_user_id)
             .await?
             .ok_or_else(|| {
-                OrchestratorError::UserSpace(format!(
-                    "no space for {}",
-                    msg.owner_user_id
-                ))
+                OrchestratorError::UserSpace(format!("no space for {}", msg.owner_user_id))
             })?;
         // match_agent + run_turn live behind the per-UserSpace
         // runtime. The orchestrator is the seam: it resolves owner

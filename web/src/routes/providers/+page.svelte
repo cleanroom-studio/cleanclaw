@@ -1,72 +1,102 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { listProviders, createProvider, deleteProvider, testStoredProvider, testProvider, type ProviderInfo } from '$lib/api';
-  import Card from '$lib/components/ui/Card.svelte';
-  import Button from '$lib/components/ui/Button.svelte';
-  import Badge from '$lib/components/ui/Badge.svelte';
-  import Input from '$lib/components/ui/Input.svelte';
+  import { onMount } from "svelte";
+  import {
+    listProviders,
+    createProvider,
+    deleteProvider,
+    testStoredProvider,
+    testProvider,
+    type ProviderInfo,
+  } from "$lib/api";
+  import Card from "$lib/components/ui/Card.svelte";
+  import Button from "$lib/components/ui/Button.svelte";
+  import Badge from "$lib/components/ui/Badge.svelte";
+  import Input from "$lib/components/ui/Input.svelte";
 
   let providers = $state<ProviderInfo[]>([]);
   let loading = $state(true);
-  let error = $state('');
+  let error = $state("");
 
   // Create
-  let newType = $state('openai');
-  let newModel = $state('MiniMax-M3');
-  let newBaseUrl = $state('');
-  let newApiKey = $state('');
+  let newType = $state("openai");
+  let newModel = $state("MiniMax-M3");
+  let newBaseUrl = $state("");
+  let newApiKey = $state("");
   let saving = $state(false);
-  let msg = $state('');
+  let msg = $state("");
 
   // Test inline
-  let testApiKey = $state('');
-  let testBase = $state('https://api.openai.com/v1');
-  let testType = $state('openai');
-  let testModel = $state('MiniMax-M3');
+  let testApiKey = $state("");
+  let testBase = $state("https://api.openai.com/v1");
+  let testType = $state("openai");
+  let testModel = $state("MiniMax-M3");
   let testing = $state(false);
-  let testResult = $state('');
+  let testResult = $state("");
 
   async function refresh() {
     loading = true;
     try {
       const r = await listProviders();
       providers = r.providers ?? [];
-    } catch (e) { error = (e as Error).message; } finally { loading = false; }
+    } catch (e) {
+      error = (e as Error).message;
+    } finally {
+      loading = false;
+    }
   }
 
   async function add(e: Event) {
     e.preventDefault();
-    saving = true; msg = '';
+    saving = true;
+    msg = "";
     try {
-      await createProvider({ type: newType, model: newModel, base_url: newBaseUrl || undefined, api_key: newApiKey });
-      newApiKey = ''; newBaseUrl = '';
+      await createProvider({
+        type: newType,
+        model: newModel,
+        base_url: newBaseUrl || undefined,
+        api_key: newApiKey,
+      });
+      newApiKey = "";
+      newBaseUrl = "";
       await refresh();
     } catch (err) {
-      msg = (err as Error).message || 'create failed';
-    } finally { saving = false; }
+      msg = (err as Error).message || "create failed";
+    } finally {
+      saving = false;
+    }
   }
 
   async function remove(id: string) {
-    if (!confirm('Delete this provider?')) return;
+    if (!confirm("Delete this provider?")) return;
     await deleteProvider(id);
     await refresh();
   }
 
   async function runTest() {
-    testing = true; testResult = '';
+    testing = true;
+    testResult = "";
     try {
-      const r = await testProvider({ type: testType, api_base: testBase, api_key: testApiKey, model: testModel });
-      testResult = r.ok ? '✓ OK' : (r.message || '✗ failed');
+      const r = await testProvider({
+        type: testType,
+        api_base: testBase,
+        api_key: testApiKey,
+        model: testModel,
+      });
+      testResult = r.ok ? "✓ OK" : r.message || "✗ failed";
     } catch (e) {
-      testResult = (e as Error).message || 'test failed';
-    } finally { testing = false; }
+      testResult = (e as Error).message || "test failed";
+    } finally {
+      testing = false;
+    }
   }
 
   async function test(id: string) {
     try {
       const r = await testStoredProvider(id);
-      alert(r.ok ? '✓ provider OK' : (r.message || '✗ failed'));
-    } catch (e) { alert((e as Error).message || 'test failed'); }
+      alert(r.ok ? "✓ provider OK" : r.message || "✗ failed");
+    } catch (e) {
+      alert((e as Error).message || "test failed");
+    }
   }
 
   onMount(refresh);
@@ -75,7 +105,9 @@
 <div class="p-6 max-w-5xl mx-auto space-y-4">
   <div>
     <h2 class="text-2xl font-semibold tracking-tight">Providers</h2>
-    <p class="text-sm text-zinc-400 mt-1">LLM backends. Add a provider once, then point agents at its model.</p>
+    <p class="text-sm text-zinc-400 mt-1">
+      LLM backends. Add a provider once, then point agents at its model.
+    </p>
   </div>
 
   {#if error}<p class="text-sm text-red-400">{error}</p>{/if}
@@ -102,15 +134,22 @@
             <tr class="border-b border-zinc-800/50">
               <td class="py-2 capitalize">{p.type}</td>
               <td class="py-2 font-mono text-xs">{p.model}</td>
-              <td class="py-2 text-xs text-zinc-500 font-mono">{p.base_url || '—'}</td>
+              <td class="py-2 text-xs text-zinc-500 font-mono"
+                >{p.base_url || "—"}</td
+              >
               <td class="py-2">
-                <Badge variant={p.has_api_key ? 'success' : 'destructive'}>
-                  {p.has_api_key ? 'set' : 'missing'}
+                <Badge variant={p.has_api_key ? "success" : "destructive"}>
+                  {p.has_api_key ? "set" : "missing"}
                 </Badge>
               </td>
               <td class="py-2 text-right space-x-2">
-                <Button size="sm" variant="outline" onclick={() => test(p.id)}>Test</Button>
-                <button class="text-xs text-red-400 hover:underline" onclick={() => remove(p.id)}>Delete</button>
+                <Button size="sm" variant="outline" onclick={() => test(p.id)}
+                  >Test</Button
+                >
+                <button
+                  class="text-xs text-red-400 hover:underline"
+                  onclick={() => remove(p.id)}>Delete</button
+                >
               </td>
             </tr>
           {/each}
@@ -124,7 +163,11 @@
     <form onsubmit={add} class="grid grid-cols-2 gap-3">
       <div>
         <label for="p-t" class="text-xs text-zinc-400">Type</label>
-        <select id="p-t" bind:value={newType} class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-2 text-sm">
+        <select
+          id="p-t"
+          bind:value={newType}
+          class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-2 text-sm"
+        >
           <option value="openai">OpenAI</option>
           <option value="anthropic">Anthropic</option>
           <option value="minimax">minimax</option>
@@ -135,11 +178,22 @@
       </div>
       <div>
         <label for="p-m" class="text-xs text-zinc-400">Model</label>
-        <Input id="p-m" bind:value={newModel} placeholder="MiniMax-M3" required />
+        <Input
+          id="p-m"
+          bind:value={newModel}
+          placeholder="MiniMax-M3"
+          required
+        />
       </div>
       <div class="col-span-2">
-        <label for="p-b" class="text-xs text-zinc-400">Base URL (optional)</label>
-        <Input id="p-b" bind:value={newBaseUrl} placeholder="https://api.minimaxi.com/v1" />
+        <label for="p-b" class="text-xs text-zinc-400"
+          >Base URL (optional)</label
+        >
+        <Input
+          id="p-b"
+          bind:value={newBaseUrl}
+          placeholder="https://api.minimaxi.com/v1"
+        />
       </div>
       <div class="col-span-2">
         <label for="p-k" class="text-xs text-zinc-400">API key</label>
@@ -147,18 +201,26 @@
       </div>
       {#if msg}<p class="col-span-2 text-sm text-red-400">{msg}</p>{/if}
       <div class="col-span-2">
-        <Button type="submit" disabled={saving}>{saving ? 'Adding…' : 'Add'}</Button>
+        <Button type="submit" disabled={saving}
+          >{saving ? "Adding…" : "Add"}</Button
+        >
       </div>
     </form>
   </Card>
 
   <Card>
     <h3 class="text-sm font-semibold mb-3">Test a key without storing</h3>
-    <p class="text-xs text-zinc-500 mb-3">Verify an API key + base URL + model works before saving it as a provider.</p>
+    <p class="text-xs text-zinc-500 mb-3">
+      Verify an API key + base URL + model works before saving it as a provider.
+    </p>
     <div class="grid grid-cols-2 gap-3">
       <div>
         <label for="tt-t" class="text-xs text-zinc-400">Type</label>
-        <select id="tt-t" bind:value={testType} class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-2 text-sm">
+        <select
+          id="tt-t"
+          bind:value={testType}
+          class="h-9 w-full bg-zinc-900 border border-zinc-700 rounded px-2 text-sm"
+        >
           <option value="openai">openai</option>
           <option value="anthropic">anthropic</option>
         </select>
@@ -176,8 +238,11 @@
         <Input id="tt-k" type="password" bind:value={testApiKey} />
       </div>
       <div class="col-span-2 flex items-center gap-3">
-        <Button onclick={runTest} disabled={testing}>{testing ? 'Testing…' : 'Test'}</Button>
-        {#if testResult}<span class="text-xs text-zinc-300">{testResult}</span>{/if}
+        <Button onclick={runTest} disabled={testing}
+          >{testing ? "Testing…" : "Test"}</Button
+        >
+        {#if testResult}<span class="text-xs text-zinc-300">{testResult}</span
+          >{/if}
       </div>
     </div>
   </Card>

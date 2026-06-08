@@ -6,7 +6,7 @@
 //! themselves; the server-side handler (W4 wiring) is responsible
 //! for persisting via `cleanclaw-config` / `cleanclaw-auth`.
 
-use crate::html::{card_open, card_close, card_header, card_title, card_content, esc, tabs, Theme};
+use crate::html::{card_close, card_content, card_header, card_open, card_title, esc, tabs, Theme};
 use crate::layout::{render, NavKey};
 
 /// Settings sub-tab key. Drives the active highlight on the tab strip.
@@ -60,7 +60,13 @@ pub fn shell(active: SettingsTab, body: &str, theme: Theme) -> String {
         tabs = settings_tabs(active),
         body = body,
     );
-    render("Settings · CleanClaw", NavKey::Settings, &inner, Some(("Ada", "user")), theme)
+    render(
+        "Settings · CleanClaw",
+        NavKey::Settings,
+        &inner,
+        Some(("Ada", "user")),
+        theme,
+    )
 }
 
 /// `/settings/general` — top-level config (provider, channels,

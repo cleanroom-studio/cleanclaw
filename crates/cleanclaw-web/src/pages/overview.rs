@@ -4,7 +4,7 @@
 //! In W1 this is a static page. W4 wires it to the live
 //! `StatusResponse` (agents count, channels count, recent activity).
 
-use crate::html::{badge, card_open, card_close, card_header, card_title, card_content, Theme};
+use crate::html::{badge, card_close, card_content, card_header, card_open, card_title, Theme};
 use crate::layout::{render as layout_render, NavKey};
 
 /// Render the overview page. `user` is `(display_name, role)` if

@@ -131,10 +131,7 @@ impl Tool for WebSearchTool {
             args.as_object_mut()
                 .map(|o| o.insert("n".to_string(), json!(n)));
         }
-        let chain = cleanclaw_toolprov::Chain::from_registry(
-            &self.registry,
-            websearch::CATEGORY,
-        );
+        let chain = cleanclaw_toolprov::Chain::from_registry(&self.registry, websearch::CATEGORY);
         if chain.is_empty() {
             return Err(CleanClawError::NotImplemented(
                 "web_search: no provider registered in the toolprov chain".into(),

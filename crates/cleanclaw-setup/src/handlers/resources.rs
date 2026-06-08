@@ -34,9 +34,7 @@ pub struct ChannelDto {
     pub status: String, // "connected" | "disconnected"
 }
 
-async fn list_channels(
-    State(state): State<Arc<ServerState>>,
-) -> impl IntoResponse {
+async fn list_channels(State(state): State<Arc<ServerState>>) -> impl IntoResponse {
     // We don't have a config loader here yet; the dashboard just
     // lists the channel *types* we ship. A real impl reads the
     // merged user config and projects `Channels` field.
@@ -77,9 +75,7 @@ pub struct CronJobDto {
     pub account_id: String,
 }
 
-async fn list_cron(
-    State(state): State<Arc<ServerState>>,
-) -> impl IntoResponse {
+async fn list_cron(State(state): State<Arc<ServerState>>) -> impl IntoResponse {
     // Listing all cron jobs is admin-only; for now list by owner
     // would require a user_id, but we default to listing all
     // jobs the gateway knows about.
@@ -137,19 +133,22 @@ async fn create_cron(
         created_at: now,
     };
     match state.store.save_cron_job(&rec).await {
-        Ok(()) => (StatusCode::CREATED, Json(CronJobDto {
-            id: rec.id,
-            agent_id: rec.agent_id,
-            owner_user_id: rec.user_id,
-            name: rec.name,
-            kind: rec.r#type,
-            schedule: rec.schedule,
-            message: rec.message,
-            channel: rec.channel,
-            chat_id: rec.chat_id,
-            account_id: rec.account_id,
-        }))
-        .into_response(),
+        Ok(()) => (
+            StatusCode::CREATED,
+            Json(CronJobDto {
+                id: rec.id,
+                agent_id: rec.agent_id,
+                owner_user_id: rec.user_id,
+                name: rec.name,
+                kind: rec.r#type,
+                schedule: rec.schedule,
+                message: rec.message,
+                channel: rec.channel,
+                chat_id: rec.chat_id,
+                account_id: rec.account_id,
+            }),
+        )
+            .into_response(),
         Err(e) => err_response(e),
     }
 }
@@ -161,9 +160,7 @@ pub struct SkillDto {
     pub source: String, // "bundled" | "user" | "agent" | "global"
 }
 
-async fn list_skills(
-    State(_state): State<Arc<ServerState>>,
-) -> impl IntoResponse {
+async fn list_skills(State(_state): State<Arc<ServerState>>) -> impl IntoResponse {
     // Surface every bundled skill name. A real impl scans the
     // SkillsConfig + per-agent user-skills dirs.
     let skills: Vec<SkillDto> = cleanclaw_agent::BUNDLED_SKILL_NAMES
@@ -184,9 +181,7 @@ pub struct ToolDto {
     pub parameters: serde_json::Value,
 }
 
-async fn list_tools(
-    State(_state): State<Arc<ServerState>>,
-) -> impl IntoResponse {
+async fn list_tools(State(_state): State<Arc<ServerState>>) -> impl IntoResponse {
     // Surface a static list of the tool categories. The real impl
     // pulls from the merged tool registry, which the agent loop
     // populates at boot.
@@ -224,32 +219,28 @@ pub struct UsageTotalsDto {
     pub requests: i64,
 }
 
-async fn usage_totals(
-    State(state): State<Arc<ServerState>>,
-) -> impl IntoResponse {
+async fn usage_totals(State(state): State<Arc<ServerState>>) -> impl IntoResponse {
     let since = chrono::Utc::now().date_naive() - chrono::Duration::days(30);
     let until = chrono::Utc::now().date_naive();
     let res = state.store.list_token_usage(since).await;
     let totals = match res {
-        Ok(rows) => rows
-            .into_iter()
-            .fold(
-                UsageTotalsDto {
-                    input_tokens: 0,
-                    output_tokens: 0,
-                    cache_read_tokens: 0,
-                    cache_create_tokens: 0,
-                    requests: 0,
-                },
-                |mut acc, r| {
-                    acc.input_tokens += r.input_tokens as i64;
-                    acc.output_tokens += r.output_tokens as i64;
-                    acc.cache_read_tokens += r.cache_read_tokens as i64;
-                    acc.cache_create_tokens += r.cache_create_tokens as i64;
-                    acc.requests += r.request_count as i64;
-                    acc
-                },
-            ),
+        Ok(rows) => rows.into_iter().fold(
+            UsageTotalsDto {
+                input_tokens: 0,
+                output_tokens: 0,
+                cache_read_tokens: 0,
+                cache_create_tokens: 0,
+                requests: 0,
+            },
+            |mut acc, r| {
+                acc.input_tokens += r.input_tokens as i64;
+                acc.output_tokens += r.output_tokens as i64;
+                acc.cache_read_tokens += r.cache_read_tokens as i64;
+                acc.cache_create_tokens += r.cache_create_tokens as i64;
+                acc.requests += r.request_count as i64;
+                acc
+            },
+        ),
         Err(_) => UsageTotalsDto {
             input_tokens: 0,
             output_tokens: 0,
@@ -269,9 +260,7 @@ pub struct TopAgentDto {
     pub requests: i64,
 }
 
-async fn usage_top_agents(
-    State(state): State<Arc<ServerState>>,
-) -> impl IntoResponse {
+async fn usage_top_agents(State(state): State<Arc<ServerState>>) -> impl IntoResponse {
     // Per-agent token rollup from the token_usage_daily table.
     let since = chrono::Utc::now().date_naive() - chrono::Duration::days(30);
     let rows = state
@@ -290,7 +279,8 @@ async fn usage_top_agents(
                 tokens: 0,
                 requests: 0,
             });
-        entry.tokens += (r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_create_tokens) as i64;
+        entry.tokens +=
+            (r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_create_tokens) as i64;
         entry.requests += r.request_count as i64;
     }
     let mut v: Vec<TopAgentDto> = by_agent.into_values().collect();
@@ -305,9 +295,5 @@ fn err_response(e: CleanClawError) -> axum::response::Response {
         CleanClawError::Conflict(_) => StatusCode::CONFLICT,
         _ => StatusCode::INTERNAL_SERVER_ERROR,
     };
-    (
-        status,
-        Json(serde_json::json!({ "error": e.to_string() })),
-    )
-        .into_response()
+    (status, Json(serde_json::json!({ "error": e.to_string() }))).into_response()
 }

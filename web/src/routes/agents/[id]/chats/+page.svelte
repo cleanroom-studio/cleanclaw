@@ -1,10 +1,10 @@
 <script lang="ts">
   // Per-agent chats list.
-  import { onMount } from 'svelte';
-  import Card from '$lib/components/ui/Card.svelte';
-  import Button from '$lib/components/ui/Button.svelte';
-  import Badge from '$lib/components/ui/Badge.svelte';
-  import { listChatSessions, type SessionInfo } from '$lib/api';
+  import { onMount } from "svelte";
+  import Card from "$lib/components/ui/Card.svelte";
+  import Button from "$lib/components/ui/Button.svelte";
+  import Badge from "$lib/components/ui/Badge.svelte";
+  import { listChatSessions, type SessionInfo } from "$lib/api";
 
   let { params }: { params: { id: string } } = $props();
   let sessions = $state<SessionInfo[]>([]);
@@ -15,7 +15,8 @@
     try {
       const r = await listChatSessions(params.id);
       sessions = (r.sessions ?? []).sort(
-        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+        (a, b) =>
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
       );
     } catch {
       sessions = [];
@@ -42,10 +43,13 @@
       <ul class="divide-y divide-zinc-800">
         {#each sessions as s (s.key)}
           <li class="py-2 flex items-center gap-3">
-            <Badge variant="outline">{s.channel || 'web'}</Badge>
+            <Badge variant="outline">{s.channel || "web"}</Badge>
             <span class="text-sm flex-1 truncate">{s.title || s.key}</span>
             <span class="text-xs text-zinc-500">{s.message_count} msgs</span>
-            <a href="/agents/{params.id}/chat/?session={s.key}" class="text-violet-300 text-xs hover:underline">Open</a>
+            <a
+              href="/agents/{params.id}/chat/?session={s.key}"
+              class="text-violet-300 text-xs hover:underline">Open</a
+            >
           </li>
         {/each}
       </ul>

@@ -60,18 +60,16 @@ async fn read_config(
                 .collect();
             let projected: Vec<_> = filtered
                 .into_iter()
-                .map(|r| serde_json::json!({
-                    "id": r.id,
-                    "kind": r.kind,
-                    "name": r.name,
-                    "value": r.data,
-                }))
+                .map(|r| {
+                    serde_json::json!({
+                        "id": r.id,
+                        "kind": r.kind,
+                        "name": r.name,
+                        "value": r.data,
+                    })
+                })
                 .collect();
-            (
-                StatusCode::OK,
-                Json(json!({"configs": projected})),
-            )
-                .into_response()
+            (StatusCode::OK, Json(json!({"configs": projected}))).into_response()
         }
         Err(e) => internal(e).into_response(),
     }
@@ -128,7 +126,11 @@ async fn delete_config(
 ) -> impl IntoResponse {
     let (user_id, agent_id) = scope_to_ids(&q.scope, &q.scope_id);
     let kind = q.kind.unwrap_or_else(|| "setting".into());
-    match state.store.delete_config(&kind, &user_id, &agent_id, &q.name).await {
+    match state
+        .store
+        .delete_config(&kind, &user_id, &agent_id, &q.name)
+        .await
+    {
         Ok(()) => (StatusCode::OK, Json(json!({"ok": true}))).into_response(),
         Err(e) => internal(e).into_response(),
     }

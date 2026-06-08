@@ -4,8 +4,8 @@
   // every agent the caller can see, allows selecting a different
   // one, and surfaces "Manage agents" when admin / quota permits.
 
-  import { goto } from '$app/navigation';
-  import type { AgentInfo } from '$lib/api';
+  import { goto } from "$app/navigation";
+  import type { AgentInfo } from "$lib/api";
 
   let {
     agents,
@@ -20,7 +20,7 @@
   let open = $state(false);
 
   const active = $derived(agents.find((a) => a.id === activeAgentId) || null);
-  const label = $derived(active?.name || activeAgentId || 'Select agent');
+  const label = $derived(active?.name || activeAgentId || "Select agent");
 
   function selectAgent(id: string) {
     open = false;
@@ -29,7 +29,7 @@
 
   function manage() {
     open = false;
-    void goto('/agents/');
+    void goto("/agents/");
   }
 </script>
 
@@ -39,8 +39,10 @@
     onclick={() => (open = !open)}
     class="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-800/60 text-left"
   >
-    <div class="h-7 w-7 rounded-md bg-violet-600/30 flex items-center justify-center text-xs font-semibold">
-      {(label || '?').slice(0, 1).toUpperCase()}
+    <div
+      class="h-7 w-7 rounded-md bg-violet-600/30 flex items-center justify-center text-xs font-semibold"
+    >
+      {(label || "?").slice(0, 1).toUpperCase()}
     </div>
     <div class="flex-1 min-w-0">
       <div class="text-sm font-medium truncate">{label}</div>
@@ -48,7 +50,7 @@
         <div class="text-[10px] text-zinc-500 truncate">{active.model}</div>
       {/if}
     </div>
-    <span class="text-zinc-500 text-xs">{open ? '▴' : '▾'}</span>
+    <span class="text-zinc-500 text-xs">{open ? "▴" : "▾"}</span>
   </button>
 
   {#if open}
@@ -65,14 +67,18 @@
               class:text-white={a.id === activeAgentId}
               onclick={() => selectAgent(a.id)}
             >
-              <div class="h-5 w-5 rounded bg-zinc-700 flex items-center justify-center text-[10px]">
+              <div
+                class="h-5 w-5 rounded bg-zinc-700 flex items-center justify-center text-[10px]"
+              >
                 {(a.name || a.id).slice(0, 1).toUpperCase()}
               </div>
               <div class="flex-1 min-w-0">
                 <div class="truncate">{a.name || a.id}</div>
-                <div class="text-[10px] text-zinc-400 truncate font-mono">{a.model}</div>
+                <div class="text-[10px] text-zinc-400 truncate font-mono">
+                  {a.model}
+                </div>
               </div>
-              {#if a.role === 'viewer'}
+              {#if a.role === "viewer"}
                 <span class="text-[10px] text-amber-400">viewer</span>
               {/if}
             </button>

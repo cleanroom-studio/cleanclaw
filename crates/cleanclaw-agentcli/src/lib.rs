@@ -266,10 +266,7 @@ async fn resolve_owner(
 
 /// List agents owned by `user_id`. Pass empty string to list all
 /// (admin path).
-pub async fn list(
-    store: Arc<dyn Store>,
-    user_id: &str,
-) -> Result<Vec<AgentRecord>, AgentCliError> {
+pub async fn list(store: Arc<dyn Store>, user_id: &str) -> Result<Vec<AgentRecord>, AgentCliError> {
     if user_id.is_empty() {
         // No public "list all" on the store trait; we approximate
         // by listing all users and union-ing their agent rows.
@@ -298,10 +295,7 @@ pub async fn list_all(store: Arc<dyn Store>) -> Result<Vec<AgentRecord>, AgentCl
 /// `Init`. We surface the helper so the CLI can do
 /// `agents find <name>` and the dashboard's URL `?agent=<name>`
 /// can resolve the id before opening a chat session.
-pub async fn find_by_name(
-    store: Arc<dyn Store>,
-    name: &str,
-) -> Result<AgentRecord, AgentCliError> {
+pub async fn find_by_name(store: Arc<dyn Store>, name: &str) -> Result<AgentRecord, AgentCliError> {
     let trimmed = validate_name(name)?.to_string();
     let candidates = list_all(store.clone()).await?;
     // Exact match first.
@@ -320,10 +314,7 @@ pub async fn find_by_name(
 }
 
 /// Fetch a single agent by id.
-pub async fn show(
-    store: Arc<dyn Store>,
-    agent_id: &str,
-) -> Result<AgentRecord, AgentCliError> {
+pub async fn show(store: Arc<dyn Store>, agent_id: &str) -> Result<AgentRecord, AgentCliError> {
     let rec = store.get_agent(agent_id).await?;
     Ok(rec)
 }
@@ -333,10 +324,7 @@ pub async fn show(
 /// `ConfigRecord` rows. The Rust Store impl handles the cascade
 /// for the main tables; we additionally scrub any per-agent
 /// config rows that might have survived.
-pub async fn delete(
-    store: Arc<dyn Store>,
-    agent_id: &str,
-) -> Result<(), AgentCliError> {
+pub async fn delete(store: Arc<dyn Store>, agent_id: &str) -> Result<(), AgentCliError> {
     let rec = store.get_agent(agent_id).await?;
     // Best-effort cleanup of per-agent ConfigRecord rows
     // (kind=provider, kind=channel, kind=setting with this
@@ -418,9 +406,8 @@ mod tests {
             dsn: format!("sqlite://{}/test.db", dir.path().display()),
             auto_migrate: true,
         };
-        let store: Arc<dyn cleanclaw_store::Store> = Arc::from(
-            cleanclaw_store::open(&cfg, dir.path()).await.unwrap(),
-        );
+        let store: Arc<dyn cleanclaw_store::Store> =
+            Arc::from(cleanclaw_store::open(&cfg, dir.path()).await.unwrap());
         let all = list_all(store).await.unwrap();
         assert!(all.is_empty());
     }
@@ -433,9 +420,8 @@ mod tests {
             dsn: format!("sqlite://{}/test.db", dir.path().display()),
             auto_migrate: true,
         };
-        let store: Arc<dyn cleanclaw_store::Store> = Arc::from(
-            cleanclaw_store::open(&cfg, dir.path()).await.unwrap(),
-        );
+        let store: Arc<dyn cleanclaw_store::Store> =
+            Arc::from(cleanclaw_store::open(&cfg, dir.path()).await.unwrap());
         // Need a user first; create one inline.
         let now = chrono::Utc::now();
         let user = cleanclaw_store::models::UserRecord {
@@ -480,9 +466,8 @@ mod tests {
             dsn: format!("sqlite://{}/test.db", dir.path().display()),
             auto_migrate: true,
         };
-        let store: Arc<dyn cleanclaw_store::Store> = Arc::from(
-            cleanclaw_store::open(&cfg, dir.path()).await.unwrap(),
-        );
+        let store: Arc<dyn cleanclaw_store::Store> =
+            Arc::from(cleanclaw_store::open(&cfg, dir.path()).await.unwrap());
         // Two users.
         let now = chrono::Utc::now();
         for (id, name) in [("u1", "alice"), ("u2", "bob")] {
@@ -525,9 +510,8 @@ mod tests {
             dsn: format!("sqlite://{}/test.db", dir.path().display()),
             auto_migrate: true,
         };
-        let store: Arc<dyn cleanclaw_store::Store> = Arc::from(
-            cleanclaw_store::open(&cfg, dir.path()).await.unwrap(),
-        );
+        let store: Arc<dyn cleanclaw_store::Store> =
+            Arc::from(cleanclaw_store::open(&cfg, dir.path()).await.unwrap());
         let now = chrono::Utc::now();
         store
             .create_user(&cleanclaw_store::models::UserRecord {

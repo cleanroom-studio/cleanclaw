@@ -7,9 +7,7 @@
 //! speaks the same JSON-RPC protocol the host already understands.
 
 use async_trait::async_trait;
-use cleanclaw_plugin_runtime::{
-    Plugin, PluginError, ToolDef, ToolResult,
-};
+use cleanclaw_plugin_runtime::{Plugin, PluginError, ToolDef, ToolResult};
 use serde_json::Value;
 use std::sync::Arc;
 
@@ -50,17 +48,10 @@ impl Plugin for OpenClawDemoPlugin {
         ])
     }
 
-    async fn tool_execute(
-        &self,
-        name: &str,
-        args: Value,
-    ) -> Result<ToolResult, PluginError> {
+    async fn tool_execute(&self, name: &str, args: Value) -> Result<ToolResult, PluginError> {
         match name {
             "get_weather" => {
-                let city = args
-                    .get("city")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("?");
+                let city = args.get("city").and_then(|v| v.as_str()).unwrap_or("?");
                 Ok(ToolResult {
                     output: format!("Weather in {city}: 22°C, partly cloudy (stub)"),
                     error: None,

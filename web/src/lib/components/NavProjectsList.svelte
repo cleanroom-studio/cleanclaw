@@ -5,9 +5,9 @@
   // Clicking a project title navigates to the project's chat
   // view; sessions inside expand/collapse on click.
 
-  import { goto } from '$app/navigation';
-  import { createProject, deleteProject } from '$lib/api';
-  import type { SessionInfo, ProjectInfo } from '$lib/api';
+  import { goto } from "$app/navigation";
+  import { createProject, deleteProject } from "$lib/api";
+  import type { SessionInfo, ProjectInfo } from "$lib/api";
 
   let {
     agentId,
@@ -23,7 +23,7 @@
 
   let expanded = $state<Record<string, boolean>>({});
   let creating = $state(false);
-  let newName = $state('');
+  let newName = $state("");
 
   function toggle(id: string) {
     expanded[id] = !expanded[id];
@@ -46,11 +46,11 @@
     if (!newName.trim()) return;
     try {
       const r = await createProject(agentId, { name: newName.trim() });
-      newName = '';
+      newName = "";
       creating = false;
       onChanged?.();
     } catch (err) {
-      alert((err as Error).message || 'create failed');
+      alert((err as Error).message || "create failed");
     }
   }
 
@@ -61,20 +61,22 @@
       await deleteProject(agentId, p.id);
       onChanged?.();
     } catch (err) {
-      alert((err as Error).message || 'delete failed');
+      alert((err as Error).message || "delete failed");
     }
   }
 </script>
 
 <div>
-  <div class="px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-500 flex items-center justify-between">
+  <div
+    class="px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-500 flex items-center justify-between"
+  >
     <span>Projects</span>
     <button
       type="button"
       class="text-zinc-500 hover:text-zinc-300 normal-case tracking-normal"
       title="New project"
-      onclick={() => (creating = true)}
-    >+</button>
+      onclick={() => (creating = true)}>+</button
+    >
   </div>
   {#if creating}
     <form onsubmit={create} class="px-2 mb-1 flex gap-1">
@@ -85,7 +87,11 @@
         class="flex-1 h-7 bg-zinc-900 border border-zinc-700 rounded px-2 text-xs"
       />
       <button type="submit" class="text-xs text-violet-300">Save</button>
-      <button type="button" class="text-xs text-zinc-500" onclick={() => (creating = false)}>×</button>
+      <button
+        type="button"
+        class="text-xs text-zinc-500"
+        onclick={() => (creating = false)}>×</button
+      >
     </form>
   {/if}
   <ul class="space-y-0.5">
@@ -98,22 +104,24 @@
             type="button"
             class="px-1 text-zinc-500 hover:text-zinc-300"
             onclick={() => toggle(p.id)}
-            title={isOpen ? 'Collapse' : 'Expand'}
-          >{isOpen ? '▾' : '▸'}</button>
+            title={isOpen ? "Collapse" : "Expand"}>{isOpen ? "▾" : "▸"}</button
+          >
           <button
             type="button"
             class="flex-1 text-left px-2 py-1 rounded text-sm hover:bg-zinc-800/60 truncate"
             onclick={() => openProject(p)}
           >
             <div class="truncate text-zinc-200">{p.name}</div>
-            <div class="truncate text-[10px] text-zinc-500 font-mono">{ps.length} session{ps.length === 1 ? '' : 's'}</div>
+            <div class="truncate text-[10px] text-zinc-500 font-mono">
+              {ps.length} session{ps.length === 1 ? "" : "s"}
+            </div>
           </button>
           <button
             type="button"
             class="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 px-1"
             title="Delete project"
-            onclick={(e) => removeProject(p, e)}
-          >×</button>
+            onclick={(e) => removeProject(p, e)}>×</button
+          >
         </div>
         {#if isOpen && ps.length > 0}
           <ul class="ml-4 mt-0.5 space-y-0.5 border-l border-zinc-800 pl-2">

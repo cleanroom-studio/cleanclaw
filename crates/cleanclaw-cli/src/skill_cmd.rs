@@ -47,12 +47,12 @@ pub async fn run(cmd: SkillCmd) -> Result<()> {
         SkillCmd::Ls => ls(),
         SkillCmd::Show { name } => show(&name),
         SkillCmd::Search { query } => search(&query).await,
-    SkillCmd::Install {
-        name,
-        source,
-        repo,
-        path,
-    } => install(&name, &source, repo.as_deref(), path.as_deref()),
+        SkillCmd::Install {
+            name,
+            source,
+            repo,
+            path,
+        } => install(&name, &source, repo.as_deref(), path.as_deref()),
         SkillCmd::Update { name } => update(&name),
         SkillCmd::Rm { name } => rm(&name),
         SkillCmd::Info { name } => info(&name),
@@ -132,10 +132,7 @@ fn install(
                 .build()
                 .map_err(|e| cleanclaw_core::CleanClawError::Internal(format!("rt: {e}")))?;
             rt.block_on(cleanclaw_skills::install::install_from_github(
-                client,
-                r,
-                name,
-                &dest,
+                client, r, name, &dest,
             ))
             .map_err(|e| cleanclaw_core::CleanClawError::Internal(format!("install: {e}")))?;
         }
@@ -152,9 +149,7 @@ fn install(
                 .build()
                 .map_err(|e| cleanclaw_core::CleanClawError::Internal(format!("rt: {e}")))?;
             rt.block_on(cleanclaw_skills::install::install_from_clawhub(
-                client,
-                name,
-                &dest,
+                client, name, &dest,
             ))
             .map_err(|e| cleanclaw_core::CleanClawError::Internal(format!("install: {e}")))?;
             let _ = repo; // future hook
@@ -259,8 +254,7 @@ mod tests {
     #[test]
     fn parse_response_handles_empty() {
         use serde_json::json;
-        let hits =
-            cleanclaw_skills::search::parse_response(&json!({})).expect("empty response ok");
+        let hits = cleanclaw_skills::search::parse_response(&json!({})).expect("empty response ok");
         assert!(hits.is_empty());
     }
 }

@@ -116,7 +116,8 @@ pub async fn chat_completions(
                     .map(|tc| cleanclaw_provider::message::ToolCall {
                         id: tc.id.clone(),
                         name: tc.function.name.clone(),
-                        arguments: serde_json::from_str(&tc.function.arguments).unwrap_or(Value::Null),
+                        arguments: serde_json::from_str(&tc.function.arguments)
+                            .unwrap_or(Value::Null),
                     })
                     .collect();
             }

@@ -51,7 +51,9 @@ impl Tool for GoalTool {
     async fn call(&self, ctx: &ToolContext, args: Value) -> Result<Value> {
         let a: CreateArgs = serde_json::from_value(args)?;
         if a.objective.is_empty() {
-            return Err(CleanClawError::InvalidArgument("objective is required".into()));
+            return Err(CleanClawError::InvalidArgument(
+                "objective is required".into(),
+            ));
         }
         let now = cleanclaw_core::now_utc();
         let g = GoalRecord {

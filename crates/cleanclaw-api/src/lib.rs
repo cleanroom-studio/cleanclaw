@@ -27,16 +27,16 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, warn};
 
+pub mod apikey_endpoints;
 pub mod chat;
 pub mod chat_ws;
-pub mod openai_compat;
 pub mod cron_endpoints;
-pub mod apikey_endpoints;
-pub mod websocket;
+pub mod openai_compat;
 pub mod v1_users;
+pub mod websocket;
 
-use chat::ChatService;
 pub use chat::ChatRequest as AgentChatRequest;
+use chat::ChatService;
 pub use websocket::WsState;
 
 #[derive(Clone)]
@@ -98,14 +98,8 @@ pub fn router(state: ApiState) -> Router {
         // dashboard surface). The history endpoint re-emits
         // assistant / user / tool messages for a session so the
         // dashboard can hydrate the bubble stack on navigation.
-        .route(
-            "/api/chat/history",
-            get(chat::get_history),
-        )
-        .route(
-            "/api/chat/sessions",
-            get(chat::list_sessions),
-        )
+        .route("/api/chat/history", get(chat::get_history))
+        .route("/api/chat/sessions", get(chat::list_sessions))
         .route(
             "/api/chat/sessions/:key",
             axum::routing::delete(chat::delete_session).put(chat::rename_session),
@@ -118,7 +112,10 @@ pub fn router(state: ApiState) -> Router {
         // (handlers/projects.rs).
         .route("/api/ws", get(websocket::ws_handler).with_state(ws))
         .route("/api/ws/chat", get(chat_ws::chat_ws_handler))
-        .route("/v1/chat/completions", post(openai_compat::chat_completions))
+        .route(
+            "/v1/chat/completions",
+            post(openai_compat::chat_completions),
+        )
         .route("/v1/agents", get(list_v1_agents))
         .route("/v1/users", post(v1_users::provision_user))
         .with_state(state)
@@ -168,10 +165,7 @@ async fn register(
     }
 }
 
-async fn register_inner(
-    state: &ApiState,
-    req: &RegisterRequest,
-) -> Result<serde_json::Value> {
+async fn register_inner(state: &ApiState, req: &RegisterRequest) -> Result<serde_json::Value> {
     if state.store.count_users().await? > 0 {
         return Err(CleanClawError::Forbidden);
     }
@@ -181,7 +175,10 @@ async fn register_inner(
         username: req.username.clone(),
         email: req.email.clone(),
         password_hash: hash,
-        display_name: req.display_name.clone().unwrap_or_else(|| req.username.clone()),
+        display_name: req
+            .display_name
+            .clone()
+            .unwrap_or_else(|| req.username.clone()),
         role: "super_admin".into(),
         status: "active".into(),
         apikey_id: String::new(),
@@ -246,7 +243,8 @@ async fn login_inner(
         sid: sid.clone(),
         user_id: user.id.clone(),
         created_at: cleanclaw_core::now_utc(),
-        expires_at: cleanclaw_core::now_utc() + chrono::Duration::from_std(cleanclaw_auth::SESSION_TTL).unwrap(),
+        expires_at: cleanclaw_core::now_utc()
+            + chrono::Duration::from_std(cleanclaw_auth::SESSION_TTL).unwrap(),
     };
     state.store.create_web_session(&sess).await?;
     let cookie = format!(
@@ -278,19 +276,23 @@ async fn logout(
         "{}=; HttpOnly; Path=/; Max-Age=0",
         cleanclaw_auth::SESSION_COOKIE_NAME
     );
-    headers.insert(
-        axum::http::header::SET_COOKIE,
-        cookie.parse().unwrap(),
-    );
+    headers.insert(axum::http::header::SET_COOKIE, cookie.parse().unwrap());
     (StatusCode::OK, headers, Json(json!({"ok": true})))
 }
 
 // ---- /api/me ------------------------------------------------------------
 
-async fn get_me(State(state): State<ApiState>, headers: axum::http::HeaderMap) -> impl IntoResponse {
+async fn get_me(
+    State(state): State<ApiState>,
+    headers: axum::http::HeaderMap,
+) -> impl IntoResponse {
     let bearer = extract_bearer(&headers);
     let cookie = extract_cookie(&headers);
-    match state.auth.resolve(bearer.as_deref(), cookie.as_deref()).await {
+    match state
+        .auth
+        .resolve(bearer.as_deref(), cookie.as_deref())
+        .await
+    {
         Ok(Some(ident)) => {
             let u = state.store.get_user(&ident.user_id).await.ok();
             match u {
@@ -382,7 +384,11 @@ async fn create_agent(
         Err(r) => return r,
     };
     if !ident.can_create_agent() {
-        return (StatusCode::FORBIDDEN, Json(json!({"error": "not authorized"}))).into_response();
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "not authorized"})),
+        )
+            .into_response();
     }
     let agent = cleanclaw_store::models::AgentRecord {
         id: cleanclaw_core::AgentId::generate().to_string(),
@@ -428,8 +434,12 @@ async fn get_agent(
     };
     match state.store.get_agent(&id).await {
         Ok(a) => {
-            if !ident.can_access_agent(&a.id) && a.user_id != ident.user_id && !ident.is_super_admin() {
-                return (StatusCode::FORBIDDEN, Json(json!({"error": "forbidden"}))).into_response();
+            if !ident.can_access_agent(&a.id)
+                && a.user_id != ident.user_id
+                && !ident.is_super_admin()
+            {
+                return (StatusCode::FORBIDDEN, Json(json!({"error": "forbidden"})))
+                    .into_response();
             }
             (StatusCode::OK, Json(json!({"agent": a}))).into_response()
         }
@@ -449,7 +459,8 @@ async fn delete_agent(
     match state.store.get_agent(&id).await {
         Ok(a) => {
             if a.user_id != ident.user_id && !ident.is_super_admin() {
-                return (StatusCode::FORBIDDEN, Json(json!({"error": "forbidden"}))).into_response();
+                return (StatusCode::FORBIDDEN, Json(json!({"error": "forbidden"})))
+                    .into_response();
             }
             if let Err(e) = state.store.delete_agent(&id).await {
                 return err_to_response(e);
@@ -475,17 +486,14 @@ fn extract_cookie(headers: &axum::http::HeaderMap) -> Option<String> {
         .get(axum::http::header::COOKIE)
         .and_then(|v| v.to_str().ok())
         .and_then(|cookies| {
-            cookies
-                .split(';')
-                .map(|s| s.trim())
-                .find_map(|c| {
-                    let (k, v) = c.split_once('=')?;
-                    if k == cleanclaw_auth::SESSION_COOKIE_NAME {
-                        Some(v.to_string())
-                    } else {
-                        None
-                    }
-                })
+            cookies.split(';').map(|s| s.trim()).find_map(|c| {
+                let (k, v) = c.split_once('=')?;
+                if k == cleanclaw_auth::SESSION_COOKIE_NAME {
+                    Some(v.to_string())
+                } else {
+                    None
+                }
+            })
         })
 }
 
@@ -495,9 +503,17 @@ async fn require_auth(
 ) -> std::result::Result<Identity, axum::response::Response> {
     let bearer = extract_bearer(headers);
     let cookie = extract_cookie(headers);
-    match state.auth.resolve(bearer.as_deref(), cookie.as_deref()).await {
+    match state
+        .auth
+        .resolve(bearer.as_deref(), cookie.as_deref())
+        .await
+    {
         Ok(Some(ident)) => Ok(ident),
-        _ => Err((StatusCode::UNAUTHORIZED, Json(json!({"error": "unauthorized"}))).into_response()),
+        _ => Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "unauthorized"})),
+        )
+            .into_response()),
     }
 }
 
@@ -638,10 +654,14 @@ pub fn persist_attachment(
     bytes: &[u8],
 ) -> std::result::Result<AttachmentRecord, CleanClawError> {
     if name.is_empty() {
-        return Err(CleanClawError::InvalidArgument("attachment name required".into()));
+        return Err(CleanClawError::InvalidArgument(
+            "attachment name required".into(),
+        ));
     }
     if bytes.is_empty() {
-        return Err(CleanClawError::InvalidArgument("attachment payload empty".into()));
+        return Err(CleanClawError::InvalidArgument(
+            "attachment payload empty".into(),
+        ));
     }
     if bytes.len() > MAX_ATTACHMENT_BYTES {
         return Err(CleanClawError::InvalidArgument(format!(
@@ -703,8 +723,8 @@ mod attachment_tests {
             std::process::id(),
             cleanclaw_core::idgen::IdGen::new().next("t")
         ));
-        let rec = persist_attachment(&dir, "hello.txt", "text/plain", b"hi there")
-            .expect("persist ok");
+        let rec =
+            persist_attachment(&dir, "hello.txt", "text/plain", b"hi there").expect("persist ok");
         assert!(!rec.id.is_empty());
         assert_eq!(rec.name, "hello.txt");
         assert_eq!(rec.mime, "text/plain");

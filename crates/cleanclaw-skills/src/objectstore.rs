@@ -218,10 +218,7 @@ pub async fn delete_skill_up(
 /// List every skill name installed under `<owner>/skills/`.
 /// Returns the set of distinct `<skill_name>` prefixes — one entry
 /// per skill bundle, regardless of how many files each contains.
-pub async fn list_skill_names(
-    ws: &dyn Store,
-    owner: &str,
-) -> ObjectStoreResult<Vec<String>> {
+pub async fn list_skill_names(ws: &dyn Store, owner: &str) -> ObjectStoreResult<Vec<String>> {
     let objs = ws
         .list(owner, SKILLS_PROJECT, "")
         .await
@@ -396,12 +393,16 @@ mod tests {
             std::fs::write(skill_dir.join("scripts/run.sh"), b"#!/bin/sh\necho hi").unwrap();
 
             // Upload.
-            let n = sync_skill_up(&*ws, "u1", "web-search", skill_root).await.unwrap();
+            let n = sync_skill_up(&*ws, "u1", "web-search", skill_root)
+                .await
+                .unwrap();
             assert_eq!(n, 2);
 
             // Hydrate into a fresh dst_dir and verify both files
             // are byte-identical.
-            let n = hydrate_skills_down(&*ws, "u1", "web-search", dst_dir.path()).await.unwrap();
+            let n = hydrate_skills_down(&*ws, "u1", "web-search", dst_dir.path())
+                .await
+                .unwrap();
             assert_eq!(n, 2);
             let got = std::fs::read(dst_dir.path().join("web-search/SKILL.md")).unwrap();
             assert_eq!(got, b"---\nname: web-search\n---\nBody");
@@ -482,10 +483,7 @@ mod tests {
                 &*ws,
                 "u1",
                 "web-search",
-                &[(
-                    PathBuf::from("../etc/passwd"),
-                    b"pwned".to_vec(),
-                )],
+                &[(PathBuf::from("../etc/passwd"), b"pwned".to_vec())],
             )
             .await;
             assert!(r.is_err());

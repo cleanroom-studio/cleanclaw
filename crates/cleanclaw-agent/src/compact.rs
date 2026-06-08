@@ -28,11 +28,17 @@ pub const DEFAULT_TRIGGER_TOKENS: usize = 32_000; // rough char-budget proxy
 pub fn estimate_tokens(messages: &[Message]) -> usize {
     messages
         .iter()
-        .map(|m| m.content.len() + m.content_parts.iter().map(|p| match p {
-            cleanclaw_provider::ContentPart::Text { text } => text.len(),
-            cleanclaw_provider::ContentPart::ImageUrl { .. } => 1024,
-            cleanclaw_provider::ContentPart::ImageBase64 { data, .. } => data.len() / 4,
-        }).sum::<usize>())
+        .map(|m| {
+            m.content.len()
+                + m.content_parts
+                    .iter()
+                    .map(|p| match p {
+                        cleanclaw_provider::ContentPart::Text { text } => text.len(),
+                        cleanclaw_provider::ContentPart::ImageUrl { .. } => 1024,
+                        cleanclaw_provider::ContentPart::ImageBase64 { data, .. } => data.len() / 4,
+                    })
+                    .sum::<usize>()
+        })
         .sum::<usize>()
         / 4
 }

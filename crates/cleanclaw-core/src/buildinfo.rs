@@ -7,7 +7,10 @@ pub const BUILD_COMMIT: &str = env!("CLEANCLAW_BUILD_COMMIT", "unknown");
 pub const BUILD_DATE: &str = env!("CLEANCLAW_BUILD_DATE", "unknown");
 
 pub fn describe() -> String {
-    format!("cleanclaw {} ({} {})", BUILD_VERSION, BUILD_COMMIT, BUILD_DATE)
+    format!(
+        "cleanclaw {} ({} {})",
+        BUILD_VERSION, BUILD_COMMIT, BUILD_DATE
+    )
 }
 
 fn deploy_var() -> String {

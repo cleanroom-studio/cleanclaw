@@ -20,14 +20,13 @@ use axum::{
 };
 use cleanclaw_core::CleanClawError;
 use cleanclaw_store::Store;
-use serde_json::Value;
 use serde_json::json;
+use serde_json::Value;
 
 use crate::ServerState;
 
 pub fn router() -> Router<Arc<ServerState>> {
-    Router::new()
-        .route("/api/tools", get(read_tools).put(write_tools))
+    Router::new().route("/api/tools", get(read_tools).put(write_tools))
 }
 
 async fn read_tools(State(state): State<Arc<ServerState>>) -> impl IntoResponse {
@@ -63,10 +62,7 @@ async fn write_tools(
     State(state): State<Arc<ServerState>>,
     Json(body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
-    let value = body
-        .get("tools")
-        .cloned()
-        .unwrap_or_else(|| body.clone());
+    let value = body.get("tools").cloned().unwrap_or_else(|| body.clone());
     // Sanitize web_search.provider against the whitelist so a
     // typo or an untrusted admin can't route searches to a
     // provider we never registered.

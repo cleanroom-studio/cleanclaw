@@ -159,7 +159,10 @@ impl MessageBus {
         let _ = self.outbound_tx.send(m).await;
     }
 
-    pub async fn try_send_inbound(&self, m: InboundMessage) -> Result<(), mpsc::error::TrySendError<InboundMessage>> {
+    pub async fn try_send_inbound(
+        &self,
+        m: InboundMessage,
+    ) -> Result<(), mpsc::error::TrySendError<InboundMessage>> {
         self.inbound_tx.try_send(m)
     }
 
@@ -203,7 +206,10 @@ mod tests {
         let mut seen: std::collections::HashMap<&str, &str> = std::collections::HashMap::new();
         for (name, val) in all {
             if let Some(prev) = seen.get(val) {
-                panic!("{} and {} both equal {:?} — Source constants must be distinct", prev, name, val);
+                panic!(
+                    "{} and {} both equal {:?} — Source constants must be distinct",
+                    prev, name, val
+                );
             }
             seen.insert(val, name);
         }

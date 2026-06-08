@@ -190,14 +190,8 @@ impl WebhookBridge {
             .get("FromUserName")
             .and_then(|v| v.as_str())
             .unwrap_or("");
-        let content = body
-            .get("Content")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let msg_id = body
-            .get("MsgId")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let content = body.get("Content").and_then(|v| v.as_str()).unwrap_or("");
+        let msg_id = body.get("MsgId").and_then(|v| v.as_str()).unwrap_or("");
         let msg_type = body
             .get("MsgType")
             .and_then(|v| v.as_str())
@@ -241,7 +235,9 @@ impl WebhookBridge {
         // @-bot mentions. Both share the same `event.channel`
         // + `event.text` + `event.user` shape.
         let ev = body.get("event");
-        let Some(ev) = ev else { return Ok(0); };
+        let Some(ev) = ev else {
+            return Ok(0);
+        };
         let ev_type = ev.get("type").and_then(|t| t.as_str()).unwrap_or("");
         if ev_type != "message" && ev_type != "app_mention" {
             return Ok(0);
@@ -252,23 +248,14 @@ impl WebhookBridge {
         if ev.get("subtype").is_some() {
             return Ok(0);
         }
-        let channel_id = ev
-            .get("channel")
-            .and_then(|c| c.as_str())
-            .unwrap_or("");
-        let user_id = ev
-            .get("user")
-            .and_then(|u| u.as_str())
-            .unwrap_or("");
+        let channel_id = ev.get("channel").and_then(|c| c.as_str()).unwrap_or("");
+        let user_id = ev.get("user").and_then(|u| u.as_str()).unwrap_or("");
         let text = ev
             .get("text")
             .and_then(|t| t.as_str())
             .unwrap_or("")
             .to_string();
-        let ts = ev
-            .get("ts")
-            .and_then(|t| t.as_str())
-            .unwrap_or("");
+        let ts = ev.get("ts").and_then(|t| t.as_str()).unwrap_or("");
         if channel_id.is_empty() || user_id.is_empty() {
             return Ok(0);
         }
@@ -323,7 +310,9 @@ impl WebhookBridge {
             let m = extract_discord_message(body);
             (m, None)
         };
-        let Some(msg) = msg else { return Ok(0); };
+        let Some(msg) = msg else {
+            return Ok(0);
+        };
         let _ = guild_id; // reserved for future per-guild routing
         self.dispatch(msg).await?;
         Ok(1)
@@ -331,15 +320,11 @@ impl WebhookBridge {
 }
 
 fn extract_discord_message(d: &Value) -> Option<InboundMessage> {
-    let channel_id = d
-        .get("channel_id")
-        .and_then(|c| c.as_str())
-        .unwrap_or("");
-    let author = d.get("author").or_else(|| d.get("member").and_then(|m| m.get("user")))?;
-    let user_id = author
-        .get("id")
-        .and_then(|i| i.as_str())
-        .unwrap_or("");
+    let channel_id = d.get("channel_id").and_then(|c| c.as_str()).unwrap_or("");
+    let author = d
+        .get("author")
+        .or_else(|| d.get("member").and_then(|m| m.get("user")))?;
+    let user_id = author.get("id").and_then(|i| i.as_str()).unwrap_or("");
     let username = author
         .get("username")
         .and_then(|u| u.as_str())

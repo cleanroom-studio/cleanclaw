@@ -5,7 +5,12 @@
   // (Compressed to a small wrapper; the chat surface itself
   // listens to click events rather than passing a ref.)
 
-  let { content, onCopy, onRegenerate, onDelete }: {
+  let {
+    content,
+    onCopy,
+    onRegenerate,
+    onDelete,
+  }: {
     content: string;
     onCopy?: () => void;
     onRegenerate?: () => void;
@@ -25,13 +30,27 @@
 </script>
 
 <div class="flex items-center gap-1 text-xs">
-  <button type="button" class="px-1.5 py-0.5 rounded hover:bg-zinc-800" onclick={copy}>
-    {copied ? '✓' : '⧉'}
+  <button
+    type="button"
+    class="px-1.5 py-0.5 rounded hover:bg-zinc-800"
+    onclick={copy}
+  >
+    {copied ? "✓" : "⧉"}
   </button>
   {#if onRegenerate}
-    <button type="button" class="px-1.5 py-0.5 rounded hover:bg-zinc-800" onclick={onRegenerate} title="Regenerate">↻</button>
+    <button
+      type="button"
+      class="px-1.5 py-0.5 rounded hover:bg-zinc-800"
+      onclick={onRegenerate}
+      title="Regenerate">↻</button
+    >
   {/if}
   {#if onDelete}
-    <button type="button" class="px-1.5 py-0.5 rounded hover:bg-zinc-800" onclick={onDelete} title="Delete">🗑</button>
+    <button
+      type="button"
+      class="px-1.5 py-0.5 rounded hover:bg-zinc-800"
+      onclick={onDelete}
+      title="Delete">🗑</button
+    >
   {/if}
 </div>

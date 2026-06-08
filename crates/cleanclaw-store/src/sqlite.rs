@@ -112,14 +112,13 @@ impl Store for SqliteStore {
     }
 
     async fn get_user_by_external(&self, apikey_id: &str, external_id: &str) -> Result<UserRecord> {
-        let row = sqlx::query(
-            "SELECT * FROM users WHERE apikey_id = ? AND external_id = ? LIMIT 1",
-        )
-        .bind(apikey_id)
-        .bind(external_id)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(CleanClawError::NotFound("app_user".into()))?;
+        let row =
+            sqlx::query("SELECT * FROM users WHERE apikey_id = ? AND external_id = ? LIMIT 1")
+                .bind(apikey_id)
+                .bind(external_id)
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or(CleanClawError::NotFound("app_user".into()))?;
         Ok(row_to_user(&row))
     }
 
@@ -327,17 +326,19 @@ impl Store for SqliteStore {
             .bind(apikey_id)
             .fetch_all(&self.pool)
             .await?;
-        Ok(rows.iter().map(|r| r.get::<String, _>("agent_id")).collect())
+        Ok(rows
+            .iter()
+            .map(|r| r.get::<String, _>("agent_id"))
+            .collect())
     }
 
     // ---- Agents ----
 
     async fn list_agents(&self, owner_user_id: &str) -> Result<Vec<AgentRecord>> {
-        let rows =
-            sqlx::query("SELECT * FROM agents WHERE user_id = ? ORDER BY created_at ASC")
-                .bind(owner_user_id)
-                .fetch_all(&self.pool)
-                .await?;
+        let rows = sqlx::query("SELECT * FROM agents WHERE user_id = ? ORDER BY created_at ASC")
+            .bind(owner_user_id)
+            .fetch_all(&self.pool)
+            .await?;
         Ok(rows.iter().map(row_to_agent).collect())
     }
 
@@ -551,8 +552,9 @@ impl Store for SqliteStore {
     }
 
     async fn list_session_owner_pairs(&self) -> Result<Vec<SessionOwnerPair>> {
-        let rows =
-            sqlx::query("SELECT DISTINCT user_id, agent_id FROM sessions").fetch_all(&self.pool).await?;
+        let rows = sqlx::query("SELECT DISTINCT user_id, agent_id FROM sessions")
+            .fetch_all(&self.pool)
+            .await?;
         Ok(rows
             .iter()
             .map(|r| SessionOwnerPair {
@@ -562,20 +564,13 @@ impl Store for SqliteStore {
             .collect())
     }
 
-    async fn delete_session(
-        &self,
-        user_id: &str,
-        agent_id: &str,
-        session_key: &str,
-    ) -> Result<()> {
-        sqlx::query(
-            "DELETE FROM sessions WHERE user_id = ? AND agent_id = ? AND session_key = ?",
-        )
-        .bind(user_id)
-        .bind(agent_id)
-        .bind(session_key)
-        .execute(&self.pool)
-        .await?;
+    async fn delete_session(&self, user_id: &str, agent_id: &str, session_key: &str) -> Result<()> {
+        sqlx::query("DELETE FROM sessions WHERE user_id = ? AND agent_id = ? AND session_key = ?")
+            .bind(user_id)
+            .bind(agent_id)
+            .bind(session_key)
+            .execute(&self.pool)
+            .await?;
         sqlx::query(
             "DELETE FROM session_messages WHERE user_id = ? AND agent_id = ? AND session_key = ?",
         )
@@ -892,12 +887,7 @@ impl Store for SqliteStore {
         Ok(())
     }
 
-    async fn delete_project(
-        &self,
-        user_id: &str,
-        agent_id: &str,
-        project_id: &str,
-    ) -> Result<()> {
+    async fn delete_project(&self, user_id: &str, agent_id: &str, project_id: &str) -> Result<()> {
         sqlx::query("DELETE FROM projects WHERE user_id = ? AND agent_id = ? AND project_id = ?")
             .bind(user_id)
             .bind(agent_id)
@@ -953,10 +943,11 @@ impl Store for SqliteStore {
     }
 
     async fn list_goals(&self, agent_id: &str) -> Result<Vec<GoalRecord>> {
-        let rows = sqlx::query("SELECT * FROM agent_goals WHERE agent_id = ? ORDER BY created_at DESC")
-            .bind(agent_id)
-            .fetch_all(&self.pool)
-            .await?;
+        let rows =
+            sqlx::query("SELECT * FROM agent_goals WHERE agent_id = ? ORDER BY created_at DESC")
+                .bind(agent_id)
+                .fetch_all(&self.pool)
+                .await?;
         Ok(rows.iter().map(row_to_goal).collect())
     }
 
@@ -1032,10 +1023,11 @@ impl Store for SqliteStore {
     }
 
     async fn list_cron_jobs_by_agent(&self, agent_id: &str) -> Result<Vec<CronJobRecord>> {
-        let rows = sqlx::query("SELECT * FROM cron_jobs WHERE agent_id = ? ORDER BY created_at DESC")
-            .bind(agent_id)
-            .fetch_all(&self.pool)
-            .await?;
+        let rows =
+            sqlx::query("SELECT * FROM cron_jobs WHERE agent_id = ? ORDER BY created_at DESC")
+                .bind(agent_id)
+                .fetch_all(&self.pool)
+                .await?;
         Ok(rows.iter().map(row_to_cron).collect())
     }
 
@@ -1194,10 +1186,7 @@ impl Store for SqliteStore {
         Ok(())
     }
 
-    async fn list_token_usage(
-        &self,
-        since_day: NaiveDate,
-    ) -> Result<Vec<TokenUsageRecord>> {
+    async fn list_token_usage(&self, since_day: NaiveDate) -> Result<Vec<TokenUsageRecord>> {
         let rows = sqlx::query("SELECT * FROM token_usage_daily WHERE day >= ? ORDER BY day DESC")
             .bind(since_day)
             .fetch_all(&self.pool)

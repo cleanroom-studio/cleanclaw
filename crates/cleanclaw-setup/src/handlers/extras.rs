@@ -27,9 +27,7 @@ use axum::{
 };
 use cleanclaw_auth::UserError;
 use cleanclaw_config::ProviderConfig;
-use cleanclaw_provider::{
-    factory::build_provider, message::ChatRequest, ProviderError,
-};
+use cleanclaw_provider::{factory::build_provider, message::ChatRequest, ProviderError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::warn;
@@ -90,31 +88,13 @@ pub fn router() -> Router<Arc<ServerState>> {
     Router::new()
         .route("/api/status", get(status))
         .route("/api/test-provider", post(test_provider))
-        .route(
-            "/api/feishu/webhook/:account_id",
-            post(feishu_webhook),
-        )
+        .route("/api/feishu/webhook/:account_id", post(feishu_webhook))
         .route("/api/line/webhook", post(line_webhook))
-        .route(
-            "/api/telegram/webhook/:account_id",
-            post(telegram_webhook),
-        )
-        .route(
-            "/api/wechat/webhook/:account_id",
-            post(wechat_webhook),
-        )
-        .route(
-            "/api/slack/webhook/:account_id",
-            post(slack_webhook),
-        )
-        .route(
-            "/api/discord/webhook/:account_id",
-            post(discord_webhook),
-        )
-        .route(
-            "/api/agents/:id/files/:name/zip",
-            get(agent_file_zip),
-        )
+        .route("/api/telegram/webhook/:account_id", post(telegram_webhook))
+        .route("/api/wechat/webhook/:account_id", post(wechat_webhook))
+        .route("/api/slack/webhook/:account_id", post(slack_webhook))
+        .route("/api/discord/webhook/:account_id", post(discord_webhook))
+        .route("/api/agents/:id/files/:name/zip", get(agent_file_zip))
         .route("/api/admin/users", get(admin_list_users))
         .route("/api/admin/users/:id", delete(admin_delete_user))
         .route("/api/admin/users/:id/role", post(admin_set_role))
@@ -283,10 +263,7 @@ async fn feishu_webhook(
     // bridge only handles the body → InboundMessage translation.
     let raw = serde_json::to_value(&body).unwrap_or_default();
     let dispatched = match state.webhook_bridge.as_ref() {
-        Some(bridge) => bridge
-            .handle_feishu(&raw, &account_id)
-            .await
-            .unwrap_or(0),
+        Some(bridge) => bridge.handle_feishu(&raw, &account_id).await.unwrap_or(0),
         None => 0,
     };
     Json(FeishuWebhookResponse {
@@ -321,10 +298,7 @@ async fn line_webhook(
     // InboundMessage and push onto the bus.
     let raw = serde_json::to_value(&body).unwrap_or_default();
     let n = match state.webhook_bridge.as_ref() {
-        Some(bridge) => bridge
-            .handle_line(&raw, "")
-            .await
-            .unwrap_or(0),
+        Some(bridge) => bridge.handle_line(&raw, "").await.unwrap_or(0),
         None => body.events.len(),
     };
     Json(LineWebhookResponse {
@@ -378,10 +352,7 @@ async fn wechat_webhook(
     Json(body): Json<serde_json::Value>,
 ) -> Json<WechatWebhookResponse> {
     let n = match state.webhook_bridge.as_ref() {
-        Some(bridge) => bridge
-            .handle_wechat(&body, &account_id)
-            .await
-            .unwrap_or(0),
+        Some(bridge) => bridge.handle_wechat(&body, &account_id).await.unwrap_or(0),
         None => 0,
     };
     Json(WechatWebhookResponse {
@@ -421,10 +392,7 @@ async fn slack_webhook(
         });
     }
     let n = match state.webhook_bridge.as_ref() {
-        Some(bridge) => bridge
-            .handle_slack(&body, &account_id)
-            .await
-            .unwrap_or(0),
+        Some(bridge) => bridge.handle_slack(&body, &account_id).await.unwrap_or(0),
         None => 0,
     };
     Json(SlackWebhookResponse {
@@ -464,10 +432,7 @@ async fn discord_webhook(
     }
     let _ = account_id;
     let n = match state.webhook_bridge.as_ref() {
-        Some(bridge) => bridge
-            .handle_discord(&body, &account_id)
-            .await
-            .unwrap_or(0),
+        Some(bridge) => bridge.handle_discord(&body, &account_id).await.unwrap_or(0),
         None => 0,
     };
     Json(DiscordWebhookResponse {
@@ -497,7 +462,7 @@ async fn agent_file_zip(
     // Read the file's bytes from the workspace_files table, then zip
     // it in-memory. The dashboard can download the .zip as a single
     // artifact (binary → binary inside zip).
-//
+    //
     // `get_workspace_file(agent_id, user_id, filename)` returns the
     // raw bytes for the file keyed by (agent, user, name). The
     // dashboard's per-user files use `user_id = current user`; for
@@ -513,13 +478,14 @@ async fn agent_file_zip(
     let mut buf = std::io::Cursor::new(Vec::new());
     {
         let mut zw = zip::ZipWriter::new(&mut buf);
-        let opts = zip::write::FileOptions::default()
-            .compression_method(zip::CompressionMethod::Stored);
+        let opts =
+            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
         zw.start_file(name.clone(), opts)
             .map_err(|e| ExtraError::Internal(e.to_string()))?;
         zw.write_all(&body)
             .map_err(|e| ExtraError::Internal(e.to_string()))?;
-        zw.finish().map_err(|e| ExtraError::Internal(e.to_string()))?;
+        zw.finish()
+            .map_err(|e| ExtraError::Internal(e.to_string()))?;
     }
     let zip_bytes = buf.into_inner();
     use base64::Engine;
@@ -588,11 +554,7 @@ async fn admin_delete_user(
             }
         }
     }
-    state
-        .accounts
-        .delete(&id)
-        .await
-        .map_err(ExtraError::Auth)?;
+    state.accounts.delete(&id).await.map_err(ExtraError::Auth)?;
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 
@@ -675,7 +637,9 @@ mod tests {
 
     #[test]
     fn set_role_rejects_unknown_role() {
-        let req = SetRoleRequest { role: "hacker".into() };
+        let req = SetRoleRequest {
+            role: "hacker".into(),
+        };
         assert!(!["super_admin", "admin", "user"].contains(&req.role.as_str()));
     }
 
@@ -706,12 +670,9 @@ mod tests {
             challenge: Some("abc123".into()),
             ..Default::default()
         };
-        let resp = feishu_webhook_inner_for_test(
-            Path("cli_xxx".to_string()),
-            body,
-        )
-        .await
-        .into_response();
+        let resp = feishu_webhook_inner_for_test(Path("cli_xxx".to_string()), body)
+            .await
+            .into_response();
         assert_eq!(resp.status(), StatusCode::OK);
     }
 

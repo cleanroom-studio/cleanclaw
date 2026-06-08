@@ -18,7 +18,11 @@ mod session_cmd;
 mod skill_cmd;
 
 #[derive(Parser)]
-#[command(name = "cleanclaw", version, about = "CleanClaw — multi-tenant AI agent runtime")]
+#[command(
+    name = "cleanclaw",
+    version,
+    about = "CleanClaw — multi-tenant AI agent runtime"
+)]
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,
@@ -68,7 +72,9 @@ enum Cmd {
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_env("CLEANCLAW_LOG").unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(
+            EnvFilter::try_from_env("CLEANCLAW_LOG").unwrap_or_else(|_| EnvFilter::new("info")),
+        )
         .init();
 
     let cli = Cli::parse();

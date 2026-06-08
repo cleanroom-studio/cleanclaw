@@ -4,7 +4,10 @@
 //! `/overview`.
 
 use crate::css::BASE_CSS;
-use crate::html::{badge, button, card_open, card_close, card_header, card_title, card_content, esc, page, ButtonSize, ButtonVariant, Theme};
+use crate::html::{
+    badge, button, card_close, card_content, card_header, card_open, card_title, esc, page,
+    ButtonSize, ButtonVariant, Theme,
+};
 
 /// Render the landing page. SSR-only — no client-side redirect.
 pub fn render() -> String {
@@ -22,8 +25,18 @@ pub fn render() -> String {
 </div>
 </div>"#,
         badge = badge("Self-hosted", crate::html::BadgeVariant::Secondary),
-        btn_signup = button("Create an account", ButtonVariant::Default, ButtonSize::Lg, Some("/signup")),
-        btn_overview = button("Sign in", ButtonVariant::Outline, ButtonSize::Lg, Some("/overview")),
+        btn_signup = button(
+            "Create an account",
+            ButtonVariant::Default,
+            ButtonSize::Lg,
+            Some("/signup")
+        ),
+        btn_overview = button(
+            "Sign in",
+            ButtonVariant::Outline,
+            ButtonSize::Lg,
+            Some("/overview")
+        ),
         cards = landing_cards(),
     );
     page("CleanClaw", &body, BASE_CSS, Theme::Light)
@@ -32,9 +45,15 @@ pub fn render() -> String {
 fn landing_cards() -> String {
     let mut out = String::new();
     let features = [
-        ("Channels", "Telegram, Discord, Slack, Feishu, WeChat, Line, Webhook."),
+        (
+            "Channels",
+            "Telegram, Discord, Slack, Feishu, WeChat, Line, Webhook.",
+        ),
         ("Skills", "Drop-in skills via tarball, GitHub, or ClawHub."),
-        ("Scheduler", "Cron jobs per agent, per project, per channel."),
+        (
+            "Scheduler",
+            "Cron jobs per agent, per project, per channel.",
+        ),
         ("Web UI", "Server-rendered, fast, no JS required."),
     ];
     for (title, body) in features {

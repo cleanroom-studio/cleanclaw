@@ -1,13 +1,17 @@
 <script lang="ts">
-  import { avatarClasses } from './classes';
-  let { name = '', src = '', size = 36 }: { name?: string; src?: string; size?: number } = $props();
+  import { avatarClasses } from "./classes";
+  let {
+    name = "",
+    src = "",
+    size = 36,
+  }: { name?: string; src?: string; size?: number } = $props();
   const initials = $derived(
     name
       .split(/\s+/)
-      .map((p) => p[0] || '')
-      .join('')
+      .map((p) => p[0] || "")
+      .join("")
       .slice(0, 2)
-      .toUpperCase() || '?'
+      .toUpperCase() || "?",
   );
 </script>
 

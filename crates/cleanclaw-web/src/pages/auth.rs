@@ -45,14 +45,23 @@ pub fn login_page(theme: Theme, error: Option<&str>, prefill: Option<&str>) -> S
         card_title = crate::html::card_title("Sign in"),
         card_description = crate::html::card_description("Use your username or email to sign in."),
         error_alert = match error {
-            Some(msg) => crate::html::alert("Sign-in failed", msg, crate::html::AlertVariant::Destructive),
+            Some(msg) => crate::html::alert(
+                "Sign-in failed",
+                msg,
+                crate::html::AlertVariant::Destructive
+            ),
             None => String::new(),
         },
         label_user = crate::html::label("Username or email", "login"),
         input_user = crate::html::input("login", "you@example.com", prefill.unwrap_or(""), "text"),
         label_pass = crate::html::label("Password", "password"),
         input_pass = crate::html::html_password("password", "password", ""),
-        submit = crate::html::button("Sign in", crate::html::ButtonVariant::Default, crate::html::ButtonSize::Default, None),
+        submit = crate::html::button(
+            "Sign in",
+            crate::html::ButtonVariant::Default,
+            crate::html::ButtonSize::Default,
+            None
+        ),
         card_close = crate::html::card_close(),
     );
     auth_shell("Sign in · CleanClaw", &body, theme)
@@ -60,7 +69,12 @@ pub fn login_page(theme: Theme, error: Option<&str>, prefill: Option<&str>) -> S
 
 /// Render the signup form. Mirrors `signup/page.tsx` + the React
 /// `register()` function in `lib/api.ts`.
-pub fn signup_page(theme: Theme, error: Option<&str>, prefill_username: Option<&str>, prefill_email: Option<&str>) -> String {
+pub fn signup_page(
+    theme: Theme,
+    error: Option<&str>,
+    prefill_username: Option<&str>,
+    prefill_email: Option<&str>,
+) -> String {
     let body = format!(
         r#"{card_open}
 {card_header}
@@ -81,18 +95,30 @@ pub fn signup_page(theme: Theme, error: Option<&str>, prefill_username: Option<&
         card_open = crate::html::card_open(""),
         card_header = crate::html::card_header(),
         card_title = crate::html::card_title("Create an account"),
-        card_description = crate::html::card_description("Sign up to manage agents, channels, and skills."),
+        card_description =
+            crate::html::card_description("Sign up to manage agents, channels, and skills."),
         error_alert = match error {
-            Some(msg) => crate::html::alert("Signup failed", msg, crate::html::AlertVariant::Destructive),
+            Some(msg) =>
+                crate::html::alert("Signup failed", msg, crate::html::AlertVariant::Destructive),
             None => String::new(),
         },
         label_user = crate::html::label("Username", "username"),
         input_user = crate::html::input("username", "ada", prefill_username.unwrap_or(""), "text"),
         label_email = crate::html::label("Email", "email"),
-        input_email = crate::html::input("email", "you@example.com", prefill_email.unwrap_or(""), "email"),
+        input_email = crate::html::input(
+            "email",
+            "you@example.com",
+            prefill_email.unwrap_or(""),
+            "email"
+        ),
         label_pass = crate::html::label("Password", "password"),
         input_pass = crate::html::html_password("password", "Password (min 8 chars)", ""),
-        submit = crate::html::button("Create account", crate::html::ButtonVariant::Default, crate::html::ButtonSize::Default, None),
+        submit = crate::html::button(
+            "Create account",
+            crate::html::ButtonVariant::Default,
+            crate::html::ButtonSize::Default,
+            None
+        ),
         card_close = crate::html::card_close(),
     );
     auth_shell("Sign up · CleanClaw", &body, theme)
@@ -116,7 +142,11 @@ pub fn validate_signup(form: &SignupForm) -> std::result::Result<(), String> {
     if form.username.trim().len() < 3 {
         return Err("Username must be at least 3 characters".into());
     }
-    if !form.username.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
+    if !form
+        .username
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
         return Err("Username may only contain letters, digits, _ and -".into());
     }
     if !form.email.contains('@') || form.email.len() < 5 {
@@ -252,7 +282,8 @@ mod tests {
 
     #[test]
     fn signup_form_deserializes() {
-        let j = r#"{"username":"ada","email":"a@b.co","password":"long-enough","display_name":"Ada"}"#;
+        let j =
+            r#"{"username":"ada","email":"a@b.co","password":"long-enough","display_name":"Ada"}"#;
         let f: SignupForm = serde_json::from_str(j).unwrap();
         assert_eq!(f.username, "ada");
         assert_eq!(f.display_name.as_deref(), Some("Ada"));

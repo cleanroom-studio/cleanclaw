@@ -36,13 +36,13 @@ pub fn build_provider(
                 api_base: base,
             }))
         }
-        "anthropic" | "anthropic-messages" | "claude" => Arc::new(AnthropicProvider::new(
-            AnthropicConfig {
+        "anthropic" | "anthropic-messages" | "claude" => {
+            Arc::new(AnthropicProvider::new(AnthropicConfig {
                 api_key,
                 api_base: base,
                 version: "2023-06-01".into(),
-            },
-        )),
+            }))
+        }
         other => {
             // Default to OpenAI-compat for unknown types — works for the
             // majority of providers (Together, Groq, Mistral, OpenRouter,

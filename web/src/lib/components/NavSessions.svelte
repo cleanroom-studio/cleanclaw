@@ -6,18 +6,17 @@
   // row navigates into the chat with that session pre-selected;
   // a small delete button removes the session.
 
-  import { goto } from '$app/navigation';
-  import { deleteChatSession } from '$lib/api';
-  import type { SessionInfo } from '$lib/api';
+  import { goto } from "$app/navigation";
+  import { deleteChatSession } from "$lib/api";
+  import type { SessionInfo } from "$lib/api";
 
-  let {
-    agentId,
-    sessions,
-  }: { agentId: string; sessions: SessionInfo[] } = $props();
+  let { agentId, sessions }: { agentId: string; sessions: SessionInfo[] } =
+    $props();
 
   const sorted = $derived(
     [...(sessions || [])].sort(
-      (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+      (a, b) =>
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
     ),
   );
 
@@ -33,10 +32,10 @@
       // Broadcast so the sidebar re-fetches and the chat surface
       // resets if it was viewing this session.
       window.dispatchEvent(
-        new CustomEvent('cleanclaw:sessions-changed', { detail: { agentId } }),
+        new CustomEvent("cleanclaw:sessions-changed", { detail: { agentId } }),
       );
     } catch (e) {
-      alert((e as Error).message || 'delete failed');
+      alert((e as Error).message || "delete failed");
     }
   }
 
@@ -48,9 +47,13 @@
 </script>
 
 <div>
-  <div class="px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-500 flex items-center justify-between">
+  <div
+    class="px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-500 flex items-center justify-between"
+  >
     <span>Sessions</span>
-    <span class="text-zinc-600 normal-case tracking-normal">{sorted.length}</span>
+    <span class="text-zinc-600 normal-case tracking-normal"
+      >{sorted.length}</span
+    >
   </div>
   <ul class="space-y-0.5">
     {#each sorted as s (s.key)}
@@ -61,14 +64,16 @@
           onclick={() => open(s.key)}
         >
           <div class="truncate text-zinc-200">{preview(s)}</div>
-          <div class="truncate text-[10px] text-zinc-500 font-mono">{s.key}</div>
+          <div class="truncate text-[10px] text-zinc-500 font-mono">
+            {s.key}
+          </div>
         </button>
         <button
           type="button"
           class="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 px-1"
           title="Delete session"
-          onclick={(e) => remove(s.key, e)}
-        >×</button>
+          onclick={(e) => remove(s.key, e)}>×</button
+        >
       </li>
     {/each}
     {#if sorted.length === 0}

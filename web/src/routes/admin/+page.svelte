@@ -2,16 +2,16 @@
   // Admin index — small landing that surfaces the three
   // admin-only sub-pages.
 
-  import { onMount } from 'svelte';
-  import { getMe } from '$lib/api';
-  import Card from '$lib/components/ui/Card.svelte';
-  import Badge from '$lib/components/ui/Badge.svelte';
+  import { onMount } from "svelte";
+  import { getMe } from "$lib/api";
+  import Card from "$lib/components/ui/Card.svelte";
+  import Badge from "$lib/components/ui/Badge.svelte";
 
-  let role = $state('');
+  let role = $state("");
   onMount(async () => {
     try {
       const r = await getMe();
-      role = r.user?.role || '';
+      role = r.user?.role || "";
     } catch {}
   });
 </script>
@@ -25,19 +25,25 @@
     <a href="/admin/users/" class="block">
       <Card>
         <div class="text-sm font-semibold">Users</div>
-        <div class="text-xs text-zinc-500 mt-1">Create, role, delete accounts.</div>
+        <div class="text-xs text-zinc-500 mt-1">
+          Create, role, delete accounts.
+        </div>
       </Card>
     </a>
     <a href="/admin/chats/" class="block">
       <Card>
         <div class="text-sm font-semibold">Chats</div>
-        <div class="text-xs text-zinc-500 mt-1">All chat sessions across every agent.</div>
+        <div class="text-xs text-zinc-500 mt-1">
+          All chat sessions across every agent.
+        </div>
       </Card>
     </a>
     <a href="/admin/usage/" class="block">
       <Card>
         <div class="text-sm font-semibold">Token Usage</div>
-        <div class="text-xs text-zinc-500 mt-1">Aggregate per-agent / per-period tokens.</div>
+        <div class="text-xs text-zinc-500 mt-1">
+          Aggregate per-agent / per-period tokens.
+        </div>
       </Card>
     </a>
   </div>

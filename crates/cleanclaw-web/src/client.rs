@@ -173,7 +173,10 @@ impl ApiClient {
 
     /// Issue a `DELETE`. Returns the parsed JSON body (some handlers
     /// return `{ok: true}` on delete).
-    pub async fn delete_json<T: DeserializeOwned + Default>(&self, path: &str) -> Result<T, ApiError> {
+    pub async fn delete_json<T: DeserializeOwned + Default>(
+        &self,
+        path: &str,
+    ) -> Result<T, ApiError> {
         let url = self.url(path);
         let mut req = self.client.delete(&url);
         if let Some(t) = &self.bearer {
@@ -321,7 +324,14 @@ impl ApiClient {
             login: &'a str,
             password: &'a str,
         }
-        self.post_json("/login", &Body { login: login_field, password }).await
+        self.post_json(
+            "/login",
+            &Body {
+                login: login_field,
+                password,
+            },
+        )
+        .await
     }
 
     pub async fn logout(&self) -> Result<serde_json::Value, ApiError> {
@@ -336,7 +346,10 @@ impl ApiClient {
         self.put_json("/me", req).await
     }
 
-    pub async fn change_my_password(&self, req: &ChangePasswordRequest) -> Result<serde_json::Value, ApiError> {
+    pub async fn change_my_password(
+        &self,
+        req: &ChangePasswordRequest,
+    ) -> Result<serde_json::Value, ApiError> {
         self.post_json("/me/password", req).await
     }
 
@@ -358,7 +371,10 @@ impl ApiClient {
         self.get_json("/agents?all=true").await
     }
 
-    pub async fn admin_create_user(&self, req: &AdminCreateUserRequest) -> Result<serde_json::Value, ApiError> {
+    pub async fn admin_create_user(
+        &self,
+        req: &AdminCreateUserRequest,
+    ) -> Result<serde_json::Value, ApiError> {
         self.post_json("/users", req).await
     }
 
@@ -379,9 +395,12 @@ impl ApiClient {
         id: &str,
         password: &str,
     ) -> Result<serde_json::Value, ApiError> {
-        self.post_json(&format!("/users/{id}/password"), &AdminResetPasswordRequest {
-            password: password.to_string(),
-        })
+        self.post_json(
+            &format!("/users/{id}/password"),
+            &AdminResetPasswordRequest {
+                password: password.to_string(),
+            },
+        )
         .await
     }
 
@@ -419,7 +438,8 @@ impl ApiClient {
     }
 
     pub async fn rotate_apikey(&self, id: &str) -> Result<serde_json::Value, ApiError> {
-        self.post_json::<(), _>(&format!("/apikeys/{id}/rotate"), &()).await
+        self.post_json::<(), _>(&format!("/apikeys/{id}/rotate"), &())
+            .await
     }
 
     pub async fn set_apikey_agents(
@@ -431,7 +451,8 @@ impl ApiClient {
         struct Body<'a> {
             agent_ids: &'a [String],
         }
-        self.put_json(&format!("/apikeys/{id}/agents"), &Body { agent_ids }).await
+        self.put_json(&format!("/apikeys/{id}/agents"), &Body { agent_ids })
+            .await
     }
 
     /// `/v1/admin/apikeys` — v1 admin surface (the new namespace
@@ -450,11 +471,14 @@ impl ApiClient {
             id: &'a str,
             name: &'a str,
         }
-        self.post_json("/../v1/admin/apikeys", &Body { id, name }).await
+        self.post_json("/../v1/admin/apikeys", &Body { id, name })
+            .await
     }
 
     pub async fn delete_api_key(&self, id: &str) -> Result<(), ApiError> {
-        let _: serde_json::Value = self.delete_json(&format!("/../v1/admin/apikeys/{id}")).await?;
+        let _: serde_json::Value = self
+            .delete_json(&format!("/../v1/admin/apikeys/{id}"))
+            .await?;
         Ok(())
     }
 
@@ -476,7 +500,9 @@ impl ApiClient {
     ) -> Result<BindAgentResponse, ApiError> {
         self.post_json(
             &format!("/agents/{agent_id}/binding"),
-            &BindAgentRequest { api_key_id: api_key_id.to_string() },
+            &BindAgentRequest {
+                api_key_id: api_key_id.to_string(),
+            },
         )
         .await
     }
@@ -499,10 +525,14 @@ impl ApiClient {
         if let Some(id) = scope_id {
             q.insert("scopeId".into(), id.into());
         }
-        self.get_json(&format!("/providers{}", build_query(&q))).await
+        self.get_json(&format!("/providers{}", build_query(&q)))
+            .await
     }
 
-    pub async fn create_provider(&self, body: &serde_json::Value) -> Result<serde_json::Value, ApiError> {
+    pub async fn create_provider(
+        &self,
+        body: &serde_json::Value,
+    ) -> Result<serde_json::Value, ApiError> {
         self.post_json("/providers", body).await
     }
 
@@ -549,10 +579,14 @@ impl ApiClient {
         if let Some(id) = scope_id {
             q.insert("scopeId".into(), id.into());
         }
-        self.get_json(&format!("/scoped-channels{}", build_query(&q))).await
+        self.get_json(&format!("/scoped-channels{}", build_query(&q)))
+            .await
     }
 
-    pub async fn create_scoped_channel(&self, body: &serde_json::Value) -> Result<serde_json::Value, ApiError> {
+    pub async fn create_scoped_channel(
+        &self,
+        body: &serde_json::Value,
+    ) -> Result<serde_json::Value, ApiError> {
         self.post_json("/scoped-channels", body).await
     }
 
@@ -598,7 +632,13 @@ impl ApiClient {
         }
         self.post_json(
             "/test-provider",
-            &Body { api_base, api_key, model, api_type, auth_type },
+            &Body {
+                api_base,
+                api_key,
+                model,
+                api_type,
+                auth_type,
+            },
         )
         .await
     }
@@ -697,8 +737,11 @@ impl ApiClient {
             Some(s) => format!("?sessionId={}", urlencode(s)),
             None => String::new(),
         };
-        self.post_multipart(&format!("/agents/{}/files{}", urlencode(agent_id), qs), form)
-            .await
+        self.post_multipart(
+            &format!("/agents/{}/files{}", urlencode(agent_id), qs),
+            form,
+        )
+        .await
     }
 }
 
@@ -789,7 +832,10 @@ impl ApiClient {
         }
         self.put_json(
             &format!("/chat/sessions/{}", urlencode(session_id)),
-            &Body { agent_id: _agent_id, title },
+            &Body {
+                agent_id: _agent_id,
+                title,
+            },
         )
         .await
     }
@@ -820,7 +866,10 @@ impl ApiClient {
         }
         self.patch_json(
             &format!("/chat/sessions/{}/project", urlencode(session_id)),
-            &Body { agent_id, project_id },
+            &Body {
+                agent_id,
+                project_id,
+            },
         )
         .await
     }
@@ -915,7 +964,11 @@ impl ApiClient {
         req: &UpdateProjectRequest,
     ) -> Result<ProjectEntry, ApiError> {
         self.patch_json(
-            &format!("/agents/{}/projects/{}", urlencode(agent_id), urlencode(project_id)),
+            &format!(
+                "/agents/{}/projects/{}",
+                urlencode(agent_id),
+                urlencode(project_id)
+            ),
             req,
         )
         .await
@@ -960,10 +1013,7 @@ impl ApiClient {
         Ok(w.agent)
     }
 
-    pub async fn get_agent_status(
-        &self,
-        id: &str,
-    ) -> Result<(u16, Option<AgentDetail>), ApiError> {
+    pub async fn get_agent_status(&self, id: &str) -> Result<(u16, Option<AgentDetail>), ApiError> {
         let url = self.url(&format!("/agents/{}", urlencode(id)));
         let mut req = self.client.get(&url);
         if let Some(t) = &self.bearer {
@@ -1009,15 +1059,18 @@ impl ApiClient {
         id: &str,
         agent: &AgentUpdatePayload,
     ) -> Result<serde_json::Value, ApiError> {
-        self.put_json(&format!("/agents/{}", urlencode(id)), agent).await
+        self.put_json(&format!("/agents/{}", urlencode(id)), agent)
+            .await
     }
 
     pub async fn get_agent_config(&self, id: &str) -> Result<AgentFileConfig, ApiError> {
-        self.get_json(&format!("/agents/{}/config", urlencode(id))).await
+        self.get_json(&format!("/agents/{}/config", urlencode(id)))
+            .await
     }
 
     pub async fn delete_agent(&self, id: &str) -> Result<serde_json::Value, ApiError> {
-        self.delete_json(&format!("/agents/{}", urlencode(id))).await
+        self.delete_json(&format!("/agents/{}", urlencode(id)))
+            .await
     }
 
     pub async fn list_hook_plugins(&self) -> Result<Vec<HookPlugin>, ApiError> {
@@ -1044,7 +1097,8 @@ impl ApiClient {
     }
 
     pub async fn delete_skill(&self, name: &str) -> Result<serde_json::Value, ApiError> {
-        self.delete_json(&format!("/skills/{}", urlencode(name))).await
+        self.delete_json(&format!("/skills/{}", urlencode(name)))
+            .await
     }
 
     pub async fn get_agent_skills(&self, agent_id: &str) -> Result<Vec<SkillInfo>, ApiError> {
@@ -1095,7 +1149,8 @@ impl ApiClient {
             Some(a) => format!("?agent={}", urlencode(a)),
             None => String::new(),
         };
-        self.post_multipart(&format!("/skills/upload{qs}"), form).await
+        self.post_multipart(&format!("/skills/upload{qs}"), form)
+            .await
     }
 }
 
@@ -1130,7 +1185,8 @@ impl ApiClient {
         id: &str,
         data: &PluginInfo,
     ) -> Result<serde_json::Value, ApiError> {
-        self.put_json(&format!("/plugins/{}", urlencode(id)), data).await
+        self.put_json(&format!("/plugins/{}", urlencode(id)), data)
+            .await
     }
 }
 
@@ -1153,10 +1209,7 @@ impl ApiClient {
         self.get_json("/cron").await
     }
 
-    pub async fn create_cron_job(
-        &self,
-        job: &CronJobInfo,
-    ) -> Result<serde_json::Value, ApiError> {
+    pub async fn create_cron_job(&self, job: &CronJobInfo) -> Result<serde_json::Value, ApiError> {
         self.post_json("/cron", job).await
     }
 
@@ -1165,7 +1218,8 @@ impl ApiClient {
         id: &str,
         job: &CronJobInfo,
     ) -> Result<serde_json::Value, ApiError> {
-        self.put_json(&format!("/cron/{}", urlencode(id)), job).await
+        self.put_json(&format!("/cron/{}", urlencode(id)), job)
+            .await
     }
 
     pub async fn delete_cron_job(&self, id: &str) -> Result<serde_json::Value, ApiError> {
@@ -1222,10 +1276,7 @@ impl ApiClient {
 // =====================================================================
 
 impl ApiClient {
-    pub async fn list_agent_channels(
-        &self,
-        agent_id: &str,
-    ) -> Result<Vec<AgentChannel>, ApiError> {
+    pub async fn list_agent_channels(&self, agent_id: &str) -> Result<Vec<AgentChannel>, ApiError> {
         let path = format!("/agents/{}/channels", urlencode(agent_id));
         #[derive(serde::Deserialize, Default)]
         struct Wrap {
@@ -1281,7 +1332,10 @@ impl ApiClient {
         }
         self.post_json(
             &format!("/agents/{}/channels/slack", urlencode(agent_id)),
-            &Body { bot_token, app_token },
+            &Body {
+                bot_token,
+                app_token,
+            },
         )
         .await
     }
@@ -1323,7 +1377,10 @@ impl ApiClient {
         }
         self.post_json(
             &format!("/agents/{}/channels/line", urlencode(agent_id)),
-            &Body { channel_token, channel_secret },
+            &Body {
+                channel_token,
+                channel_secret,
+            },
         )
         .await
     }
@@ -1347,7 +1404,13 @@ impl ApiClient {
         }
         self.post_json(
             &format!("/agents/{}/channels/feishu", urlencode(agent_id)),
-            &Body { app_id, app_secret, verification_token, encrypt_key, use_long_conn },
+            &Body {
+                app_id,
+                app_secret,
+                verification_token,
+                encrypt_key,
+                use_long_conn,
+            },
         )
         .await
     }
@@ -1588,8 +1651,11 @@ mod tests {
             get(move |headers: axum::http::HeaderMap| {
                 let recorded = rec_h.clone();
                 async move {
-                    *recorded.lock().await =
-                        Some(headers.get("authorization").and_then(|v| v.to_str().ok().map(String::from)));
+                    *recorded.lock().await = Some(
+                        headers
+                            .get("authorization")
+                            .and_then(|v| v.to_str().ok().map(String::from)),
+                    );
                     axum::Json(serde_json::json!({ "ok": true }))
                 }
             }),
@@ -1625,7 +1691,10 @@ mod tests {
             let _ = axum::serve(listener, app).await;
         });
         let client = ApiClient::new(format!("http://{addr}/api"));
-        let e: ApiError = client.get_json::<serde_json::Value>("/missing").await.unwrap_err();
+        let e: ApiError = client
+            .get_json::<serde_json::Value>("/missing")
+            .await
+            .unwrap_err();
         assert_eq!(e.http_status(), Some(404));
         h.abort();
     }

@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use cleanclaw_provider::message::Message as ProviderMessage;
-use cleanclaw_store::models::{SessionMessageRecord, SessionRecord, SessionMeta};
+use cleanclaw_store::models::{SessionMessageRecord, SessionMeta, SessionRecord};
 use cleanclaw_store::Store;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
@@ -44,7 +44,11 @@ pub enum SessionError {
 #[async_trait::async_trait]
 pub trait SessionBackend: Send + Sync + 'static {
     /// Read the working-set messages for a session.
-    async fn get_session(&self, agent_id: &str, session_key: &str) -> Result<Vec<ProviderMessage>, SessionError>;
+    async fn get_session(
+        &self,
+        agent_id: &str,
+        session_key: &str,
+    ) -> Result<Vec<ProviderMessage>, SessionError>;
     /// Overwrite the working-set messages. Channel/triple/project are
     /// upserted alongside.
     async fn save_session(
@@ -102,7 +106,11 @@ pub trait SessionBackend: Send + Sync + 'static {
         session_key: &str,
     ) -> Result<(String, String, String), SessionError>;
     /// session_key → project_id.
-    async fn lookup_project(&self, agent_id: &str, session_key: &str) -> Result<String, SessionError>;
+    async fn lookup_project(
+        &self,
+        agent_id: &str,
+        session_key: &str,
+    ) -> Result<String, SessionError>;
     /// List sidebar sessions (one row per active chat, newest first).
     async fn list_web_sessions(&self, agent_id: &str) -> Result<Vec<WebSession>, SessionError>;
 }
@@ -116,11 +124,19 @@ pub struct WebSession {
     pub id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub channel: String,
-    #[serde(rename = "accountId", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "accountId",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub account_id: String,
     #[serde(rename = "chatId", default, skip_serializing_if = "String::is_empty")]
     pub chat_id: String,
-    #[serde(rename = "projectId", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "projectId",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub project_id: String,
     pub title: String,
     pub preview: String,
@@ -128,7 +144,11 @@ pub struct WebSession {
     pub created_at: i64,
     #[serde(rename = "updatedAt")]
     pub updated_at: i64,
-    #[serde(rename = "thumbnailUrl", default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        rename = "thumbnailUrl",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
     pub thumbnail_url: String,
 }
 
@@ -218,7 +238,11 @@ impl Session {
         {
             tracing::warn!(error = %e, "session: save_session failed");
         }
-        if let Err(e) = self.backend.append_message(&self.agent_id, &self.session_key, &msg).await {
+        if let Err(e) = self
+            .backend
+            .append_message(&self.agent_id, &self.session_key, &msg)
+            .await
+        {
             tracing::warn!(error = %e, "session: archive append failed");
         }
         let _ = chatter; // silence unused if no backend
@@ -227,7 +251,11 @@ impl Session {
     /// Full append-only archive (falls back to working set when no
     /// archive is configured or the archive is empty).
     pub async fn archived_messages(&self) -> Vec<ProviderMessage> {
-        match self.backend.list_messages(&self.agent_id, &self.session_key).await {
+        match self
+            .backend
+            .list_messages(&self.agent_id, &self.session_key)
+            .await
+        {
             Ok(v) if !v.is_empty() => v,
             _ => self.get_messages().await,
         }
@@ -333,7 +361,11 @@ impl Session {
             m.clear();
         }
         *self.last_consolidated.lock().await = 0;
-        if let Err(e) = self.backend.delete_session(&self.agent_id, &self.session_key).await {
+        if let Err(e) = self
+            .backend
+            .delete_session(&self.agent_id, &self.session_key)
+            .await
+        {
             tracing::warn!(error = %e, "session: delete_session failed");
         }
     }
@@ -431,11 +463,14 @@ impl Manager {
         project_id: &str,
     ) -> Arc<Session> {
         let key = self.resolve_or_mint_key(channel, account_id, chat_id).await;
-        let s = self.get_by_key_inner(&key, channel, account_id, chat_id, project_id).await;
+        let s = self
+            .get_by_key_inner(&key, channel, account_id, chat_id, project_id)
+            .await;
         // Record the active key for file-mode (where the backend
         // doesn't persist it). For store mode this is a no-op
         // (resolve_active_session_key would have returned Some).
-        self.record_active_key(channel, account_id, chat_id, &key).await;
+        self.record_active_key(channel, account_id, chat_id, &key)
+            .await;
         s
     }
 
@@ -555,7 +590,9 @@ impl Manager {
         &self,
         session_key: &str,
     ) -> Result<(String, String, String), SessionError> {
-        self.backend.lookup_triple(&self.agent_id, session_key).await
+        self.backend
+            .lookup_triple(&self.agent_id, session_key)
+            .await
     }
 
     pub async fn session_exists(&self, session_key: &str) -> bool {
@@ -592,7 +629,12 @@ impl Manager {
         // Check our own active_keys cache (file mode) — the chat_id
         // may have been minted into a session_key by open_new_session.
         let triple = format!("web|{session_id}");
-        if let Some(k) = self.active_keys.lock().await.get(&format!("web||{session_id}")) {
+        if let Some(k) = self
+            .active_keys
+            .lock()
+            .await
+            .get(&format!("web||{session_id}"))
+        {
             return k.clone();
         }
         let _ = triple;
@@ -626,7 +668,8 @@ impl Manager {
             .await;
         // Record the active key for file mode where the backend
         // doesn't persist it.
-        self.record_active_key(channel, account_id, chat_id, &key).await;
+        self.record_active_key(channel, account_id, chat_id, &key)
+            .await;
         let file_path = if channel == "web" {
             self.data_dir.join(format!("web_{key}.jsonl"))
         } else {
@@ -672,7 +715,9 @@ impl Manager {
         title: &str,
     ) -> Result<(), SessionError> {
         let key = self.resolve_session_key(session_id).await;
-        self.backend.rename_session(&self.agent_id, &key, title).await
+        self.backend
+            .rename_session(&self.agent_id, &key, title)
+            .await
     }
 
     pub async fn move_session_by_id(
@@ -687,7 +732,9 @@ impl Manager {
                 *s.project_id.lock().await = project_id.to_string();
             }
         }
-        self.backend.move_session(&self.agent_id, &key, project_id).await
+        self.backend
+            .move_session(&self.agent_id, &key, project_id)
+            .await
     }
 
     /// Resolve a chatId → session_key. Falls back to the legacy
@@ -848,11 +895,7 @@ impl SessionBackend for FileBackend {
         Ok(Vec::new())
     }
 
-    async fn delete_session(
-        &self,
-        _agent_id: &str,
-        session_key: &str,
-    ) -> Result<(), SessionError> {
+    async fn delete_session(&self, _agent_id: &str, session_key: &str) -> Result<(), SessionError> {
         let path = self.data_dir.join(format!("{session_key}.jsonl"));
         let _ = std::fs::remove_file(path);
         let _ = std::fs::remove_file(self.meta_path(session_key));
@@ -905,10 +948,7 @@ impl SessionBackend for FileBackend {
         Ok(String::new())
     }
 
-    async fn list_web_sessions(
-        &self,
-        _agent_id: &str,
-    ) -> Result<Vec<WebSession>, SessionError> {
+    async fn list_web_sessions(&self, _agent_id: &str) -> Result<Vec<WebSession>, SessionError> {
         let pattern = self.data_dir.join("web_*.jsonl");
         let Ok(paths) = glob_simple(&pattern) else {
             return Ok(Vec::new());
@@ -1090,7 +1130,12 @@ fn tool_calls_to_value(tcs: &[cleanclaw_provider::message::ToolCall]) -> serde_j
     )
 }
 
-fn msg_to_record(agent_id: &str, user_id: &str, session_key: &str, m: &ProviderMessage) -> SessionMessageRecord {
+fn msg_to_record(
+    agent_id: &str,
+    user_id: &str,
+    session_key: &str,
+    m: &ProviderMessage,
+) -> SessionMessageRecord {
     let now = Utc::now();
     SessionMessageRecord {
         user_id: user_id.to_string(),
@@ -1112,38 +1157,42 @@ fn msg_to_record(agent_id: &str, user_id: &str, session_key: &str, m: &ProviderM
     }
 }
 
-    fn record_to_msg(r: &SessionMessageRecord) -> ProviderMessage {
-        use cleanclaw_provider::message::{ContentPart, ToolCall};
-        let role = str_to_role(&r.role);
-        let content_parts: Vec<ContentPart> = serde_json::from_value(r.content_parts.clone())
-            .unwrap_or_default();
-        let tool_calls: Vec<ToolCall> = serde_json::from_value(r.tool_calls.clone())
-            .unwrap_or_default();
-        ProviderMessage {
-            role,
-            content: r.content.clone(),
-            content_parts,
-            tool_calls,
-            tool_call_id: if r.tool_call_id.is_empty() {
-                None
-            } else {
-                Some(r.tool_call_id.clone())
-            },
-            name: if r.name.is_empty() { None } else { Some(r.name.clone()) },
-            cache_control: None,
-            raw: if r.raw_assistant.is_null() {
-                None
-            } else {
-                Some(r.raw_assistant.clone())
-            },
-            thinking: if r.thinking.is_empty() {
-                None
-            } else {
-                Some(r.thinking.clone())
-            },
-            timestamp: Some(r.created_at.timestamp_millis()),
-        }
+fn record_to_msg(r: &SessionMessageRecord) -> ProviderMessage {
+    use cleanclaw_provider::message::{ContentPart, ToolCall};
+    let role = str_to_role(&r.role);
+    let content_parts: Vec<ContentPart> =
+        serde_json::from_value(r.content_parts.clone()).unwrap_or_default();
+    let tool_calls: Vec<ToolCall> =
+        serde_json::from_value(r.tool_calls.clone()).unwrap_or_default();
+    ProviderMessage {
+        role,
+        content: r.content.clone(),
+        content_parts,
+        tool_calls,
+        tool_call_id: if r.tool_call_id.is_empty() {
+            None
+        } else {
+            Some(r.tool_call_id.clone())
+        },
+        name: if r.name.is_empty() {
+            None
+        } else {
+            Some(r.name.clone())
+        },
+        cache_control: None,
+        raw: if r.raw_assistant.is_null() {
+            None
+        } else {
+            Some(r.raw_assistant.clone())
+        },
+        thinking: if r.thinking.is_empty() {
+            None
+        } else {
+            Some(r.thinking.clone())
+        },
+        timestamp: Some(r.created_at.timestamp_millis()),
     }
+}
 
 #[async_trait::async_trait]
 impl SessionBackend for StoreAdapter {
@@ -1187,7 +1236,9 @@ impl SessionBackend for StoreAdapter {
             updated_at: now,
             chatter_user_id: chatter_user_id.to_string(),
         };
-        self.store.save_session(user_id, agent_id, session_key, &rec).await?;
+        self.store
+            .save_session(user_id, agent_id, session_key, &rec)
+            .await?;
         Ok(())
     }
 
@@ -1209,17 +1260,18 @@ impl SessionBackend for StoreAdapter {
         session_key: &str,
     ) -> Result<Vec<ProviderMessage>, SessionError> {
         let user_id = "";
-        let recs = self.store.list_session_messages(user_id, agent_id, session_key).await?;
+        let recs = self
+            .store
+            .list_session_messages(user_id, agent_id, session_key)
+            .await?;
         Ok(recs.iter().map(record_to_msg).collect())
     }
 
-    async fn delete_session(
-        &self,
-        agent_id: &str,
-        session_key: &str,
-    ) -> Result<(), SessionError> {
+    async fn delete_session(&self, agent_id: &str, session_key: &str) -> Result<(), SessionError> {
         let user_id = "";
-        self.store.delete_session(user_id, agent_id, session_key).await?;
+        self.store
+            .delete_session(user_id, agent_id, session_key)
+            .await?;
         Ok(())
     }
 
@@ -1230,7 +1282,9 @@ impl SessionBackend for StoreAdapter {
         title: &str,
     ) -> Result<(), SessionError> {
         let user_id = "";
-        self.store.rename_session(user_id, agent_id, session_key, title).await?;
+        self.store
+            .rename_session(user_id, agent_id, session_key, title)
+            .await?;
         Ok(())
     }
 
@@ -1269,10 +1323,7 @@ impl SessionBackend for StoreAdapter {
         Ok(String::new())
     }
 
-    async fn list_web_sessions(
-        &self,
-        _agent_id: &str,
-    ) -> Result<Vec<WebSession>, SessionError> {
+    async fn list_web_sessions(&self, _agent_id: &str) -> Result<Vec<WebSession>, SessionError> {
         Ok(Vec::new())
     }
 }
@@ -1340,7 +1391,10 @@ mod tests {
         let m = Manager::new(dir.clone());
         let s = m.get("telegram", "bot1", "user-42", "").await;
         let k = s.key();
-        assert!(k.starts_with("s-"), "telegram key should be opaque, got {k}");
+        assert!(
+            k.starts_with("s-"),
+            "telegram key should be opaque, got {k}"
+        );
         let _ = std::fs::remove_dir_all(dir);
     }
 

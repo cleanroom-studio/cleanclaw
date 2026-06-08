@@ -131,10 +131,7 @@ mod tests {
 
     #[test]
     fn search_url_shape() {
-        let url = format!(
-            "{SKILLS_SH_SEARCH}?q={}&limit=10",
-            urlencode("find skills")
-        );
+        let url = format!("{SKILLS_SH_SEARCH}?q={}&limit=10", urlencode("find skills"));
         assert_eq!(url, "https://skills.sh/api/search?q=find+skills&limit=10");
     }
 

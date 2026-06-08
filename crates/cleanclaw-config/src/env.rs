@@ -146,11 +146,7 @@ mod tests {
 
     #[test]
     fn scrub_does_not_panic_when_keys_absent() {
-        for k in [
-            "CLEANCLAW_STORAGE_DSN",
-            "BOXLITE_API_KEY",
-            "E2B_API_KEY",
-        ] {
+        for k in ["CLEANCLAW_STORAGE_DSN", "BOXLITE_API_KEY", "E2B_API_KEY"] {
             env::remove_var(k);
         }
         scrub_boot_secrets();

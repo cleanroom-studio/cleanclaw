@@ -14,11 +14,7 @@ use cleanclaw_store::models::GoalRecord;
 /// Fold one model call's token counts into a goal, in place.
 /// Returns `(delta_added, exhausted)`. A `delta` of 0 means the
 /// fold was a no-op (non-active goal, or all-zero usage).
-pub fn fold_usage(
-    g: &mut GoalRecord,
-    input_tokens: i64,
-    output_tokens: i64,
-) -> (i64, bool) {
+pub fn fold_usage(g: &mut GoalRecord, input_tokens: i64, output_tokens: i64) -> (i64, bool) {
     let status = GoalStatus::parse(&g.status);
     if status != GoalStatus::Active {
         return (0, false);

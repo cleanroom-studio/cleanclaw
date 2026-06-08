@@ -19,8 +19,8 @@ use cleanclaw_store::models::GoalRecord;
 use cleanclaw_store::Store;
 use tracing::warn;
 
-use crate::goal::GoalStatus;
 use crate::goal::prompt::continuation_prompt;
+use crate::goal::GoalStatus;
 
 /// Try to fire a continuation prompt for the given (agent,
 /// session). All errors are logged and swallowed — a failure
@@ -84,9 +84,9 @@ pub async fn publish(mb: &MessageBus, g: &GoalRecord, prompt: String) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Utc;
     use cleanclaw_core::now_utc;
     use cleanclaw_store::sqlite::SqliteStore;
-    use chrono::Utc;
 
     async fn store() -> Arc<dyn Store> {
         let st = SqliteStore::open(":memory:").await.unwrap();
@@ -151,8 +151,7 @@ mod tests {
         try_fire_continuation(&st, &bus, "a1", "sk").await;
         // Bus should still be empty.
         let outcome =
-            tokio::time::timeout(std::time::Duration::from_millis(50), bus.recv_inbound())
-                .await;
+            tokio::time::timeout(std::time::Duration::from_millis(50), bus.recv_inbound()).await;
         assert!(outcome.is_err() || outcome.unwrap().is_none());
     }
 
@@ -165,8 +164,7 @@ mod tests {
         let bus = MessageBus::new(4);
         try_fire_continuation(&st, &bus, "a1", "sk").await;
         let outcome =
-            tokio::time::timeout(std::time::Duration::from_millis(50), bus.recv_inbound())
-                .await;
+            tokio::time::timeout(std::time::Duration::from_millis(50), bus.recv_inbound()).await;
         assert!(outcome.is_err() || outcome.unwrap().is_none());
     }
 
@@ -179,8 +177,7 @@ mod tests {
         let bus = MessageBus::new(4);
         try_fire_continuation(&st, &bus, "a1", "sk").await;
         let outcome =
-            tokio::time::timeout(std::time::Duration::from_millis(50), bus.recv_inbound())
-                .await;
+            tokio::time::timeout(std::time::Duration::from_millis(50), bus.recv_inbound()).await;
         assert!(outcome.is_err() || outcome.unwrap().is_none());
     }
 }

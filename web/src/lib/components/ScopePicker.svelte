@@ -1,6 +1,13 @@
 <script lang="ts">
-  let { scope = 'user', id = '', allowAgent = false, allowSystem = false, value = $bindable('user'), onchange }: {
-    scope?: 'user' | 'agent' | 'system';
+  let {
+    scope = "user",
+    id = "",
+    allowAgent = false,
+    allowSystem = false,
+    value = $bindable("user"),
+    onchange,
+  }: {
+    scope?: "user" | "agent" | "system";
     id?: string;
     allowAgent?: boolean;
     allowSystem?: boolean;
@@ -9,9 +16,9 @@
   } = $props();
 
   const options = [
-    { value: 'user', label: 'User' },
-    ...(allowAgent ? [{ value: 'agent', label: 'Agent' }] : []),
-    ...(allowSystem ? [{ value: 'system', label: 'System' }] : [])
+    { value: "user", label: "User" },
+    ...(allowAgent ? [{ value: "agent", label: "Agent" }] : []),
+    ...(allowSystem ? [{ value: "system", label: "System" }] : []),
   ];
 
   function pick(v: string) {
@@ -24,7 +31,9 @@
   {#each options as opt}
     <button
       type="button"
-      class="px-2 py-1 rounded-sm {value === opt.value ? 'bg-background text-foreground shadow' : 'text-muted-foreground hover:text-foreground'}"
+      class="px-2 py-1 rounded-sm {value === opt.value
+        ? 'bg-background text-foreground shadow'
+        : 'text-muted-foreground hover:text-foreground'}"
       onclick={() => pick(opt.value)}
     >
       {opt.label}

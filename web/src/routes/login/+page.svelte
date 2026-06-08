@@ -4,32 +4,37 @@
   // served by AuthGuard → LoginScreen). Mirrors CleanClaw's
   // signin form shape.
 
-  import { goto } from '$app/navigation';
-  import { login, getMe, type LoginResponse } from '$lib/api';
-  import Card from '$lib/components/ui/Card.svelte';
-  import Button from '$lib/components/ui/Button.svelte';
-  import Input from '$lib/components/ui/Input.svelte';
-  import Label from '$lib/components/ui/Label.svelte';
+  import { goto } from "$app/navigation";
+  import { login, getMe, type LoginResponse } from "$lib/api";
+  import Card from "$lib/components/ui/Card.svelte";
+  import Button from "$lib/components/ui/Button.svelte";
+  import Input from "$lib/components/ui/Input.svelte";
+  import Label from "$lib/components/ui/Label.svelte";
 
-  let username = $state('');
-  let password = $state('');
-  let error = $state('');
+  let username = $state("");
+  let password = $state("");
+  let error = $state("");
   let submitting = $state(false);
 
   async function submit(e: Event) {
     e.preventDefault();
-    submitting = true; error = '';
+    submitting = true;
+    error = "";
     try {
       const r: LoginResponse = await login({ username, password });
-      if (!r.ok) { error = r.error || 'invalid credentials'; submitting = false; return; }
+      if (!r.ok) {
+        error = r.error || "invalid credentials";
+        submitting = false;
+        return;
+      }
       const m = await getMe();
       if (m.ok && m.user) {
-        await goto('/overview/');
+        await goto("/overview/");
       } else {
-        await goto('/overview/');
+        await goto("/overview/");
       }
     } catch (e) {
-      error = (e as Error).message || 'sign-in failed';
+      error = (e as Error).message || "sign-in failed";
     } finally {
       submitting = false;
     }
@@ -42,16 +47,31 @@
     <form onsubmit={submit} class="space-y-3">
       <div>
         <Label for="li-u">Username</Label>
-        <Input id="li-u" bind:value={username} required autocomplete="username" />
+        <Input
+          id="li-u"
+          bind:value={username}
+          required
+          autocomplete="username"
+        />
       </div>
       <div>
         <Label for="li-p">Password</Label>
-        <Input id="li-p" type="password" bind:value={password} required autocomplete="current-password" />
+        <Input
+          id="li-p"
+          type="password"
+          bind:value={password}
+          required
+          autocomplete="current-password"
+        />
       </div>
       {#if error}<p class="text-sm text-red-400">{error}</p>{/if}
-      <Button type="submit" class="w-full" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</Button>
+      <Button type="submit" class="w-full" disabled={submitting}
+        >{submitting ? "Signing in…" : "Sign in"}</Button
+      >
       <p class="text-xs text-zinc-500 text-center">
-        No account? <a href="/signup/" class="text-violet-300 hover:underline">Sign up</a>
+        No account? <a href="/signup/" class="text-violet-300 hover:underline"
+          >Sign up</a
+        >
       </p>
     </form>
   </Card>

@@ -52,13 +52,41 @@ struct ChannelRow {
 
 async fn list_channels(State(_state): State<Arc<ServerState>>) -> impl IntoResponse {
     let rows = vec![
-        ChannelRow { r#type: "telegram".into(), enabled: false, status: "disconnected".into() },
-        ChannelRow { r#type: "discord".into(), enabled: false, status: "disconnected".into() },
-        ChannelRow { r#type: "slack".into(), enabled: false, status: "disconnected".into() },
-        ChannelRow { r#type: "feishu".into(), enabled: false, status: "disconnected".into() },
-        ChannelRow { r#type: "wechat".into(), enabled: false, status: "disconnected".into() },
-        ChannelRow { r#type: "line".into(), enabled: false, status: "disconnected".into() },
-        ChannelRow { r#type: "web".into(), enabled: true, status: "connected".into() },
+        ChannelRow {
+            r#type: "telegram".into(),
+            enabled: false,
+            status: "disconnected".into(),
+        },
+        ChannelRow {
+            r#type: "discord".into(),
+            enabled: false,
+            status: "disconnected".into(),
+        },
+        ChannelRow {
+            r#type: "slack".into(),
+            enabled: false,
+            status: "disconnected".into(),
+        },
+        ChannelRow {
+            r#type: "feishu".into(),
+            enabled: false,
+            status: "disconnected".into(),
+        },
+        ChannelRow {
+            r#type: "wechat".into(),
+            enabled: false,
+            status: "disconnected".into(),
+        },
+        ChannelRow {
+            r#type: "line".into(),
+            enabled: false,
+            status: "disconnected".into(),
+        },
+        ChannelRow {
+            r#type: "web".into(),
+            enabled: true,
+            status: "connected".into(),
+        },
     ];
     Json(rows).into_response()
 }
@@ -116,11 +144,7 @@ async fn create_scoped(
             .into_response();
     }
     let id = format!("sc_{}", uuid::Uuid::new_v4().simple());
-    (
-        StatusCode::CREATED,
-        Json(json!({"id": id, "ok": true})),
-    )
-        .into_response()
+    (StatusCode::CREATED, Json(json!({"id": id, "ok": true}))).into_response()
 }
 
 async fn update_scoped(

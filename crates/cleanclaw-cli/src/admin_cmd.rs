@@ -6,7 +6,9 @@
 //! recover their account from the shell.
 
 use clap::Subcommand;
-use cleanclaw_auth::users::{Accounts, CreateInput, ROLE_APP_USER, ROLE_SUPER_ADMIN, ROLE_USER, STATUS_ACTIVE};
+use cleanclaw_auth::users::{
+    Accounts, CreateInput, ROLE_APP_USER, ROLE_SUPER_ADMIN, ROLE_USER, STATUS_ACTIVE,
+};
 use cleanclaw_auth::UserError;
 use cleanclaw_core::{CleanClawError, Result};
 use cleanclaw_store::Store;
@@ -65,12 +67,11 @@ pub async fn run(cmd: AdminCmd) -> Result<()> {
             display_name,
             role,
             agent_quota,
-        } => {
-            create_user(store, username, email, pw, display_name, role, agent_quota).await
-        }
-        AdminCmd::ResetPassword { username, password: pw } => {
-            reset_password(store, username, pw).await
-        }
+        } => create_user(store, username, email, pw, display_name, role, agent_quota).await,
+        AdminCmd::ResetPassword {
+            username,
+            password: pw,
+        } => reset_password(store, username, pw).await,
         AdminCmd::GrantRole { username, role } => grant_role(store, username, role).await,
         AdminCmd::ListUsers { status, role } => list_users(store, status, role).await,
     }
@@ -109,11 +110,7 @@ async fn create_user(
     Ok(())
 }
 
-async fn reset_password(
-    store: Arc<dyn Store>,
-    username: String,
-    pw: String,
-) -> Result<()> {
+async fn reset_password(store: Arc<dyn Store>, username: String, pw: String) -> Result<()> {
     if pw.len() < 8 {
         return Err(CleanClawError::InvalidArgument(
             "password must be at least 8 characters".into(),
@@ -130,11 +127,7 @@ async fn reset_password(
     Ok(())
 }
 
-async fn grant_role(
-    store: Arc<dyn Store>,
-    username: String,
-    role: String,
-) -> Result<()> {
+async fn grant_role(store: Arc<dyn Store>, username: String, role: String) -> Result<()> {
     let role_str = parse_role(&role)?;
     let accts = Accounts::new(store).map_err(ue)?;
     let users = accts.list().await.map_err(ue)?;
@@ -145,15 +138,10 @@ async fn grant_role(
     // `update` takes explicit positional args; keep all the other
     // fields stable by reading them from the current row. Pass an
     // empty `display_name` so the update keeps the existing value.
-    accts.update(
-        &user.id,
-        "",
-        &role_str,
-        "",
-        Some(user.agent_quota),
-    )
-    .await
-    .map_err(ue)?;
+    accts
+        .update(&user.id, "", &role_str, "", Some(user.agent_quota))
+        .await
+        .map_err(ue)?;
     println!("{username} → {role_str}");
     Ok(())
 }
@@ -174,9 +162,15 @@ async fn list_users(
         println!("(no users match the filter)");
         return Ok(());
     }
-    println!("{:<24} {:<32} {:<14} {}", "USERNAME", "EMAIL", "ROLE", "STATUS");
+    println!(
+        "{:<24} {:<32} {:<14} {}",
+        "USERNAME", "EMAIL", "ROLE", "STATUS"
+    );
     for u in filtered {
-        println!("{:<24} {:<32} {:<14} {}", u.username, u.email, u.role, u.status);
+        println!(
+            "{:<24} {:<32} {:<14} {}",
+            u.username, u.email, u.role, u.status
+        );
     }
     Ok(())
 }
@@ -186,7 +180,9 @@ fn parse_role(s: &str) -> Result<String> {
         "super_admin" | "super-admin" | "superadmin" => Ok(ROLE_SUPER_ADMIN.into()),
         "app_user" | "app-user" | "appuser" => Ok(ROLE_APP_USER.into()),
         "user" => Ok(ROLE_USER.into()),
-        _ => Err(CleanClawError::InvalidArgument(format!("unknown role: {s}"))),
+        _ => Err(CleanClawError::InvalidArgument(format!(
+            "unknown role: {s}"
+        ))),
     }
 }
 
@@ -228,7 +224,13 @@ mod tests {
 
     #[test]
     fn ue_maps_variants() {
-        assert!(matches!(ue(UserError::InvalidCredentials), CleanClawError::Unauthorized));
-        assert!(matches!(ue(UserError::LastSuperAdmin), CleanClawError::Conflict(_)));
+        assert!(matches!(
+            ue(UserError::InvalidCredentials),
+            CleanClawError::Unauthorized
+        ));
+        assert!(matches!(
+            ue(UserError::LastSuperAdmin),
+            CleanClawError::Conflict(_)
+        ));
     }
 }

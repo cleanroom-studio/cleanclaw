@@ -96,10 +96,7 @@ pub fn router() -> Router<Arc<ServerState>> {
         .route("/api/me/password", post(change_password))
         .route("/api/apikeys/:id", delete(delete_apikey))
         .route("/api/apikeys/:id/rotate", post(rotate_apikey))
-        .route(
-            "/api/providers",
-            get(list_providers).post(create_provider),
-        )
+        .route("/api/providers", get(list_providers).post(create_provider))
         .route(
             "/api/providers/:id",
             put(update_provider).delete(delete_provider),
@@ -159,11 +156,7 @@ async fn update_me(
     let _ = body.email; // accepted but ignored
     state
         .accounts
-        .update_profile(
-            &body.user_id,
-            &body.display_name,
-            &body.avatar_url,
-        )
+        .update_profile(&body.user_id, &body.display_name, &body.avatar_url)
         .await
         .map_err(Extras2Error::Auth)?;
     Ok(Json(serde_json::json!({ "ok": true })))
@@ -269,7 +262,11 @@ async fn create_apikey(
     let rec = ApiKeyRecord {
         id: id.clone(),
         user_id: body.user_id.clone(),
-        name: if body.name.is_empty() { "default".into() } else { body.name },
+        name: if body.name.is_empty() {
+            "default".into()
+        } else {
+            body.name
+        },
         key_hash: sha256_hex(&key),
         key_prefix: prefix.clone(),
         r#type: body.r#type,
@@ -364,7 +361,11 @@ async fn create_provider(
     let rec = ConfigRecord {
         id: format!("prov_{}", uuid::Uuid::new_v4().simple()),
         kind: "provider".into(),
-        scope: if body.user_id.is_empty() { "system".into() } else { "user".into() },
+        scope: if body.user_id.is_empty() {
+            "system".into()
+        } else {
+            "user".into()
+        },
         user_id: body.user_id.clone(),
         agent_id: body.agent_id.clone(),
         name: body.name.clone(),
@@ -511,7 +512,9 @@ mod tests {
             created_at: "2026-01-01T00:00:00Z".into(),
         };
         let blob = serde_json::to_string(&v).unwrap();
-        assert!(blob.contains("\"keyPrefix\":\"fast_\"") || blob.contains("\"key_prefix\":\"fast_\""));
+        assert!(
+            blob.contains("\"keyPrefix\":\"fast_\"") || blob.contains("\"key_prefix\":\"fast_\"")
+        );
     }
 
     #[test]
@@ -532,7 +535,9 @@ mod tests {
 
     #[test]
     fn logout_request_default_session_id_is_empty() {
-        let r = LogoutRequest { session_id: String::new() };
+        let r = LogoutRequest {
+            session_id: String::new(),
+        };
         assert!(r.session_id.is_empty());
     }
 

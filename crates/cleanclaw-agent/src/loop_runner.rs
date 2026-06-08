@@ -8,8 +8,8 @@ use super::compact::{compact_in_place, save_compacted, should_compact, DEFAULT_T
 use super::context::{ContextBuilder, IdentityFileStore, IdentityFiles};
 use super::event_hub::{AgentEvent, EventEnvelope, SharedEventHub, Usage};
 use super::hooks::{Hook, HookPhase, HookRegistry};
-use super::tools::{tool_definitions_message, ToolContext, ToolRegistry};
 use super::tool_recovery::TurnFailures;
+use super::tools::{tool_definitions_message, ToolContext, ToolRegistry};
 use cleanclaw_core::{CleanClawError, Result};
 use cleanclaw_provider::{
     ChatRequest, ChatResponse, Message, Provider, ProviderStream, StreamEvent, ToolCall,
@@ -37,7 +37,7 @@ pub struct TurnInput {
     /// Optional attachments (image / file uploads from the chat
     /// surface). When non-empty, the new user turn carries
     /// `ContentPart::ImageBase64` parts so the LLM sees the media.
-//
+    //
     pub attachments: Vec<super::attachments::Attachment>,
 }
 
@@ -87,10 +87,7 @@ impl Agent {
         let user_msg = if input.attachments.is_empty() {
             Message::user(input.user_text.clone())
         } else {
-            super::attachments::user_message_with_attachments(
-                &input.user_text,
-                &input.attachments,
-            )
+            super::attachments::user_message_with_attachments(&input.user_text, &input.attachments)
         };
         messages.push(user_msg);
 
@@ -151,7 +148,8 @@ impl Agent {
                 extra: Default::default(),
             };
             if let Some(prompt_mode) = self.prompt_mode() {
-                req.extra.insert("promptMode".into(), Value::String(prompt_mode));
+                req.extra
+                    .insert("promptMode".into(), Value::String(prompt_mode));
             }
 
             let resp = self.provider.chat(&req).await.map_err(map_provider_err)?;
@@ -256,10 +254,16 @@ impl Agent {
                         .await;
                 }
                 let started = std::time::Instant::now();
-                let result = self.tools.dispatch(&ctx, &tc.name, tc.arguments.clone()).await;
+                let result = self
+                    .tools
+                    .dispatch(&ctx, &tc.name, tc.arguments.clone())
+                    .await;
                 let duration_ms = started.elapsed().as_millis() as u64;
                 let (content, is_error) = match result {
-                    Ok(v) => (serde_json::to_string(&v).unwrap_or_else(|_| "null".into()), false),
+                    Ok(v) => (
+                        serde_json::to_string(&v).unwrap_or_else(|_| "null".into()),
+                        false,
+                    ),
                     Err(e) => {
                         let msg = e.to_string();
                         // Record for the turn-failure tracker so a
@@ -357,19 +361,13 @@ impl Agent {
     /// AND drives the same multi-step tool-call loop the blocking
     /// path uses. Falls through to the blocking path if the provider
     /// errors mid-stream.
-    pub async fn run_turn_stream(
-        &self,
-        input: TurnInput,
-    ) -> Result<AgentOutput> {
+    pub async fn run_turn_stream(&self, input: TurnInput) -> Result<AgentOutput> {
         use cleanclaw_provider::StreamEvent;
         let mut messages = input.history.clone();
         let user_msg = if input.attachments.is_empty() {
             Message::user(input.user_text.clone())
         } else {
-            super::attachments::user_message_with_attachments(
-                &input.user_text,
-                &input.attachments,
-            )
+            super::attachments::user_message_with_attachments(&input.user_text, &input.attachments)
         };
         messages.push(user_msg);
         self.turn_failures.reset();
@@ -422,7 +420,8 @@ impl Agent {
                 extra: Default::default(),
             };
             if let Some(prompt_mode) = self.prompt_mode() {
-                req.extra.insert("promptMode".into(), Value::String(prompt_mode));
+                req.extra
+                    .insert("promptMode".into(), Value::String(prompt_mode));
             }
 
             // Build the request, then drain the stream. We accumulate
@@ -507,7 +506,10 @@ impl Agent {
                             }
                         }
                     }
-                    StreamEvent::Done { finish_reason, usage } => {
+                    StreamEvent::Done {
+                        finish_reason,
+                        usage,
+                    } => {
                         stream_finish = finish_reason;
                         stream_usage = usage;
                     }
@@ -524,8 +526,7 @@ impl Agent {
             // — the tool's own validation will surface a clearer error.
             for tc in &mut pending_tool_calls {
                 if let Value::String(raw) = &tc.arguments {
-                    tc.arguments =
-                        serde_json::from_str(raw).unwrap_or(Value::String(raw.clone()));
+                    tc.arguments = serde_json::from_str(raw).unwrap_or(Value::String(raw.clone()));
                 }
             }
 
@@ -595,7 +596,10 @@ impl Agent {
                         .await;
                 }
                 let started = std::time::Instant::now();
-                let result = self.tools.dispatch(&ctx, &tc.name, tc.arguments.clone()).await;
+                let result = self
+                    .tools
+                    .dispatch(&ctx, &tc.name, tc.arguments.clone())
+                    .await;
                 let duration_ms = started.elapsed().as_millis() as u64;
                 let (content, is_error) = match result {
                     Ok(v) => (
@@ -1005,7 +1009,9 @@ mod loop_tests {
             raw: Value::Null,
         };
         let p = Arc::new(CannedProvider::new(vec![canned]));
-        let store = cleanclaw_store::sqlite::SqliteStore::open(":memory:").await.unwrap();
+        let store = cleanclaw_store::sqlite::SqliteStore::open(":memory:")
+            .await
+            .unwrap();
         let store: Arc<dyn Store> = Arc::new(store);
         store.migrate().await.unwrap();
         let agent = make_agent(p.clone(), store);
@@ -1031,7 +1037,9 @@ mod loop_tests {
             raw: Value::Null,
         };
         let p = Arc::new(CannedProvider::new(vec![canned]));
-        let store = cleanclaw_store::sqlite::SqliteStore::open(":memory:").await.unwrap();
+        let store = cleanclaw_store::sqlite::SqliteStore::open(":memory:")
+            .await
+            .unwrap();
         let store: Arc<dyn Store> = Arc::new(store);
         store.migrate().await.unwrap();
         let agent = make_agent(p.clone(), store);
@@ -1075,7 +1083,9 @@ mod loop_tests {
             raw: Value::Null,
         };
         let p = Arc::new(CannedProvider::new(vec![tool_response, final_response]));
-        let store = cleanclaw_store::sqlite::SqliteStore::open(":memory:").await.unwrap();
+        let store = cleanclaw_store::sqlite::SqliteStore::open(":memory:")
+            .await
+            .unwrap();
         let store: Arc<dyn Store> = Arc::new(store);
         store.migrate().await.unwrap();
 
@@ -1096,11 +1106,7 @@ mod loop_tests {
                     "properties": { "text": { "type": "string" } }
                 })
             }
-            async fn call(
-                &self,
-                _ctx: &ToolContext,
-                args: Value,
-            ) -> cleanclaw_core::Result<Value> {
+            async fn call(&self, _ctx: &ToolContext, args: Value) -> cleanclaw_core::Result<Value> {
                 Ok(serde_json::json!({ "echo": args["text"] }))
             }
         }
@@ -1128,7 +1134,9 @@ mod loop_tests {
             raw: Value::Null,
         };
         let p = Arc::new(CannedProvider::new(vec![canned]));
-        let store = cleanclaw_store::sqlite::SqliteStore::open(":memory:").await.unwrap();
+        let store = cleanclaw_store::sqlite::SqliteStore::open(":memory:")
+            .await
+            .unwrap();
         let store: Arc<dyn Store> = Arc::new(store);
         store.migrate().await.unwrap();
         let hub: SharedEventHub = Arc::new(EventHub::new(16));

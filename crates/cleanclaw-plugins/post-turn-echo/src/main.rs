@@ -7,9 +7,7 @@
 //! summarization, ...).
 
 use async_trait::async_trait;
-use cleanclaw_plugin_runtime::{
-    send_notification, HookRegistration, Plugin, PluginError,
-};
+use cleanclaw_plugin_runtime::{send_notification, HookRegistration, Plugin, PluginError};
 use serde_json::Value;
 use std::sync::Arc;
 
@@ -32,21 +30,13 @@ impl Plugin for PostTurnEchoPlugin {
         if point != "post_turn" {
             return Ok(());
         }
-        let channel = params
-            .get("channel")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let chat_id = params
-            .get("chatId")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let channel = params.get("channel").and_then(|v| v.as_str()).unwrap_or("");
+        let chat_id = params.get("chatId").and_then(|v| v.as_str()).unwrap_or("");
         let account_id = params
             .get("accountId")
             .and_then(|v| v.as_str())
             .unwrap_or("");
-        tracing::info!(
-            "post-turn-echo: {channel}/{chat_id} (account={account_id})"
-        );
+        tracing::info!("post-turn-echo: {channel}/{chat_id} (account={account_id})");
         // Fire-and-forget: tell the host to send a follow-up.
         let _ = send_notification(
             "chat.send",
@@ -75,17 +65,16 @@ mod tests {
     #[tokio::test]
     async fn register_returns_post_turn() {
         let c = InProcPluginClient::spawn(PostTurnEchoPlugin);
-        let reg: HookRegistration = serde_json::from_value(
-            c.call("hook.register", Value::Null).await.unwrap(),
-        )
-        .unwrap();
+        let reg: HookRegistration =
+            serde_json::from_value(c.call("hook.register", Value::Null).await.unwrap()).unwrap();
         assert_eq!(reg.points, vec!["post_turn".to_string()]);
     }
 
     #[tokio::test]
     async fn unknown_point_is_noop() {
         let c = InProcPluginClient::spawn(PostTurnEchoPlugin);
-        c.notify("hook.fire", serde_json::json!({"point": "pre_turn"})).await;
+        c.notify("hook.fire", serde_json::json!({"point": "pre_turn"}))
+            .await;
         // Notification - no reply. The hook returns Ok(()) for any
         // point != "post_turn".
     }

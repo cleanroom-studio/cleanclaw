@@ -109,10 +109,18 @@ pub async fn get_agent_file(
     Path((agent_id, filename)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let _ = super::require_auth(&state, &headers).await;
-    match state.store.get_workspace_file(&agent_id, "", &filename).await {
+    match state
+        .store
+        .get_workspace_file(&agent_id, "", &filename)
+        .await
+    {
         Ok((_user, bytes)) => {
             let content = String::from_utf8_lossy(&bytes).to_string();
-            (StatusCode::OK, Json(json!({"filename": filename, "content": content}))).into_response()
+            (
+                StatusCode::OK,
+                Json(json!({"filename": filename, "content": content})),
+            )
+                .into_response()
         }
         Err(e) => super::err_to_response(e),
     }

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import AppShell from '$lib/components/AppShell.svelte';
-  import Card from '$lib/components/ui/Card.svelte';
-  import { agentUsage, type UsageInfo } from '$lib/api';
+  import { onMount } from "svelte";
+  import AppShell from "$lib/components/AppShell.svelte";
+  import Card from "$lib/components/ui/Card.svelte";
+  import { agentUsage, type UsageInfo } from "$lib/api";
 
   let { params }: { params: { id: string } } = $props();
   let usage = $state<UsageInfo[]>([]);
@@ -41,7 +41,9 @@
       </Card>
       <Card>
         <div class="text-xs text-muted-foreground">Total</div>
-        <div class="text-2xl font-bold">{(totalIn + totalOut).toLocaleString()}</div>
+        <div class="text-2xl font-bold">
+          {(totalIn + totalOut).toLocaleString()}
+        </div>
       </Card>
     </div>
     <Card>
@@ -49,7 +51,9 @@
       {#if loading}
         <p class="text-sm text-muted-foreground">Loading…</p>
       {:else if usage.length === 0}
-        <p class="text-sm text-muted-foreground">No usage yet for this agent.</p>
+        <p class="text-sm text-muted-foreground">
+          No usage yet for this agent.
+        </p>
       {:else}
         <table class="w-full text-sm">
           <thead>
@@ -64,9 +68,15 @@
             {#each usage as u}
               <tr class="border-b border-border/50">
                 <td class="py-2">{u.period}</td>
-                <td class="py-2 text-right font-mono text-xs">{u.input_tokens.toLocaleString()}</td>
-                <td class="py-2 text-right font-mono text-xs">{u.output_tokens.toLocaleString()}</td>
-                <td class="py-2 text-right font-mono text-xs">{u.total_tokens.toLocaleString()}</td>
+                <td class="py-2 text-right font-mono text-xs"
+                  >{u.input_tokens.toLocaleString()}</td
+                >
+                <td class="py-2 text-right font-mono text-xs"
+                  >{u.output_tokens.toLocaleString()}</td
+                >
+                <td class="py-2 text-right font-mono text-xs"
+                  >{u.total_tokens.toLocaleString()}</td
+                >
               </tr>
             {/each}
           </tbody>

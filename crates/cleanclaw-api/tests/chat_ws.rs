@@ -48,16 +48,10 @@ impl Provider for OneShotProvider {
     fn name(&self) -> &str {
         "oneshot"
     }
-    async fn chat(
-        &self,
-        _req: &ChatRequest,
-    ) -> Result<ChatResponse, ProviderError> {
+    async fn chat(&self, _req: &ChatRequest) -> Result<ChatResponse, ProviderError> {
         Ok(self.response.clone())
     }
-    async fn chat_stream(
-        &self,
-        _req: &ChatRequest,
-    ) -> Result<ProviderStream, ProviderError> {
+    async fn chat_stream(&self, _req: &ChatRequest) -> Result<ProviderStream, ProviderError> {
         self.call_count.fetch_add(1, Ordering::SeqCst);
         let resp = self.response.clone();
         let s = async_stream::stream! {
@@ -259,9 +253,9 @@ fn ws_chat_route_is_documented() {
 /// the `session_messages` table.
 #[tokio::test(flavor = "current_thread")]
 async fn ws_chat_persists_messages_on_done() {
+    use chrono::Utc;
     use cleanclaw_auth::apikey;
     use cleanclaw_store::models::{ApiKeyRecord, UserRecord};
-    use chrono::Utc;
 
     let (state, _provider) = fresh_state().await;
     let store: Arc<dyn Store> = state.store.clone();
@@ -324,7 +318,10 @@ async fn ws_chat_persists_messages_on_done() {
         WsMessage::Text(s) => serde_json::from_str(&s).unwrap(),
         _ => panic!("expected text frame"),
     };
-    assert_eq!(connect_res_v["ok"], true, "auth should succeed: {connect_res_v}");
+    assert_eq!(
+        connect_res_v["ok"], true,
+        "auth should succeed: {connect_res_v}"
+    );
 
     // 3. Send a chat.send request.
     let send_req = json!({
@@ -365,7 +362,7 @@ async fn ws_chat_persists_messages_on_done() {
             Ok(Some(Ok(WsMessage::Close(_)))) | Ok(None) => break,
             Ok(Some(Ok(_))) => continue, // ping/pong
             Ok(Some(Err(_))) => break,
-            Err(_) => break,             // timeout
+            Err(_) => break, // timeout
         }
     }
     assert!(got_start, "expected chat.start frame");
@@ -384,7 +381,10 @@ async fn ws_chat_persists_messages_on_done() {
         .unwrap();
     assert_eq!(msgs.len(), 2, "expected user + assistant rows");
     let user_msg = msgs.iter().find(|m| m.role == "user").expect("user msg");
-    let asst_msg = msgs.iter().find(|m| m.role == "assistant").expect("assistant msg");
+    let asst_msg = msgs
+        .iter()
+        .find(|m| m.role == "assistant")
+        .expect("assistant msg");
     assert_eq!(user_msg.content, "ping from e2e");
     assert_eq!(user_msg.origin, "ws_chat");
     assert_eq!(asst_msg.content, "hello from oneshot");

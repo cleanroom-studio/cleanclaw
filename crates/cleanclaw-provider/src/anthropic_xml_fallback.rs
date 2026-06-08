@@ -119,11 +119,7 @@ fn find_block_start(s: &str) -> Option<(usize, ())> {
         s.find("｜｜DSML｜｜<function_calls"),
         s.find("｜｜DSML｜｜<tool_calls"),
     ];
-    positions
-        .iter()
-        .filter_map(|&p| p)
-        .min()
-        .map(|p| (p, ()))
+    positions.iter().filter_map(|&p| p).min().map(|p| (p, ()))
 }
 
 /// Find the relative index of the matching close tag (`</function_calls>`
@@ -141,7 +137,8 @@ fn find_outer_close(s: &str) -> Option<usize> {
 
 fn close_tag_len(s: &str) -> usize {
     if s.starts_with("</antml:") {
-        "</antml:function_calls>".len()
+        "</antml:function_calls>"
+            .len()
             .min("</antml:tool_calls>".len())
             .max(s.find('>').map(|i| i + 1).unwrap_or(s.len()))
     } else {
@@ -194,19 +191,19 @@ fn parse_invokes(inner: &str) -> Vec<ToolCall> {
         }
         // Skip past `</invoke>`. Use a length that matches what
         // find_invoke_close returned.
-        let close_tag = if body.is_empty() || !inner[after_invoke_open..].contains("</antml:invoke>") {
-            "</invoke>".len()
-        } else {
-            "</antml:invoke>".len()
-        };
+        let close_tag =
+            if body.is_empty() || !inner[after_invoke_open..].contains("</antml:invoke>") {
+                "</invoke>".len()
+            } else {
+                "</antml:invoke>".len()
+            };
         i = invoke_end_abs + close_tag;
     }
     calls
 }
 
 fn find_invoke_close(s: &str) -> Option<usize> {
-    s.find("</invoke>")
-        .or_else(|| s.find("</antml:invoke>"))
+    s.find("</invoke>").or_else(|| s.find("</antml:invoke>"))
 }
 
 /// Parse one invoke body. The `tag_text` is the full open tag
@@ -408,10 +405,8 @@ bye"#;
 
     #[test]
     fn extract_call_names_helper() {
-        let names = extract_call_names(
-            "<function_calls><invoke name=\"foo\"></invoke></function_calls>",
-        );
+        let names =
+            extract_call_names("<function_calls><invoke name=\"foo\"></invoke></function_calls>");
         assert_eq!(names, vec!["foo".to_string()]);
     }
 }
-

@@ -89,7 +89,9 @@ async fn show(store: &Arc<dyn Store>, agent_id: &str, session_key: &str) -> Slas
         Err(_) => "[goal] no active goal for this session.".to_string(),
     };
     SlashResult {
-        outcome: SlashOutcome::Handled { reply: reply.clone() },
+        outcome: SlashOutcome::Handled {
+            reply: reply.clone(),
+        },
         reply,
     }
 }
@@ -107,7 +109,9 @@ async fn pause(store: &Arc<dyn Store>, agent_id: &str, session_key: &str) -> Sla
         Err(_) => "[goal] no goal to pause.".to_string(),
     };
     SlashResult {
-        outcome: SlashOutcome::Handled { reply: reply.clone() },
+        outcome: SlashOutcome::Handled {
+            reply: reply.clone(),
+        },
         reply,
     }
 }
@@ -125,7 +129,9 @@ async fn resume(store: &Arc<dyn Store>, agent_id: &str, session_key: &str) -> Sl
         Err(_) => "[goal] no goal to resume.".to_string(),
     };
     SlashResult {
-        outcome: SlashOutcome::Handled { reply: reply.clone() },
+        outcome: SlashOutcome::Handled {
+            reply: reply.clone(),
+        },
         reply,
     }
 }
@@ -136,7 +142,9 @@ async fn clear(store: &Arc<dyn Store>, agent_id: &str, session_key: &str) -> Sla
         Err(e) => format!("[goal] clear failed: {e}"),
     };
     SlashResult {
-        outcome: SlashOutcome::Handled { reply: reply.clone() },
+        outcome: SlashOutcome::Handled {
+            reply: reply.clone(),
+        },
         reply,
     }
 }
@@ -192,7 +200,9 @@ async fn create(
         Err(e) => format!("[goal] create failed: {e}"),
     };
     SlashResult {
-        outcome: SlashOutcome::Handled { reply: reply.clone() },
+        outcome: SlashOutcome::Handled {
+            reply: reply.clone(),
+        },
         reply,
     }
 }
@@ -279,10 +289,7 @@ mod tests {
         make_user(&st, "u1").await;
         let st: Arc<dyn Store> = st;
         let args = vec!["ship", "cleanclaw", "v1"];
-        let r = dispatch_goal(
-            &st, "a1", "s1", "u1", "telegram", "bot1", "c1", "p1", &args,
-        )
-        .await;
+        let r = dispatch_goal(&st, "a1", "s1", "u1", "telegram", "bot1", "c1", "p1", &args).await;
         assert!(matches!(r.outcome, SlashOutcome::Handled { .. }));
         assert!(r.reply.contains("set"));
         // Show the goal we just created.
@@ -298,11 +305,9 @@ mod tests {
         let st: Arc<dyn Store> = st;
         let args = vec!["long task"];
         dispatch_goal(&st, "a1", "s1", "u1", "tg", "b1", "c1", "p1", &args).await;
-        let r =
-            dispatch_goal(&st, "a1", "s1", "u1", "tg", "b1", "c1", "p1", &["pause"]).await;
+        let r = dispatch_goal(&st, "a1", "s1", "u1", "tg", "b1", "c1", "p1", &["pause"]).await;
         assert!(r.reply.contains("paused"));
-        let r =
-            dispatch_goal(&st, "a1", "s1", "u1", "tg", "b1", "c1", "p1", &["resume"]).await;
+        let r = dispatch_goal(&st, "a1", "s1", "u1", "tg", "b1", "c1", "p1", &["resume"]).await;
         assert!(r.reply.contains("resumed"));
     }
 
@@ -344,8 +349,7 @@ mod tests {
         let st = fresh_store().await;
         make_user(&st, "u1").await;
         let st: Arc<dyn Store> = st;
-        let r =
-            dispatch_goal(&st, "a1", "s1", "u1", "tg", "b1", "c1", "p1", &["pause"]).await;
+        let r = dispatch_goal(&st, "a1", "s1", "u1", "tg", "b1", "c1", "p1", &["pause"]).await;
         assert!(r.reply.contains("no goal to pause"));
     }
 

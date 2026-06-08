@@ -105,9 +105,8 @@ impl ToolBridge for StaticBridge {
             .iter()
             .find(|(n, _)| n == name)
             .map(|(_, t)| t.clone());
-        let tool = tool.ok_or_else(|| {
-            cleanclaw_core::CleanClawError::NotFound(format!("tool {name}"))
-        })?;
+        let tool =
+            tool.ok_or_else(|| cleanclaw_core::CleanClawError::NotFound(format!("tool {name}")))?;
         tool.call(ctx, args).await
     }
 }
@@ -115,8 +114,8 @@ impl ToolBridge for StaticBridge {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
     use crate::tools::Tool;
+    use async_trait::async_trait;
     use serde_json::json;
 
     struct DummyTool;
@@ -131,11 +130,7 @@ mod tests {
         fn parameters(&self) -> Value {
             json!({"type": "object", "properties": {}})
         }
-        async fn call(
-            &self,
-            _ctx: &ToolContext,
-            _args: Value,
-        ) -> Result<Value> {
+        async fn call(&self, _ctx: &ToolContext, _args: Value) -> Result<Value> {
             Ok(json!({"ok": true}))
         }
     }
@@ -146,10 +141,7 @@ mod tests {
 
     #[tokio::test]
     async fn bridge_names_and_schema() {
-        let bridge = StaticBridge::new(vec![(
-            "dummy".to_string(),
-            std::sync::Arc::new(DummyTool),
-        )]);
+        let bridge = StaticBridge::new(vec![("dummy".to_string(), std::sync::Arc::new(DummyTool))]);
         assert_eq!(bridge.names(), vec!["dummy".to_string()]);
         let s = bridge.schema("dummy").unwrap();
         assert_eq!(s["type"], "object");
@@ -157,10 +149,7 @@ mod tests {
 
     #[tokio::test]
     async fn bridge_call_dispatches() {
-        let bridge = StaticBridge::new(vec![(
-            "dummy".to_string(),
-            std::sync::Arc::new(DummyTool),
-        )]);
+        let bridge = StaticBridge::new(vec![("dummy".to_string(), std::sync::Arc::new(DummyTool))]);
         let r = bridge.call(&ctx(), "dummy", json!({})).await.unwrap();
         assert_eq!(r["ok"], true);
     }

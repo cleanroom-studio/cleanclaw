@@ -79,11 +79,7 @@ struct SearchResponse {
 /// to find the best match.
 pub async fn search_skills_sh(query: &str) -> Result<Vec<SkillsShResult>, SkillsShError> {
     let client = default_http_client();
-    let url = format!(
-        "{}/api/search?q={}",
-        SKILLS_SH_BASE_URL,
-        urlencoded(query)
-    );
+    let url = format!("{}/api/search?q={}", SKILLS_SH_BASE_URL, urlencoded(query));
     let resp = client
         .get(&url)
         .send()
@@ -128,10 +124,7 @@ pub fn pick_skills_sh_exact(results: &[SkillsShResult], name: &str) -> Option<Sk
         }
     }
     // Otherwise, the most-installed entry.
-    results
-        .iter()
-        .max_by_key(|r| r.installs)
-        .cloned()
+    results.iter().max_by_key(|r| r.installs).cloned()
 }
 
 /// Find the in-tarball subpath of a skill folder by scanning a
@@ -142,10 +135,7 @@ fn find_skill_dir_in_tarball(data: &[u8], skill_id: &str) -> Result<String, Skil
     let gz = GzDecoder::new(data);
     let mut archive = Archive::new(gz);
     let suffix = format!("/{}/SKILL.md", skill_id);
-    for entry in archive
-        .entries()
-        .map_err(|e| SkillsShError::Io(e.into()))?
-    {
+    for entry in archive.entries().map_err(|e| SkillsShError::Io(e.into()))? {
         let mut entry = entry.map_err(|e| SkillsShError::Io(e.into()))?;
         let path = entry
             .path()
@@ -306,20 +296,13 @@ async fn github_default_branch(
 
 /// Extract a single subpath from a gzipped tarball (downloads
 /// once; the tar reader streams the entries).
-fn extract_skill_from_tar(
-    data: &[u8],
-    subpath: &str,
-    dest: &Path,
-) -> Result<usize, SkillsShError> {
+fn extract_skill_from_tar(data: &[u8], subpath: &str, dest: &Path) -> Result<usize, SkillsShError> {
     let gz = GzDecoder::new(data);
     let mut archive = Archive::new(gz);
     std::fs::create_dir_all(dest)?;
     let subpath = subpath.trim_end_matches('/');
     let mut count = 0;
-    for entry in archive
-        .entries()
-        .map_err(|e| SkillsShError::Io(e.into()))?
-    {
+    for entry in archive.entries().map_err(|e| SkillsShError::Io(e.into()))? {
         let mut entry = entry.map_err(|e| SkillsShError::Io(e.into()))?;
         let path = entry
             .path()
@@ -469,7 +452,8 @@ mod tests {
         let mut h = tar::Header::new_gnu();
         h.set_size(data.len() as u64);
         h.set_mode(0o644);
-        b.append_data(&mut h, "repo-SHA/skills/pdf/SKILL.md", &data[..]).unwrap();
+        b.append_data(&mut h, "repo-SHA/skills/pdf/SKILL.md", &data[..])
+            .unwrap();
         let gz = b.into_inner().unwrap();
         let _ = gz.finish().unwrap();
         let data = std::fs::read(&tar_path).unwrap();
@@ -488,7 +472,8 @@ mod tests {
         let mut h = tar::Header::new_gnu();
         h.set_size(data.len() as u64);
         h.set_mode(0o644);
-        b.append_data(&mut h, "repo-SHA/README.md", &data[..]).unwrap();
+        b.append_data(&mut h, "repo-SHA/README.md", &data[..])
+            .unwrap();
         let gz = b.into_inner().unwrap();
         let _ = gz.finish().unwrap();
         let data = std::fs::read(&tar_path).unwrap();

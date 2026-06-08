@@ -20,10 +20,7 @@ const NOT_FOUND_FRAGMENT: &str = "no rows in result set";
 /// Load an agent's per-row `config` JSON blob. Returns an empty
 /// `Value::Null` when the agent doesn't exist (callers wanting a
 /// concrete struct can deserialize this into their own type).
-pub async fn load_agent_file_config(
-    store: &dyn Store,
-    agent_id: &str,
-) -> Result<Value, String> {
+pub async fn load_agent_file_config(store: &dyn Store, agent_id: &str) -> Result<Value, String> {
     match store.get_agent(agent_id).await {
         Ok(rec) => {
             // rec.config is already serde_json::Value

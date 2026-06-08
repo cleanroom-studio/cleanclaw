@@ -6,13 +6,18 @@
 
 use super::{Tool, ToolContext};
 use async_trait::async_trait;
-use cleanclaw_core::{CleanClawError, Result};
 use cleanclaw_bus::{InboundMessage, SOURCE_SUBAGENT};
+use cleanclaw_core::{CleanClawError, Result};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
 pub trait SubAgentSpawner: Send + Sync {
-    fn spawn_subagent(&self, parent_agent_id: &str, target_agent_id: &str, task: &str) -> Result<String>;
+    fn spawn_subagent(
+        &self,
+        parent_agent_id: &str,
+        target_agent_id: &str,
+        task: &str,
+    ) -> Result<String>;
 }
 
 pub struct SpawnSubAgentTool {
@@ -47,7 +52,9 @@ impl Tool for SpawnSubAgentTool {
     async fn call(&self, _ctx: &ToolContext, args: Value) -> Result<Value> {
         let a: Args = serde_json::from_value(args)?;
         if a.agent_id.is_empty() {
-            return Err(CleanClawError::InvalidArgument("agentId is required".into()));
+            return Err(CleanClawError::InvalidArgument(
+                "agentId is required".into(),
+            ));
         }
         if a.task.is_empty() {
             return Err(CleanClawError::InvalidArgument("task is required".into()));
@@ -57,7 +64,9 @@ impl Tool for SpawnSubAgentTool {
                 "cannot spawn yourself as a sub-agent".into(),
             ));
         }
-        let reply = self.spawner.spawn_subagent(&self.caller_agent_id, &a.agent_id, &a.task)?;
+        let reply = self
+            .spawner
+            .spawn_subagent(&self.caller_agent_id, &a.agent_id, &a.task)?;
         Ok(json!({"agent_id": a.agent_id, "reply": reply}))
     }
 }

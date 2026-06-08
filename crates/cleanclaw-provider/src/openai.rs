@@ -45,7 +45,10 @@ impl Provider for OpenAIProvider {
     }
 
     async fn chat(&self, req: &ChatRequest) -> Result<ChatResponse, ProviderError> {
-        let url = format!("{}/chat/completions", self.cfg.api_base.trim_end_matches('/'));
+        let url = format!(
+            "{}/chat/completions",
+            self.cfg.api_base.trim_end_matches('/')
+        );
         let body = build_openai_body(req, false);
         let resp = self
             .client
@@ -69,7 +72,10 @@ impl Provider for OpenAIProvider {
     }
 
     async fn chat_stream(&self, req: &ChatRequest) -> Result<ProviderStream, ProviderError> {
-        let url = format!("{}/chat/completions", self.cfg.api_base.trim_end_matches('/'));
+        let url = format!(
+            "{}/chat/completions",
+            self.cfg.api_base.trim_end_matches('/')
+        );
         let body = build_openai_body(req, true);
         let resp = self
             .client
@@ -275,8 +281,8 @@ fn parse_openai_response(raw: &Value) -> Result<ChatResponse, ProviderError> {
         .and_then(|c| c.as_array())
         .and_then(|a| a.first())
         .ok_or_else(|| ProviderError::Decode("no choices".into()))?;
-    let choice: Choice = serde_json::from_value(choice.clone())
-        .map_err(|e| ProviderError::Decode(e.to_string()))?;
+    let choice: Choice =
+        serde_json::from_value(choice.clone()).map_err(|e| ProviderError::Decode(e.to_string()))?;
 
     let tool_calls: Vec<ToolCall> = choice
         .message
@@ -314,7 +320,11 @@ fn parse_openai_response(raw: &Value) -> Result<ChatResponse, ProviderError> {
         // Surface DeepSeek's reasoning in the same slot the
         // Anthropic thinking-mode uses — the runtime treats them
         // uniformly downstream.
-        thinking: choice.message.reasoning_content.clone().filter(|s| !s.is_empty()),
+        thinking: choice
+            .message
+            .reasoning_content
+            .clone()
+            .filter(|s| !s.is_empty()),
         timestamp: None,
     };
 
@@ -511,7 +521,10 @@ mod tests {
         });
         let resp = parse_openai_response(&raw).unwrap();
         assert_eq!(resp.message.content, "42");
-        assert_eq!(resp.message.thinking.as_deref(), Some("I think therefore I am."));
+        assert_eq!(
+            resp.message.thinking.as_deref(),
+            Some("I think therefore I am.")
+        );
     }
 
     #[test]

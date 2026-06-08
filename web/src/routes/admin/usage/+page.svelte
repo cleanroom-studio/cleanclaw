@@ -1,17 +1,21 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { adminListUsage, type UsageInfo } from '$lib/api';
-  import Card from '$lib/components/ui/Card.svelte';
+  import { onMount } from "svelte";
+  import { adminListUsage, type UsageInfo } from "$lib/api";
+  import Card from "$lib/components/ui/Card.svelte";
 
   let usage = $state<UsageInfo[]>([]);
   let loading = $state(true);
-  let error = $state('');
+  let error = $state("");
 
   onMount(async () => {
     try {
       const r = await adminListUsage();
       usage = r.usage ?? [];
-    } catch (e) { error = (e as Error).message; } finally { loading = false; }
+    } catch (e) {
+      error = (e as Error).message;
+    } finally {
+      loading = false;
+    }
   });
 </script>
 
@@ -42,7 +46,8 @@
               <td class="py-2 text-zinc-500">{u.period}</td>
               <td class="py-2">{u.input_tokens.toLocaleString()}</td>
               <td class="py-2">{u.output_tokens.toLocaleString()}</td>
-              <td class="py-2 font-medium">{u.total_tokens.toLocaleString()}</td>
+              <td class="py-2 font-medium">{u.total_tokens.toLocaleString()}</td
+              >
             </tr>
           {/each}
         </tbody>

@@ -5,44 +5,55 @@
   // agent-scoped override wins over system. Per-row toggle
   // "Inherited" badge for the lower-priority rows.
 
-  import { onMount } from 'svelte';
+  import { onMount } from "svelte";
   import {
-    listModels, listProviders, getAgent, updateAgent,
-    testStoredProvider, createProvider, updateProvider, deleteProvider,
-    type AgentDetail, type ProviderInfo,
-  } from '$lib/api';
-  import Button from '$lib/components/ui/Button.svelte';
-  import Card from '$lib/components/ui/Card.svelte';
-  import Input from '$lib/components/ui/Input.svelte';
-  import Badge from '$lib/components/ui/Badge.svelte';
+    listModels,
+    listProviders,
+    getAgent,
+    updateAgent,
+    testStoredProvider,
+    createProvider,
+    updateProvider,
+    deleteProvider,
+    type AgentDetail,
+    type ProviderInfo,
+  } from "$lib/api";
+  import Button from "$lib/components/ui/Button.svelte";
+  import Card from "$lib/components/ui/Card.svelte";
+  import Input from "$lib/components/ui/Input.svelte";
+  import Badge from "$lib/components/ui/Badge.svelte";
 
   let { params }: { params: { id: string } } = $props();
 
   let agent = $state<AgentDetail | null>(null);
-  let models = $state<Array<{ id: string; provider: string; label: string }>>([]);
+  let models = $state<Array<{ id: string; provider: string; label: string }>>(
+    [],
+  );
   let providers = $state<ProviderInfo[]>([]);
-  let selectedModel = $state('');
+  let selectedModel = $state("");
   let saving = $state(false);
-  let msg = $state('');
+  let msg = $state("");
 
   // Create / edit form
-  let newType = $state('openai');
-  let newModel = $state('');
-  let newBaseUrl = $state('');
-  let newApiKey = $state('');
+  let newType = $state("openai");
+  let newModel = $state("");
+  let newBaseUrl = $state("");
+  let newApiKey = $state("");
   let showKey = $state<Record<string, boolean>>({});
   let editingId = $state<string | null>(null);
-  let editName = $state('');
-  let editModel = $state('');
-  let editBaseUrl = $state('');
-  let editApiKey = $state('');
+  let editName = $state("");
+  let editModel = $state("");
+  let editBaseUrl = $state("");
+  let editApiKey = $state("");
 
   async function load() {
     try {
       const r = await getAgent(params.id);
       agent = r.agent;
-      selectedModel = agent.model || '';
-    } catch (e) { msg = (e as Error).message; }
+      selectedModel = agent.model || "";
+    } catch (e) {
+      msg = (e as Error).message;
+    }
     try {
       const r = await listModels();
       models = r.models ?? [];
@@ -54,10 +65,11 @@
   }
 
   async function save() {
-    saving = true; msg = '';
+    saving = true;
+    msg = "";
     try {
       await updateAgent(params.id, { model: selectedModel } as any);
-      msg = 'Saved.';
+      msg = "Saved.";
     } catch (e) {
       msg = (e as Error).message;
     } finally {
@@ -68,36 +80,47 @@
   async function addProvider(e: Event) {
     e.preventDefault();
     try {
-      await createProvider({ type: newType, model: newModel, base_url: newBaseUrl || undefined, api_key: newApiKey });
-      newModel = ''; newBaseUrl = ''; newApiKey = '';
+      await createProvider({
+        type: newType,
+        model: newModel,
+        base_url: newBaseUrl || undefined,
+        api_key: newApiKey,
+      });
+      newModel = "";
+      newBaseUrl = "";
+      newApiKey = "";
       const r = await listProviders();
       providers = r.providers ?? [];
       const r2 = await listModels();
       models = r2.models ?? [];
     } catch (err) {
-      alert((err as Error).message || 'create failed');
+      alert((err as Error).message || "create failed");
     }
   }
 
   function startEdit(p: ProviderInfo) {
     editingId = p.id;
-    editName = p.type || '';
-    editModel = p.model || '';
-    editBaseUrl = p.base_url || '';
-    editApiKey = '';
+    editName = p.type || "";
+    editModel = p.model || "";
+    editBaseUrl = p.base_url || "";
+    editApiKey = "";
   }
 
   async function saveEdit() {
     if (!editingId) return;
     try {
-      await updateProvider(editingId, { model: editModel, base_url: editBaseUrl, api_key: editApiKey || undefined } as any);
+      await updateProvider(editingId, {
+        model: editModel,
+        base_url: editBaseUrl,
+        api_key: editApiKey || undefined,
+      } as any);
       editingId = null;
       const r = await listProviders();
       providers = r.providers ?? [];
       const r2 = await listModels();
       models = r2.models ?? [];
     } catch (e) {
-      alert((e as Error).message || 'update failed');
+      alert((e as Error).message || "update failed");
     }
   }
 
@@ -111,9 +134,9 @@
   async function test(id: string) {
     try {
       const r = await testStoredProvider(id);
-      alert(r.ok ? '✓ provider OK' : (r.message || '✗ failed'));
+      alert(r.ok ? "✓ provider OK" : r.message || "✗ failed");
     } catch (e) {
-      alert((e as Error).message || 'test failed');
+      alert((e as Error).message || "test failed");
     }
   }
 
@@ -122,8 +145,13 @@
 
 <div class="p-6 max-w-5xl mx-auto space-y-6">
   <div>
-    <h2 class="text-2xl font-semibold tracking-tight">Models · {agent?.name || params.id}</h2>
-    <p class="text-sm text-zinc-400 mt-1">Pick the model this agent uses. The selection overrides the system fallback chain.</p>
+    <h2 class="text-2xl font-semibold tracking-tight">
+      Models · {agent?.name || params.id}
+    </h2>
+    <p class="text-sm text-zinc-400 mt-1">
+      Pick the model this agent uses. The selection overrides the system
+      fallback chain.
+    </p>
   </div>
 
   <Card>
@@ -131,15 +159,22 @@
     <div class="flex items-end gap-3">
       <div class="flex-1">
         <label for="am-pick" class="text-xs text-zinc-400">Model</label>
-        <select id="am-pick" bind:value={selectedModel}
-          class="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm">
+        <select
+          id="am-pick"
+          bind:value={selectedModel}
+          class="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm"
+        >
           <option value="">— use default —</option>
           {#each models as m (m.id)}
-            <option value="{m.provider}/{m.id}">{m.label || m.id} · {m.provider}</option>
+            <option value="{m.provider}/{m.id}"
+              >{m.label || m.id} · {m.provider}</option
+            >
           {/each}
         </select>
       </div>
-      <Button onclick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+      <Button onclick={save} disabled={saving}
+        >{saving ? "Saving…" : "Save"}</Button
+      >
     </div>
     {#if msg}<p class="text-xs text-zinc-400 mt-2">{msg}</p>{/if}
   </Card>
@@ -162,9 +197,11 @@
         <tbody>
           {#each providers as p (p.id)}
             <tr class="border-b border-zinc-800/50">
-              <td class="py-2 capitalize">{p.type || '—'}</td>
-              <td class="py-2 font-mono text-xs">{p.model || '—'}</td>
-              <td class="py-2 font-mono text-xs text-zinc-500">{p.base_url || '—'}</td>
+              <td class="py-2 capitalize">{p.type || "—"}</td>
+              <td class="py-2 font-mono text-xs">{p.model || "—"}</td>
+              <td class="py-2 font-mono text-xs text-zinc-500"
+                >{p.base_url || "—"}</td
+              >
               <td class="py-2">
                 {#if p.has_api_key}
                   <Badge variant="success">set</Badge>
@@ -173,9 +210,17 @@
                 {/if}
               </td>
               <td class="py-2 text-right space-x-1">
-                <Button size="sm" variant="outline" onclick={() => test(p.id)}>Test</Button>
-                <Button size="sm" variant="outline" onclick={() => startEdit(p)}>Edit</Button>
-                <button class="text-xs text-red-400 hover:underline" onclick={() => removeProvider(p.id, p.type || p.id)}>Delete</button>
+                <Button size="sm" variant="outline" onclick={() => test(p.id)}
+                  >Test</Button
+                >
+                <Button size="sm" variant="outline" onclick={() => startEdit(p)}
+                  >Edit</Button
+                >
+                <button
+                  class="text-xs text-red-400 hover:underline"
+                  onclick={() => removeProvider(p.id, p.type || p.id)}
+                  >Delete</button
+                >
               </td>
             </tr>
           {/each}
@@ -197,13 +242,17 @@
           <Input id="ep-b" bind:value={editBaseUrl} />
         </div>
         <div class="col-span-2">
-          <label for="ep-k" class="text-xs text-zinc-400">API key (leave blank to keep)</label>
+          <label for="ep-k" class="text-xs text-zinc-400"
+            >API key (leave blank to keep)</label
+          >
           <Input id="ep-k" type="password" bind:value={editApiKey} />
         </div>
       </div>
       <div class="flex items-center gap-2 mt-3">
         <Button onclick={saveEdit}>Save</Button>
-        <Button variant="outline" onclick={() => (editingId = null)}>Cancel</Button>
+        <Button variant="outline" onclick={() => (editingId = null)}
+          >Cancel</Button
+        >
       </div>
     </Card>
   {/if}
@@ -213,8 +262,11 @@
     <form onsubmit={addProvider} class="grid grid-cols-2 gap-3">
       <div>
         <label for="np-t" class="text-xs text-zinc-400">Type</label>
-        <select id="np-t" bind:value={newType}
-          class="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm">
+        <select
+          id="np-t"
+          bind:value={newType}
+          class="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm"
+        >
           <option value="openai">openai</option>
           <option value="anthropic">anthropic</option>
           <option value="minimax">minimax</option>
@@ -225,11 +277,22 @@
       </div>
       <div>
         <label for="np-m" class="text-xs text-zinc-400">Model</label>
-        <Input id="np-m" bind:value={newModel} placeholder="MiniMax-M3" required />
+        <Input
+          id="np-m"
+          bind:value={newModel}
+          placeholder="MiniMax-M3"
+          required
+        />
       </div>
       <div class="col-span-2">
-        <label for="np-b" class="text-xs text-zinc-400">Base URL (optional)</label>
-        <Input id="np-b" bind:value={newBaseUrl} placeholder="https://api.openai.com/v1" />
+        <label for="np-b" class="text-xs text-zinc-400"
+          >Base URL (optional)</label
+        >
+        <Input
+          id="np-b"
+          bind:value={newBaseUrl}
+          placeholder="https://api.openai.com/v1"
+        />
       </div>
       <div class="col-span-2">
         <label for="np-k" class="text-xs text-zinc-400">API key</label>

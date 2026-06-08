@@ -18,10 +18,7 @@ pub struct ImageGenTool {
 }
 
 impl ImageGenTool {
-    pub fn new(
-        provider: Arc<dyn cleanclaw_toolprov::Provider>,
-        config: ProviderConfig,
-    ) -> Self {
+    pub fn new(provider: Arc<dyn cleanclaw_toolprov::Provider>, config: ProviderConfig) -> Self {
         Self { provider, config }
     }
 }
@@ -46,7 +43,11 @@ impl Tool for ImageGenTool {
         })
     }
 
-    async fn call(&self, _ctx: &ToolContext, args: Value) -> std::result::Result<Value, CleanClawError> {
+    async fn call(
+        &self,
+        _ctx: &ToolContext,
+        args: Value,
+    ) -> std::result::Result<Value, CleanClawError> {
         let prompt = match args.get("prompt").and_then(|v| v.as_str()) {
             Some(s) if !s.trim().is_empty() => s,
             _ => return Ok(Value::String("image_gen: prompt is required".into())),
@@ -72,8 +73,12 @@ mod image_gen_tests {
     struct Stub;
     #[async_trait::async_trait]
     impl Provider for Stub {
-        fn category(&self) -> &'static str { "image_gen" }
-        fn name(&self) -> &'static str { "stub" }
+        fn category(&self) -> &'static str {
+            "image_gen"
+        }
+        fn name(&self) -> &'static str {
+            "stub"
+        }
         async fn execute(
             &self,
             _req: ProviderRequest,
@@ -87,10 +92,7 @@ mod image_gen_tests {
         let tool = ImageGenTool::new(Arc::new(Stub), ProviderConfig::default());
         let ctx = ToolContext::default();
         let r = tool
-            .call(
-                &ctx,
-                serde_json::json!({"prompt": "a fluffy cat"}),
-            )
+            .call(&ctx, serde_json::json!({"prompt": "a fluffy cat"}))
             .await
             .unwrap();
         let s = r.as_str().unwrap();
@@ -110,6 +112,9 @@ mod image_gen_tests {
         let tool = ImageGenTool::new(Arc::new(Stub), ProviderConfig::default());
         let d = tool.parameters();
         let req = d.get("required").unwrap();
-        assert!(req.as_array().unwrap().contains(&Value::String("prompt".into())));
+        assert!(req
+            .as_array()
+            .unwrap()
+            .contains(&Value::String("prompt".into())));
     }
 }

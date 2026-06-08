@@ -83,7 +83,11 @@ struct ManagerState {
 }
 
 impl Manager {
-    pub fn new(bus: Arc<MessageBus>, leaser: Arc<dyn Leaser>, holder_id: impl Into<String>) -> Self {
+    pub fn new(
+        bus: Arc<MessageBus>,
+        leaser: Arc<dyn Leaser>,
+        holder_id: impl Into<String>,
+    ) -> Self {
         Self {
             inner: Mutex::new(ManagerState {
                 channels: HashMap::new(),
@@ -167,7 +171,9 @@ impl Manager {
 
     pub async fn release_singleton(&self, key: &str) -> Result<(), ChannelError> {
         let (channel, account_id) = split_key(key);
-        self.leaser.release(channel, account_id, &self.holder_id).await?;
+        self.leaser
+            .release(channel, account_id, &self.holder_id)
+            .await?;
         let mut g = self.inner.lock().await;
         g.singleton.remove(key);
         g.channels.remove(key);
@@ -280,7 +286,10 @@ impl WebChannel {
     /// keep the tx around for unsubscribing later).
     pub async fn subscribe_with(&self, chat_id: &str, tx: mpsc::Sender<OutboundMessage>) {
         let mut g = self.state.lock().await;
-        g.subscribers.entry(chat_id.to_string()).or_default().push(tx);
+        g.subscribers
+            .entry(chat_id.to_string())
+            .or_default()
+            .push(tx);
     }
 
     /// Drop a subscriber (e.g. when the browser tab closes).
@@ -346,15 +355,10 @@ fn is_table_separator(line: &str) -> bool {
     if !trimmed.contains("---") {
         return false;
     }
-    trimmed
-        .split('|')
-        .all(|cell| {
-            let t = cell.trim();
-            !t.is_empty()
-                && t.chars()
-                    .all(|c| c == '-' || c == ':')
-                && t.len() >= 3
-        })
+    trimmed.split('|').all(|cell| {
+        let t = cell.trim();
+        !t.is_empty() && t.chars().all(|c| c == '-' || c == ':') && t.len() >= 3
+    })
 }
 
 /// Flatten GFM tables. Two-column → "header: value" lines. 3+ column →
@@ -365,10 +369,7 @@ pub fn flatten_markdown_tables(text: &str) -> String {
     let mut i = 0;
     while i < lines.len() {
         // Try to start a table: header + separator.
-        if i + 1 < lines.len()
-            && lines[i].contains('|')
-            && is_table_separator(lines[i + 1])
-        {
+        if i + 1 < lines.len() && lines[i].contains('|') && is_table_separator(lines[i + 1]) {
             let header = lines[i];
             let data_lines: Vec<&str> = lines[i + 2..]
                 .iter()
@@ -445,8 +446,14 @@ mod tests {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let l = NopLeaser;
-            assert!(l.acquire("c", "a", "h", Duration::from_secs(1)).await.unwrap());
-            assert!(l.renew("c", "a", "h", Duration::from_secs(1)).await.unwrap());
+            assert!(l
+                .acquire("c", "a", "h", Duration::from_secs(1))
+                .await
+                .unwrap());
+            assert!(l
+                .renew("c", "a", "h", Duration::from_secs(1))
+                .await
+                .unwrap());
             l.release("c", "a", "h").await.unwrap();
         });
     }
@@ -479,7 +486,10 @@ mod tests {
     fn flatten_three_col_uses_middot() {
         let input = "| a | b | c |\n|---|---|---|\n| 1 | 2 | 3 |";
         let out = flatten_markdown_tables(input);
-        assert!(out.contains("1 · 2 · 3"), "expected ' · ' separator, got {out:?}");
+        assert!(
+            out.contains("1 · 2 · 3"),
+            "expected ' · ' separator, got {out:?}"
+        );
     }
 
     #[test]
@@ -758,12 +768,7 @@ impl LongPollTask {
         error_backoff_ms: u64,
     ) {
         // If we're already running, refuse to double-spawn.
-        if self
-            .handle
-            .try_lock()
-            .map(|g| g.is_some())
-            .unwrap_or(false)
-        {
+        if self.handle.try_lock().map(|g| g.is_some()).unwrap_or(false) {
             return;
         }
         self.shutdown.store(false, Ordering::Release);
@@ -811,11 +816,7 @@ impl LongPollTask {
 
     pub fn is_running(&self) -> bool {
         self.shutdown.load(Ordering::Acquire) == false
-            && self
-                .handle
-                .try_lock()
-                .map(|g| g.is_some())
-                .unwrap_or(false)
+            && self.handle.try_lock().map(|g| g.is_some()).unwrap_or(false)
     }
 }
 
@@ -846,14 +847,12 @@ impl TelegramChannel {
     ) -> Self {
         let account_id = account_id.into();
         let bot_token = bot_token.into();
-        let url = format!("https://api.telegram.org/bot{token}/sendMessage", token = bot_token);
+        let url = format!(
+            "https://api.telegram.org/bot{token}/sendMessage",
+            token = bot_token
+        );
         Self {
-            inner: WebhookChannel::new(
-                format!("telegram:{account_id}"),
-                "telegram",
-                url,
-                client,
-            ),
+            inner: WebhookChannel::new(format!("telegram:{account_id}"), "telegram", url, client),
             bot_token,
             bot_username: String::new(),
             bus: Mutex::new(None),
@@ -1026,7 +1025,10 @@ impl Channel for TelegramChannel {
                 .await
                 .map_err(|e| ChannelError::Send(e.to_string()))?;
             if !resp.status().is_success() {
-                return Err(ChannelError::Send(format!("telegram HTTP {}", resp.status())));
+                return Err(ChannelError::Send(format!(
+                    "telegram HTTP {}",
+                    resp.status()
+                )));
             }
         }
         Ok(())
@@ -1056,12 +1058,7 @@ impl DiscordChannel {
         let account_id = account_id.into();
         let url = "https://discord.com/api/v10/channels/{channel_id}/messages".to_string();
         Self {
-            inner: WebhookChannel::new(
-                format!("discord:{account_id}"),
-                "discord",
-                url,
-                client,
-            ),
+            inner: WebhookChannel::new(format!("discord:{account_id}"), "discord", url, client),
             bot_token: bot_token.into(),
             bot_user_id: String::new(),
             bus: Mutex::new(None),
@@ -1167,7 +1164,10 @@ impl Channel for DiscordChannel {
             .await
             .map_err(|e| ChannelError::Send(e.to_string()))?;
         if !resp.status().is_success() {
-            return Err(ChannelError::Send(format!("discord HTTP {}", resp.status())));
+            return Err(ChannelError::Send(format!(
+                "discord HTTP {}",
+                resp.status()
+            )));
         }
         Ok(())
     }
@@ -1642,10 +1642,11 @@ impl LineChannel {
         };
         mac.update(body);
         let expected = mac.finalize().into_bytes();
-        let provided = match base64::engine::general_purpose::STANDARD.decode(signature_header.trim()) {
-            Ok(b) => b,
-            Err(_) => return false,
-        };
+        let provided =
+            match base64::engine::general_purpose::STANDARD.decode(signature_header.trim()) {
+                Ok(b) => b,
+                Err(_) => return false,
+            };
         // Constant-time compare.
         if expected.len() != provided.len() {
             return false;
@@ -1870,7 +1871,9 @@ mod platform_tests {
     #[async_trait::async_trait]
     impl PlatformPoll for CountingPoll {
         async fn poll_once(&self) -> Result<Vec<InboundMessage>, ChannelError> {
-            let n = self.emitted.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+            let n = self
+                .emitted
+                .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
             if n >= self.limit {
                 // Slow down so the test can stop the loop in time.
                 tokio::time::sleep(Duration::from_millis(50)).await;
@@ -1957,7 +1960,11 @@ mod platform_tests {
         let mut mac = HmacSha256::new_from_slice(b"real-secret").unwrap();
         mac.update(b"hello");
         let sig = base64::engine::general_purpose::STANDARD.encode(mac.finalize().into_bytes());
-        assert!(!LineChannel::verify_signature("fake-secret", b"hello", &sig));
+        assert!(!LineChannel::verify_signature(
+            "fake-secret",
+            b"hello",
+            &sig
+        ));
     }
 
     #[test]

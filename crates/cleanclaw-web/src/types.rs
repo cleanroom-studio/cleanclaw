@@ -1353,13 +1353,22 @@ mod tests {
 
     #[test]
     fn scope_name_serializes() {
-        assert_eq!(serde_json::to_string(&ScopeName::System).unwrap(), "\"system\"");
-        assert_eq!(serde_json::from_str::<ScopeName>("\"user\"").unwrap(), ScopeName::User);
+        assert_eq!(
+            serde_json::to_string(&ScopeName::System).unwrap(),
+            "\"system\""
+        );
+        assert_eq!(
+            serde_json::from_str::<ScopeName>("\"user\"").unwrap(),
+            ScopeName::User
+        );
     }
 
     #[test]
     fn apikey_type_serializes() {
-        assert_eq!(serde_json::to_string(&ApikeyType::Admin).unwrap(), "\"admin\"");
+        assert_eq!(
+            serde_json::to_string(&ApikeyType::Admin).unwrap(),
+            "\"admin\""
+        );
     }
 
     #[test]
@@ -1400,7 +1409,8 @@ mod tests {
 
     #[test]
     fn agent_update_payload_camelcase() {
-        let j = r#"{"name":"a","splitReplies":true,"splitRepliesReset":false,"autoPersistReset":true}"#;
+        let j =
+            r#"{"name":"a","splitReplies":true,"splitRepliesReset":false,"autoPersistReset":true}"#;
         let r: AgentUpdatePayload = serde_json::from_str(j).unwrap();
         assert_eq!(r.split_replies, Some(true));
         assert_eq!(r.split_replies_reset, Some(false));
@@ -1410,7 +1420,10 @@ mod tests {
     #[test]
     fn chat_role_serializes_lowercase() {
         assert_eq!(serde_json::to_string(&ChatRole::User).unwrap(), "\"user\"");
-        assert_eq!(serde_json::to_string(&ChatRole::Assistant).unwrap(), "\"assistant\"");
+        assert_eq!(
+            serde_json::to_string(&ChatRole::Assistant).unwrap(),
+            "\"assistant\""
+        );
     }
 
     #[test]
@@ -1436,7 +1449,10 @@ mod tests {
     #[test]
     fn todo_state_roundtrip() {
         let s = TodoState {
-            items: vec![TodoItem { text: "do x".into(), done: false }],
+            items: vec![TodoItem {
+                text: "do x".into(),
+                done: false,
+            }],
             raw: "- [ ] do x".into(),
         };
         let j = serde_json::to_string(&s).unwrap();
@@ -1447,9 +1463,18 @@ mod tests {
 
     #[test]
     fn token_usage_range_serializes() {
-        assert_eq!(serde_json::to_string(&TokenUsageRange::H24).unwrap(), "\"24h\"");
-        assert_eq!(serde_json::to_string(&TokenUsageRange::D7).unwrap(), "\"7d\"");
-        assert_eq!(serde_json::to_string(&TokenUsageRange::D30).unwrap(), "\"30d\"");
+        assert_eq!(
+            serde_json::to_string(&TokenUsageRange::H24).unwrap(),
+            "\"24h\""
+        );
+        assert_eq!(
+            serde_json::to_string(&TokenUsageRange::D7).unwrap(),
+            "\"7d\""
+        );
+        assert_eq!(
+            serde_json::to_string(&TokenUsageRange::D30).unwrap(),
+            "\"30d\""
+        );
     }
 
     #[test]

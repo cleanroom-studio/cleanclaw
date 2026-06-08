@@ -95,8 +95,12 @@ mod tests {
 
     #[async_trait]
     impl Hook for CounterHook {
-        fn name(&self) -> &str { &self.name }
-        fn phase(&self) -> HookPhase { self.phase }
+        fn name(&self) -> &str {
+            &self.name
+        }
+        fn phase(&self) -> HookPhase {
+            self.phase
+        }
         async fn run(&self, _payload: Value) -> Result<()> {
             self.counter.fetch_add(1, Ordering::Relaxed);
             Ok(())

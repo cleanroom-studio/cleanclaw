@@ -89,9 +89,7 @@ impl Tool for ExecTool {
 
         let output = match result {
             Ok(Ok(o)) => o,
-            Ok(Err(e)) => {
-                return Err(CleanClawError::Internal(format!("exec wait: {e}")))
-            }
+            Ok(Err(e)) => return Err(CleanClawError::Internal(format!("exec wait: {e}"))),
             Err(_) => {
                 // Timeout — best-effort kill. We don't get the partial
                 // output back; the model sees "timeout" + the timeout

@@ -1,7 +1,7 @@
 <script lang="ts">
   // Sidebar — full replacement for
   // + `sidebar.tsx` combined into a single Svelte component.
-//
+  //
   // Composition:
   //   • SidebarProvider     — left rail
   //   • AppSidebar
@@ -11,20 +11,20 @@
   //                           NavSessions
   //       • SidebarFooter   — Settings button + NavUser
   //   • SidebarInset        — the main content slot (passed `children`)
-//
+  //
   // Polling:
   //   • /api/status every 15s → admin flag, online dot
   //   • /api/me once on mount → role + display name in the footer
   //   • /api/agents once on mount → agent switcher list
   //   • /api/chat/sessions when active agent changes → sessions list
-//
+  //
   // Events:
   //   • `cleanclaw:sessions-changed` is broadcast by the chat
   //     surface after a new chat / rename / delete so the sidebar
   //     re-fetches without a page reload.
 
-  import { onMount, onDestroy } from 'svelte';
-  import { page } from '$app/state';
+  import { onMount, onDestroy } from "svelte";
+  import { page } from "$app/state";
   import {
     getStatus,
     getMe,
@@ -36,13 +36,13 @@
     type SessionInfo,
     type ProjectInfo,
     type StatusResponse,
-  } from '$lib/api';
-  import AgentSwitcher from './AgentSwitcher.svelte';
-  import NavMain from './NavMain.svelte';
-  import NavUser from './NavUser.svelte';
-  import NavProjectsList from './NavProjectsList.svelte';
-  import NavSessions from './NavSessions.svelte';
-  import AgentSettingsDialog from './AgentSettingsDialog.svelte';
+  } from "$lib/api";
+  import AgentSwitcher from "./AgentSwitcher.svelte";
+  import NavMain from "./NavMain.svelte";
+  import NavUser from "./NavUser.svelte";
+  import NavProjectsList from "./NavProjectsList.svelte";
+  import NavSessions from "./NavSessions.svelte";
+  import AgentSettingsDialog from "./AgentSettingsDialog.svelte";
 
   let { children }: { children?: any } = $props();
 
@@ -59,16 +59,19 @@
     // Both `?session=<id>` query on `/chat/` and the
     // `/chat/<session>/` path segment are valid.
     const m = pathname.match(/^\/(chat|agents\/[^/]+\/chat)\/([^/?#]+)/);
-    if (m && m[2] !== 'undefined' && m[2] !== 'new') return decodeURIComponent(m[2]);
+    if (m && m[2] !== "undefined" && m[2] !== "new")
+      return decodeURIComponent(m[2]);
     try {
-      const params = new URLSearchParams(search || '');
-      const s = params.get('session');
+      const params = new URLSearchParams(search || "");
+      const s = params.get("session");
       if (s) return s;
     } catch {}
     return null;
   }
-  const activeAgentId = $derived(extractAgentId(page.url?.pathname || ''));
-  const activeSessionKey = $derived(extractSessionKey(page.url?.pathname || '', page.url?.search || ''));
+  const activeAgentId = $derived(extractAgentId(page.url?.pathname || ""));
+  const activeSessionKey = $derived(
+    extractSessionKey(page.url?.pathname || "", page.url?.search || ""),
+  );
   const hasOpenSession = $derived(!!activeSessionKey);
 
   let status = $state<StatusResponse | null>(null);
@@ -83,12 +86,20 @@
 
   // Status polling — keep the online dot and admin flag fresh.
   onMount(() => {
-    void getStatus().then((s) => (status = s)).catch(() => {});
+    void getStatus()
+      .then((s) => (status = s))
+      .catch(() => {});
     pollTimer = setInterval(() => {
-      void getStatus().then((s) => (status = s)).catch(() => {});
+      void getStatus()
+        .then((s) => (status = s))
+        .catch(() => {});
     }, 15000);
-    void getMe().then((r) => (user = r.user ?? null)).catch(() => {});
-    void listAgents().then((r) => (agents = r.agents ?? [])).catch(() => {});
+    void getMe()
+      .then((r) => (user = r.user ?? null))
+      .catch(() => {});
+    void listAgents()
+      .then((r) => (agents = r.agents ?? []))
+      .catch(() => {});
 
     return () => {
       if (pollTimer) clearInterval(pollTimer);
@@ -120,51 +131,62 @@
       const detail = (e as CustomEvent<{ agentId?: string }>).detail;
       if (!detail || !detail.agentId || detail.agentId === a) refetch();
     };
-    window.addEventListener('cleanclaw:sessions-changed', handler);
-    return () => window.removeEventListener('cleanclaw:sessions-changed', handler);
+    window.addEventListener("cleanclaw:sessions-changed", handler);
+    return () =>
+      window.removeEventListener("cleanclaw:sessions-changed", handler);
   });
 
   function broadcastSessionsChanged() {
-    if (typeof window !== 'undefined' && activeAgentId) {
+    if (typeof window !== "undefined" && activeAgentId) {
       window.dispatchEvent(
-        new CustomEvent('cleanclaw:sessions-changed', { detail: { agentId: activeAgentId } }),
+        new CustomEvent("cleanclaw:sessions-changed", {
+          detail: { agentId: activeAgentId },
+        }),
       );
     }
   }
 
-  const isAdmin = $derived(status?.isAdmin ?? user?.role === 'super_admin');
+  const isAdmin = $derived(status?.isAdmin ?? user?.role === "super_admin");
 
   // Nav item helpers.
   const AGENT_NAV = $derived(
     activeAgentId
       ? [
           {
-            title: 'New chat',
+            title: "New chat",
             url: `/agents/${activeAgentId}/chat/`,
-            icon: 'Plus',
-            active: page.url?.pathname === `/agents/${activeAgentId}/chat` || page.url?.pathname === `/agents/${activeAgentId}/chat/`,
+            icon: "Plus",
+            active:
+              page.url?.pathname === `/agents/${activeAgentId}/chat` ||
+              page.url?.pathname === `/agents/${activeAgentId}/chat/`,
           },
         ]
       : [],
   );
 
-  const PLATFORM_OVERVIEW = { title: 'Overview', url: '/overview/', icon: 'LayoutDashboard' };
+  const PLATFORM_OVERVIEW = {
+    title: "Overview",
+    url: "/overview/",
+    icon: "LayoutDashboard",
+  };
   const PLATFORM_AGENT_USER = [
-    { title: 'Agents', url: '/agents/', icon: 'Bot' },
-    { title: 'Models', url: '/models/', icon: 'Brain' },
+    { title: "Agents", url: "/agents/", icon: "Bot" },
+    { title: "Models", url: "/models/", icon: "Brain" },
   ];
   const PLATFORM_AGENT_ADMIN = [
-    { title: 'Agents', url: '/agents/', icon: 'Bot' },
-    { title: 'Models', url: '/models/', icon: 'Brain' },
-    { title: 'Skills', url: '/skills/', icon: 'Sparkles' },
-    { title: 'Tools', url: '/tools/', icon: 'Wrench' },
+    { title: "Agents", url: "/agents/", icon: "Bot" },
+    { title: "Models", url: "/models/", icon: "Brain" },
+    { title: "Skills", url: "/skills/", icon: "Sparkles" },
+    { title: "Tools", url: "/tools/", icon: "Wrench" },
   ];
-  const PLATFORM_USER_USER = [{ title: 'API Keys', url: '/apikeys/', icon: 'KeyRound' }];
+  const PLATFORM_USER_USER = [
+    { title: "API Keys", url: "/apikeys/", icon: "KeyRound" },
+  ];
   const PLATFORM_USER_ADMIN = [
-    { title: 'Users', url: '/admin/users/', icon: 'Users' },
-    { title: 'Chats', url: '/admin/chats/', icon: 'MessagesSquare' },
-    { title: 'Token Usage', url: '/admin/usage/', icon: 'Coins' },
-    { title: 'API Keys', url: '/apikeys/', icon: 'KeyRound' },
+    { title: "Users", url: "/admin/users/", icon: "Users" },
+    { title: "Chats", url: "/admin/chats/", icon: "MessagesSquare" },
+    { title: "Token Usage", url: "/admin/usage/", icon: "Coins" },
+    { title: "API Keys", url: "/apikeys/", icon: "KeyRound" },
   ];
 </script>
 
@@ -173,7 +195,7 @@
     <div class="p-3 border-b border-zinc-800">
       <AgentSwitcher
         {agents}
-        activeAgentId={activeAgentId}
+        {activeAgentId}
         locked={!isAdmin && (user?.agent_quota ?? 1) === 0}
       />
     </div>
@@ -183,15 +205,21 @@
         <NavMain label="Agent" items={AGENT_NAV} />
         <NavProjectsList
           agentId={activeAgentId}
-          projects={projects}
-          sessions={sessions}
+          {projects}
+          {sessions}
           onChanged={broadcastSessionsChanged}
         />
-        <NavSessions agentId={activeAgentId} sessions={sessions} />
+        <NavSessions agentId={activeAgentId} {sessions} />
       {:else}
         <NavMain items={[PLATFORM_OVERVIEW]} />
-        <NavMain label="Agent" items={isAdmin ? PLATFORM_AGENT_ADMIN : PLATFORM_AGENT_USER} />
-        <NavMain label="User" items={isAdmin ? PLATFORM_USER_ADMIN : PLATFORM_USER_USER} />
+        <NavMain
+          label="Agent"
+          items={isAdmin ? PLATFORM_AGENT_ADMIN : PLATFORM_AGENT_USER}
+        />
+        <NavMain
+          label="User"
+          items={isAdmin ? PLATFORM_USER_ADMIN : PLATFORM_USER_USER}
+        />
       {/if}
     </nav>
 
@@ -208,8 +236,10 @@
         <span>Settings</span>
       </button>
       <NavUser
-        name={user?.display_name || user?.username || (isAdmin ? 'Admin' : 'User')}
-        subtitle={user?.role || (isAdmin ? 'super_admin' : 'user')}
+        name={user?.display_name ||
+          user?.username ||
+          (isAdmin ? "Admin" : "User")}
+        subtitle={user?.role || (isAdmin ? "super_admin" : "user")}
       />
     </div>
   </aside>
@@ -222,8 +252,8 @@
 <AgentSettingsDialog
   bind:open={settingsOpen}
   userOnly={settingsUserOnly}
-  agentId={activeAgentId || ''}
-  role={activeAgentId ? 'owner' : 'owner'}
-  isAdmin={isAdmin}
+  agentId={activeAgentId || ""}
+  role={activeAgentId ? "owner" : "owner"}
+  {isAdmin}
   onChanged={broadcastSessionsChanged}
 />

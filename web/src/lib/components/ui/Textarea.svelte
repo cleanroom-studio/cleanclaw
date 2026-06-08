@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { textareaClasses } from './classes';
+  import { textareaClasses } from "./classes";
   let {
-    value = $bindable(''),
-    placeholder = '',
+    value = $bindable(""),
+    placeholder = "",
     rows = 3,
-    class: cls = '',
+    class: cls = "",
     ...rest
   }: {
     value?: string;

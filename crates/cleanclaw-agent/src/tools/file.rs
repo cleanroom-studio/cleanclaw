@@ -113,7 +113,11 @@ fn validate_file_target_path(path: &str) -> Result<()> {
         }
     }
     match clean.components().count() {
-        1 if matches!(clean.components().next(), Some(Component::CurDir) | Some(Component::ParentDir) | Some(Component::RootDir)) => {
+        1 if matches!(
+            clean.components().next(),
+            Some(Component::CurDir) | Some(Component::ParentDir) | Some(Component::RootDir)
+        ) =>
+        {
             Err(CleanClawError::InvalidArgument(format!(
                 "path {path:?} is a directory, not a file; include a filename"
             )))
@@ -158,9 +162,8 @@ impl Tool for ReadFileTool {
                 "read_file: {p:?} is a directory; use list_dir"
             )));
         }
-        let content = std::fs::read_to_string(&path).map_err(|e| {
-            CleanClawError::Internal(format!("read_file {p}: {e}"))
-        })?;
+        let content = std::fs::read_to_string(&path)
+            .map_err(|e| CleanClawError::Internal(format!("read_file {p}: {e}")))?;
         let lines: Vec<&str> = content.lines().collect();
         let start = a.start_line.unwrap_or(0);
         let limit = a.limit.unwrap_or(200);
@@ -209,9 +212,8 @@ impl Tool for WriteFileTool {
         validate_file_target_path(p)?;
         let path = resolve(ctx, p)?;
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| {
-                CleanClawError::Internal(format!("create_dir_all {parent:?}: {e}"))
-            })?;
+            std::fs::create_dir_all(parent)
+                .map_err(|e| CleanClawError::Internal(format!("create_dir_all {parent:?}: {e}")))?;
         }
         std::fs::write(&path, a.content.as_bytes())
             .map_err(|e| CleanClawError::Internal(format!("write_file {p}: {e}")))?;
@@ -257,10 +259,10 @@ impl Tool for EditFileTool {
         if !path.exists() {
             return Err(CleanClawError::NotFound(format!("edit_file: {p}")));
         }
-        let content = std::fs::read_to_string(&path).map_err(|e| {
-            CleanClawError::Internal(format!("edit_file {p}: {e}"))
-        })?;
-        let (new_content, count) = apply_edit(p, &content, &a.old_string, &a.new_string, a.replace_all)?;
+        let content = std::fs::read_to_string(&path)
+            .map_err(|e| CleanClawError::Internal(format!("edit_file {p}: {e}")))?;
+        let (new_content, count) =
+            apply_edit(p, &content, &a.old_string, &a.new_string, a.replace_all)?;
         std::fs::write(&path, new_content.as_bytes())
             .map_err(|e| CleanClawError::Internal(format!("edit_file {p}: {e}")))?;
         Ok(json!({"path": p, "replacements": count}))
@@ -345,9 +347,9 @@ impl Tool for ListDirTool {
             )));
         }
         let mut entries: Vec<Value> = Vec::new();
-        for entry in std::fs::read_dir(&path).map_err(|e| {
-            CleanClawError::Internal(format!("list_dir {p:?}: {e}"))
-        })? {
+        for entry in std::fs::read_dir(&path)
+            .map_err(|e| CleanClawError::Internal(format!("list_dir {p:?}: {e}")))?
+        {
             let entry = entry.map_err(|e| CleanClawError::Internal(e.to_string()))?;
             let metadata = entry.metadata().ok();
             let is_dir = metadata.as_ref().map(|m| m.is_dir()).unwrap_or(false);
@@ -361,7 +363,12 @@ impl Tool for ListDirTool {
         entries.sort_by(|a, b| {
             let ad = a.get("is_dir").and_then(|v| v.as_bool()).unwrap_or(false);
             let bd = b.get("is_dir").and_then(|v| v.as_bool()).unwrap_or(false);
-            bd.cmp(&ad).then(a.get("name").and_then(|v| v.as_str()).unwrap_or("").cmp(b.get("name").and_then(|v| v.as_str()).unwrap_or("")))
+            bd.cmp(&ad).then(
+                a.get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .cmp(b.get("name").and_then(|v| v.as_str()).unwrap_or("")),
+            )
         });
         Ok(json!({"path": p, "entries": entries}))
     }
@@ -428,32 +435,17 @@ mod tests {
 
     #[test]
     fn root_for_routes_correctly() {
-        let r = root_for_path(
-            "SOUL.md",
-            "/sys",
-            "/user",
-            "/user_skills",
-        );
+        let r = root_for_path("SOUL.md", "/sys", "/user", "/user_skills");
         match r {
             Root::System(s) => assert_eq!(s, "/sys"),
             _ => panic!(),
         }
-        let r = root_for_path(
-            "skills/foo/SKILL.md",
-            "/sys",
-            "/user",
-            "/user_skills",
-        );
+        let r = root_for_path("skills/foo/SKILL.md", "/sys", "/user", "/user_skills");
         match r {
             Root::System(s) => assert_eq!(s, "/user_skills"),
             _ => panic!(),
         }
-        let r = root_for_path(
-            "report.md",
-            "/sys",
-            "/user",
-            "/user_skills",
-        );
+        let r = root_for_path("report.md", "/sys", "/user", "/user_skills");
         match r {
             Root::System(s) => assert_eq!(s, "/user"),
             _ => panic!(),

@@ -26,7 +26,7 @@ export interface UserInfo {
   username: string;
   email?: string;
   display_name?: string;
-  role: 'super_admin' | 'admin' | 'user';
+  role: "super_admin" | "admin" | "user";
   is_admin: boolean;
   agent_quota?: number;
   avatar_url?: string;
@@ -59,7 +59,7 @@ export interface AgentInfo {
   description?: string;
   avatar_url?: string;
   user_id?: string;
-  role?: 'owner' | 'viewer';
+  role?: "owner" | "viewer";
   is_public?: boolean;
   share_model_config?: boolean;
   model: string;
@@ -101,7 +101,7 @@ export interface ProviderInfo {
   has_api_key?: boolean;
   auth_type?: string;
   models?: Array<{ id: string; name?: string }>;
-  scope?: 'system' | 'agent' | 'user';
+  scope?: "system" | "agent" | "user";
   is_inherited?: boolean;
 }
 
@@ -200,7 +200,12 @@ export interface ChatTurnRequest {
 export interface ChatTurnResponse {
   reply: string;
   finish_reason: string;
-  usage: { input_tokens: number; output_tokens: number; cache_read_tokens?: number; cache_creation_tokens?: number };
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_tokens?: number;
+    cache_creation_tokens?: number;
+  };
   iterations: number;
 }
 
@@ -216,13 +221,23 @@ export interface ChatHistoryMessage {
 
 // ---- Auth ----
 
-export async function apiFetch<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+export async function apiFetch<T = unknown>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
   const headers = new Headers(init.headers);
-  if (!headers.has('Content-Type') && init.body) headers.set('Content-Type', 'application/json');
-  const res = await fetch(path, { ...init, headers, credentials: 'same-origin' });
+  if (!headers.has("Content-Type") && init.body)
+    headers.set("Content-Type", "application/json");
+  const res = await fetch(path, {
+    ...init,
+    headers,
+    credentials: "same-origin",
+  });
   if (!res.ok) {
     const text = await res.text();
-    let err: { message: string; type?: string } = { message: text || res.statusText };
+    let err: { message: string; type?: string } = {
+      message: text || res.statusText,
+    };
     try {
       const j = JSON.parse(text);
       if (j?.error?.message) err = j.error;
@@ -232,92 +247,158 @@ export async function apiFetch<T = unknown>(path: string, init: RequestInit = {}
     }
     throw Object.assign(new Error(err.message), { status: res.status, ...err });
   }
-  const ct = res.headers.get('content-type') || '';
-  if (ct.includes('application/json')) return (await res.json()) as T;
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) return (await res.json()) as T;
   return (await res.text()) as unknown as T;
 }
 
 export async function getStatus(): Promise<StatusResponse> {
-  return apiFetch<StatusResponse>('/api/status');
+  return apiFetch<StatusResponse>("/api/status");
 }
 
 export async function getHealth(): Promise<{ ok: boolean }> {
-  return apiFetch<{ ok: boolean }>('/api/health');
+  return apiFetch<{ ok: boolean }>("/api/health");
 }
 
 export async function getMe(): Promise<MeResponse> {
-  return apiFetch<MeResponse>('/api/me');
+  return apiFetch<MeResponse>("/api/me");
 }
 
-export async function register(req: { username: string; email: string; password: string; display_name?: string }): Promise<RegisterResponse> {
-  return apiFetch<RegisterResponse>('/api/register', { method: 'POST', body: JSON.stringify(req) });
+export async function register(req: {
+  username: string;
+  email: string;
+  password: string;
+  display_name?: string;
+}): Promise<RegisterResponse> {
+  return apiFetch<RegisterResponse>("/api/register", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
-export async function login(req: { login?: string; username?: string; password: string }): Promise<LoginResponse> {
+export async function login(req: {
+  login?: string;
+  username?: string;
+  password: string;
+}): Promise<LoginResponse> {
   // The Rust API's `cleanclaw-api` `/api/login` accepts either
   // `login` (setup-style) or `username` (api-style). The
   // `CleanClaw` dashboard uses `username` — keep that as the
   // primary field.
-  return apiFetch<LoginResponse>('/api/login', { method: 'POST', body: JSON.stringify(req) });
+  return apiFetch<LoginResponse>("/api/login", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
 export async function logout(): Promise<{ ok: boolean }> {
-  return apiFetch<{ ok: boolean }>('/api/logout', { method: 'POST' });
+  return apiFetch<{ ok: boolean }>("/api/logout", { method: "POST" });
 }
 
-export async function updateMe(patch: { display_name?: string; avatar_url?: string; email?: string }): Promise<{ ok: boolean }> {
-  return apiFetch('/api/me', { method: 'PUT', body: JSON.stringify(patch) });
+export async function updateMe(patch: {
+  display_name?: string;
+  avatar_url?: string;
+  email?: string;
+}): Promise<{ ok: boolean }> {
+  return apiFetch("/api/me", { method: "PUT", body: JSON.stringify(patch) });
 }
 
-export async function changeMyPassword(oldPassword: string, newPassword: string): Promise<{ ok: boolean; error?: string }> {
-  return apiFetch('/api/me/password', { method: 'POST', body: JSON.stringify({ old_password: oldPassword, password: newPassword }) });
+export async function changeMyPassword(
+  oldPassword: string,
+  newPassword: string,
+): Promise<{ ok: boolean; error?: string }> {
+  return apiFetch("/api/me/password", {
+    method: "POST",
+    body: JSON.stringify({ old_password: oldPassword, password: newPassword }),
+  });
 }
 
 // ---- Agents ----
 
 export async function listAgents(): Promise<{ agents: AgentInfo[] }> {
-  return apiFetch<{ agents: AgentInfo[] }>('/api/agents');
+  return apiFetch<{ agents: AgentInfo[] }>("/api/agents");
 }
 
-export async function createAgent(req: { name: string; model: string; soul?: string; identity?: string; description?: string; is_public?: boolean; share_model_config?: boolean }): Promise<{ agent: AgentInfo }> {
-  return apiFetch<{ agent: AgentInfo }>('/api/agents', { method: 'POST', body: JSON.stringify(req) });
+export async function createAgent(req: {
+  name: string;
+  model: string;
+  soul?: string;
+  identity?: string;
+  description?: string;
+  is_public?: boolean;
+  share_model_config?: boolean;
+}): Promise<{ agent: AgentInfo }> {
+  return apiFetch<{ agent: AgentInfo }>("/api/agents", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
 export async function getAgent(id: string): Promise<{ agent: AgentDetail }> {
   return apiFetch<{ agent: AgentDetail }>(`/api/agents/${id}`);
 }
 
-export async function updateAgent(id: string, patch: Partial<AgentDetail>): Promise<{ ok: boolean; agent: AgentInfo }> {
-  return apiFetch(`/api/agents/${id}`, { method: 'PUT', body: JSON.stringify(patch) });
+export async function updateAgent(
+  id: string,
+  patch: Partial<AgentDetail>,
+): Promise<{ ok: boolean; agent: AgentInfo }> {
+  return apiFetch(`/api/agents/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(patch),
+  });
 }
 
 export async function deleteAgent(id: string): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/agents/${id}`, { method: 'DELETE' });
+  return apiFetch(`/api/agents/${id}`, { method: "DELETE" });
 }
 
 // ---- Agent files (workspace + system files) ----
 
-export interface AgentFileEntry { filename: string; }
+export interface AgentFileEntry {
+  filename: string;
+}
 
-export async function listAgentFiles(agentId: string): Promise<{ files: AgentFileEntry[] }> {
+export async function listAgentFiles(
+  agentId: string,
+): Promise<{ files: AgentFileEntry[] }> {
   return apiFetch<{ files: AgentFileEntry[] }>(`/api/agents/${agentId}/files`);
 }
 
-export async function getAgentFile(agentId: string, filename: string): Promise<{ filename: string; content: string }> {
-  return apiFetch(`/api/agents/${agentId}/files/${encodeURIComponent(filename)}`);
+export async function getAgentFile(
+  agentId: string,
+  filename: string,
+): Promise<{ filename: string; content: string }> {
+  return apiFetch(
+    `/api/agents/${agentId}/files/${encodeURIComponent(filename)}`,
+  );
 }
 
-export async function putAgentFile(agentId: string, filename: string, content: string): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/agents/${agentId}/files/${encodeURIComponent(filename)}`, { method: 'PUT', body: JSON.stringify({ content }) });
+export async function putAgentFile(
+  agentId: string,
+  filename: string,
+  content: string,
+): Promise<{ ok: boolean }> {
+  return apiFetch(
+    `/api/agents/${agentId}/files/${encodeURIComponent(filename)}`,
+    { method: "PUT", body: JSON.stringify({ content }) },
+  );
 }
 
-export async function deleteAgentFile(agentId: string, filename: string): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/agents/${agentId}/files/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+export async function deleteAgentFile(
+  agentId: string,
+  filename: string,
+): Promise<{ ok: boolean }> {
+  return apiFetch(
+    `/api/agents/${agentId}/files/${encodeURIComponent(filename)}`,
+    { method: "DELETE" },
+  );
 }
 
 // ---- Agent config + tools registered ----
 
-export async function getAgentConfig(agentId: string): Promise<{ config: any }> {
+export async function getAgentConfig(
+  agentId: string,
+): Promise<{ config: any }> {
   // W1 alias: cleanclaw-api keeps the agent's per-row config in
   // the agents row; expose it as a thin wrapper. Real parity
   // (with stored-config scopes) lands in a follow-up.
@@ -325,36 +406,67 @@ export async function getAgentConfig(agentId: string): Promise<{ config: any }> 
   return { config: a.agent };
 }
 
-export async function listAgentRegisteredTools(agentId: string): Promise<{ tools: Array<{ name: string; description?: string; category?: string }> }> {
+export async function listAgentRegisteredTools(agentId: string): Promise<{
+  tools: Array<{ name: string; description?: string; category?: string }>;
+}> {
   // cleanclaw currently doesn't track per-agent tool registry
   // separately — fall back to the global /api/tools endpoint
   // and tag them as the global set so the dashboard can render
   // something. (A real per-agent registry is on the backlog.)
-  return apiFetch<{ tools: any[] }>('/api/tools').then((r) => ({ tools: [] }));
+  return apiFetch<{ tools: any[] }>("/api/tools").then((r) => ({ tools: [] }));
 }
 
 // ---- Projects ----
 
-export async function listProjects(agentId: string): Promise<{ projects: ProjectInfo[] }> {
-  return apiFetch<{ projects: ProjectInfo[] }>(`/api/agents/${agentId}/projects`);
+export async function listProjects(
+  agentId: string,
+): Promise<{ projects: ProjectInfo[] }> {
+  return apiFetch<{ projects: ProjectInfo[] }>(
+    `/api/agents/${agentId}/projects`,
+  );
 }
 
-export async function createProject(agentId: string, req: { name: string; description?: string }): Promise<{ id: string; ok: boolean }> {
-  return apiFetch(`/api/agents/${agentId}/projects`, { method: 'POST', body: JSON.stringify(req) });
+export async function createProject(
+  agentId: string,
+  req: { name: string; description?: string },
+): Promise<{ id: string; ok: boolean }> {
+  return apiFetch(`/api/agents/${agentId}/projects`, {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
-export async function updateProject(agentId: string, projectId: string, patch: { name?: string; description?: string }): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/agents/${agentId}/projects/${projectId}`, { method: 'PATCH', body: JSON.stringify(patch) });
+export async function updateProject(
+  agentId: string,
+  projectId: string,
+  patch: { name?: string; description?: string },
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/agents/${agentId}/projects/${projectId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
 }
 
-export async function deleteProject(agentId: string, projectId: string): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/agents/${agentId}/projects/${projectId}`, { method: 'DELETE' });
+export async function deleteProject(
+  agentId: string,
+  projectId: string,
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/agents/${agentId}/projects/${projectId}`, {
+    method: "DELETE",
+  });
 }
 
 // ---- Chat (SSE) ----
 
 export interface ChatStreamEvent {
-  type: 'content_delta' | 'thinking_delta' | 'tool_call' | 'tool_call_delta' | 'tool_result' | 'done' | 'error';
+  type:
+    | "content_delta"
+    | "thinking_delta"
+    | "tool_call"
+    | "tool_call_delta"
+    | "tool_result"
+    | "done"
+    | "error";
   data: {
     delta?: string;
     id?: string;
@@ -365,7 +477,12 @@ export interface ChatStreamEvent {
     result?: string;
     is_error?: boolean;
     finish_reason?: string;
-    usage?: { input_tokens: number; output_tokens: number; cache_read_tokens?: number; cache_creation_tokens?: number };
+    usage?: {
+      input_tokens: number;
+      output_tokens: number;
+      cache_read_tokens?: number;
+      cache_creation_tokens?: number;
+    };
     message?: string;
   };
 }
@@ -376,12 +493,12 @@ export async function sendChatStream(
   sessionKey: string,
   message: string,
   onEvent: (e: ChatStreamEvent) => void,
-  opts: { model?: string; signal?: AbortSignal } = {}
+  opts: { model?: string; signal?: AbortSignal } = {},
 ): Promise<void> {
-  const res = await fetch('/api/chat/stream', {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("/api/chat/stream", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       agent_id: agentId,
       message,
@@ -392,19 +509,19 @@ export async function sendChatStream(
   });
   if (!res.ok || !res.body) {
     const text = await res.text().catch(() => res.statusText);
-    onEvent({ type: 'error', data: { message: text } });
+    onEvent({ type: "error", data: { message: text } });
     return;
   }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
-  let buffer = '';
+  let buffer = "";
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     // SSE frames end with a blank line (\n\n).
     let idx: number;
-    while ((idx = buffer.indexOf('\n\n')) >= 0) {
+    while ((idx = buffer.indexOf("\n\n")) >= 0) {
       const frame = buffer.slice(0, idx);
       buffer = buffer.slice(idx + 2);
       // Parse `event: <name>\ndata: <json>`.
@@ -412,62 +529,112 @@ export async function sendChatStream(
       const dataMatch = frame.match(/^data:\s*(\{.*\})/m);
       if (!evMatch || !dataMatch) continue;
       let payload: any = {};
-      try { payload = JSON.parse(dataMatch[1]); } catch { /* ignore */ }
-      onEvent({ type: evMatch[1] as ChatStreamEvent['type'], data: payload });
+      try {
+        payload = JSON.parse(dataMatch[1]);
+      } catch {
+        /* ignore */
+      }
+      onEvent({ type: evMatch[1] as ChatStreamEvent["type"], data: payload });
     }
   }
 }
 
 // ---- Chat history + sessions ----
 
-export async function getChatHistory(agentId: string, sessionKey: string): Promise<{ messages: ChatHistoryMessage[] }> {
+export async function getChatHistory(
+  agentId: string,
+  sessionKey: string,
+): Promise<{ messages: ChatHistoryMessage[] }> {
   const q = new URLSearchParams({ agent_id: agentId, session_key: sessionKey });
   return apiFetch<{ messages: ChatHistoryMessage[] }>(`/api/chat/history?${q}`);
 }
 
-export async function listChatSessions(agentId: string): Promise<{ sessions: SessionInfo[] }> {
+export async function listChatSessions(
+  agentId: string,
+): Promise<{ sessions: SessionInfo[] }> {
   const q = new URLSearchParams({ agent_id: agentId });
   return apiFetch<{ sessions: SessionInfo[] }>(`/api/chat/sessions?${q}`);
 }
 
-export async function renameChatSession(agentId: string, key: string, title: string): Promise<{ ok: boolean }> {
+export async function renameChatSession(
+  agentId: string,
+  key: string,
+  title: string,
+): Promise<{ ok: boolean }> {
   const q = new URLSearchParams({ agent_id: agentId });
-  return apiFetch(`/api/chat/sessions/${encodeURIComponent(key)}?${q}`, { method: 'PUT', body: JSON.stringify({ title }) });
+  return apiFetch(`/api/chat/sessions/${encodeURIComponent(key)}?${q}`, {
+    method: "PUT",
+    body: JSON.stringify({ title }),
+  });
 }
 
-export async function deleteChatSession(agentId: string, key: string): Promise<{ ok: boolean }> {
+export async function deleteChatSession(
+  agentId: string,
+  key: string,
+): Promise<{ ok: boolean }> {
   const q = new URLSearchParams({ agent_id: agentId });
-  return apiFetch(`/api/chat/sessions/${encodeURIComponent(key)}?${q}`, { method: 'DELETE' });
+  return apiFetch(`/api/chat/sessions/${encodeURIComponent(key)}?${q}`, {
+    method: "DELETE",
+  });
 }
 
-export async function moveChatSessionToProject(agentId: string, key: string, projectId: string): Promise<{ ok: boolean }> {
+export async function moveChatSessionToProject(
+  agentId: string,
+  key: string,
+  projectId: string,
+): Promise<{ ok: boolean }> {
   const q = new URLSearchParams({ agent_id: agentId });
-  return apiFetch(`/api/chat/sessions/${encodeURIComponent(key)}/project?${q}`, { method: 'PATCH', body: JSON.stringify({ project_id: projectId }) });
+  return apiFetch(
+    `/api/chat/sessions/${encodeURIComponent(key)}/project?${q}`,
+    { method: "PATCH", body: JSON.stringify({ project_id: projectId }) },
+  );
 }
 
 // ---- Cron ----
 
-export async function listCron(agentId?: string): Promise<{ jobs: CronJobInfo[] }> {
-  if (agentId) return apiFetch<{ jobs: CronJobInfo[] }>(`/api/agents/${agentId}/cron`);
-  return apiFetch<{ jobs: CronJobInfo[] }>('/api/cron');
+export async function listCron(
+  agentId?: string,
+): Promise<{ jobs: CronJobInfo[] }> {
+  if (agentId)
+    return apiFetch<{ jobs: CronJobInfo[] }>(`/api/agents/${agentId}/cron`);
+  return apiFetch<{ jobs: CronJobInfo[] }>("/api/cron");
 }
 
-export async function createCron(req: Omit<CronJobInfo, 'id'> & { agent_id: string }): Promise<{ job: CronJobInfo }> {
-  return apiFetch(`/api/agents/${req.agent_id}/cron`, { method: 'POST', body: JSON.stringify(req) });
+export async function createCron(
+  req: Omit<CronJobInfo, "id"> & { agent_id: string },
+): Promise<{ job: CronJobInfo }> {
+  return apiFetch(`/api/agents/${req.agent_id}/cron`, {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
-export async function deleteCron(agentId: string, jobId: string): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/cron/${jobId}`, { method: 'DELETE' });
+export async function deleteCron(
+  agentId: string,
+  jobId: string,
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/cron/${jobId}`, { method: "DELETE" });
 }
 
-export async function toggleCron(agentId: string, jobId: string, enabled: boolean): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/cron/${jobId}`, { method: 'PATCH', body: JSON.stringify({ enabled }) });
+export async function toggleCron(
+  agentId: string,
+  jobId: string,
+  enabled: boolean,
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/cron/${jobId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ enabled }),
+  });
 }
 
 // ---- Channels (per-agent) ----
 
-export async function listChannels(agentId: string): Promise<{ channels: ChannelInfo[] }> {
-  return apiFetch<{ channels: ChannelInfo[] }>(`/api/agents/${agentId}/channels`);
+export async function listChannels(
+  agentId: string,
+): Promise<{ channels: ChannelInfo[] }> {
+  return apiFetch<{ channels: ChannelInfo[] }>(
+    `/api/agents/${agentId}/channels`,
+  );
 }
 
 export async function connectChannel(
@@ -475,87 +642,171 @@ export async function connectChannel(
   type: string,
   accountId: string,
   botToken: string,
-  config?: Record<string, any>
+  config?: Record<string, any>,
 ): Promise<{ ok: boolean; error?: string }> {
   // Each platform has its own /api/agents/:id/channels/<type>
   // endpoint in cleanclaw-setup. Map a few common ones.
   const endpoint = (() => {
     switch (type) {
-      case 'telegram': return `/api/agents/${agentId}/channels/telegram`;
-      case 'discord': return `/api/agents/${agentId}/channels/discord`;
-      case 'slack': return `/api/agents/${agentId}/channels/slack`;
-      case 'line': return `/api/agents/${agentId}/channels/line`;
-      case 'feishu': return `/api/agents/${agentId}/channels/feishu`;
-      default: return `/api/agents/${agentId}/channels`;
+      case "telegram":
+        return `/api/agents/${agentId}/channels/telegram`;
+      case "discord":
+        return `/api/agents/${agentId}/channels/discord`;
+      case "slack":
+        return `/api/agents/${agentId}/channels/slack`;
+      case "line":
+        return `/api/agents/${agentId}/channels/line`;
+      case "feishu":
+        return `/api/agents/${agentId}/channels/feishu`;
+      default:
+        return `/api/agents/${agentId}/channels`;
     }
   })();
-  const body: any = { type, account_id: accountId, bot_token: botToken, config };
-  return apiFetch(endpoint, { method: 'POST', body: JSON.stringify(body) });
+  const body: any = {
+    type,
+    account_id: accountId,
+    bot_token: botToken,
+    config,
+  };
+  return apiFetch(endpoint, { method: "POST", body: JSON.stringify(body) });
 }
 
-export async function disconnectChannel(agentId: string, type: string, accountId: string): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/agents/${agentId}/channels/${type}/${accountId}`, { method: 'DELETE' });
+export async function disconnectChannel(
+  agentId: string,
+  type: string,
+  accountId: string,
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/agents/${agentId}/channels/${type}/${accountId}`, {
+    method: "DELETE",
+  });
 }
 
-export async function listGlobalChannels(): Promise<{ channels: Array<{ type: string; label: string; configured: boolean; logo: string }> }> {
-  return apiFetch<{ channels: any[] }>('/api/channels');
+export async function listGlobalChannels(): Promise<{
+  channels: Array<{
+    type: string;
+    label: string;
+    configured: boolean;
+    logo: string;
+  }>;
+}> {
+  return apiFetch<{ channels: any[] }>("/api/channels");
 }
 
-export async function startWechatLogin(agentId: string, accountId: string): Promise<{ qrcode_url?: string; ticket?: string }> {
-  return apiFetch(`/api/agents/${agentId}/channels/wechat/login`, { method: 'POST', body: JSON.stringify({ account_id: accountId }) });
+export async function startWechatLogin(
+  agentId: string,
+  accountId: string,
+): Promise<{ qrcode_url?: string; ticket?: string }> {
+  return apiFetch(`/api/agents/${agentId}/channels/wechat/login`, {
+    method: "POST",
+    body: JSON.stringify({ account_id: accountId }),
+  });
 }
 
-export async function pollWechatLoginStatus(agentId: string, ticket: string): Promise<{ status: 'pending' | 'scanned' | 'connected' | 'expired' }> {
-  return apiFetch(`/api/agents/${agentId}/channels/wechat/login/status?ticket=${encodeURIComponent(ticket)}`);
+export async function pollWechatLoginStatus(
+  agentId: string,
+  ticket: string,
+): Promise<{ status: "pending" | "scanned" | "connected" | "expired" }> {
+  return apiFetch(
+    `/api/agents/${agentId}/channels/wechat/login/status?ticket=${encodeURIComponent(ticket)}`,
+  );
 }
 
 // ---- Providers ----
 
 export async function listProviders(): Promise<{ providers: ProviderInfo[] }> {
-  return apiFetch<{ providers: ProviderInfo[] }>('/api/providers');
+  return apiFetch<{ providers: ProviderInfo[] }>("/api/providers");
 }
 
-export async function createProvider(req: { type: string; model: string; base_url?: string; api_base?: string; api_key: string; auth_type?: string; api_type?: string }): Promise<{ ok: boolean; provider?: ProviderInfo }> {
-  return apiFetch('/api/providers', { method: 'POST', body: JSON.stringify(req) });
+export async function createProvider(req: {
+  type: string;
+  model: string;
+  base_url?: string;
+  api_base?: string;
+  api_key: string;
+  auth_type?: string;
+  api_type?: string;
+}): Promise<{ ok: boolean; provider?: ProviderInfo }> {
+  return apiFetch("/api/providers", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
-export async function updateProvider(id: string, patch: Partial<ProviderInfo> & { api_key?: string }): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/providers/${id}`, { method: 'PUT', body: JSON.stringify(patch) });
+export async function updateProvider(
+  id: string,
+  patch: Partial<ProviderInfo> & { api_key?: string },
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/providers/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(patch),
+  });
 }
 
 export async function deleteProvider(id: string): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/providers/${id}`, { method: 'DELETE' });
+  return apiFetch(`/api/providers/${id}`, { method: "DELETE" });
 }
 
-export async function testStoredProvider(id: string): Promise<{ ok: boolean; message?: string }> {
-  return apiFetch(`/api/providers/${id}/test`, { method: 'POST' });
+export async function testStoredProvider(
+  id: string,
+): Promise<{ ok: boolean; message?: string }> {
+  return apiFetch(`/api/providers/${id}/test`, { method: "POST" });
 }
 
-export async function testProvider(req: { type: string; api_base: string; api_key: string; model: string }): Promise<{ ok: boolean; message?: string }> {
-  return apiFetch('/api/test-provider', { method: 'POST', body: JSON.stringify(req) });
+export async function testProvider(req: {
+  type: string;
+  api_base: string;
+  api_key: string;
+  model: string;
+}): Promise<{ ok: boolean; message?: string }> {
+  return apiFetch("/api/test-provider", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
 // ---- Skills ----
 
-export async function listSkills(agentId?: string): Promise<{ skills: SkillInfo[] }> {
-  if (agentId) return apiFetch<{ skills: SkillInfo[] }>(`/api/agents/${agentId}/skills`);
-  return apiFetch<{ skills: SkillInfo[] }>('/api/skills');
+export async function listSkills(
+  agentId?: string,
+): Promise<{ skills: SkillInfo[] }> {
+  if (agentId)
+    return apiFetch<{ skills: SkillInfo[] }>(`/api/agents/${agentId}/skills`);
+  return apiFetch<{ skills: SkillInfo[] }>("/api/skills");
 }
 
-export async function searchSkills(q: string, source = 'skillssh'): Promise<{ results: SkillSearchResult[] }> {
+export async function searchSkills(
+  q: string,
+  source = "skillssh",
+): Promise<{ results: SkillSearchResult[] }> {
   const url = `/api/skills/search?q=${encodeURIComponent(q)}&source=${encodeURIComponent(source)}`;
   return apiFetch<{ results: SkillSearchResult[] }>(url);
 }
 
-export async function installSkill(req: { source: string; spec: string; name?: string }): Promise<{ ok: boolean; name?: string; error?: string }> {
-  return apiFetch('/api/skills/install', { method: 'POST', body: JSON.stringify(req) });
+export async function installSkill(req: {
+  source: string;
+  spec: string;
+  name?: string;
+}): Promise<{ ok: boolean; name?: string; error?: string }> {
+  return apiFetch("/api/skills/install", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
-export async function uploadSkill(file: File, agentId?: string): Promise<{ ok: boolean; name?: string; error?: string }> {
-  const url = agentId ? `/api/skills/upload?agent=${encodeURIComponent(agentId)}` : '/api/skills/upload';
+export async function uploadSkill(
+  file: File,
+  agentId?: string,
+): Promise<{ ok: boolean; name?: string; error?: string }> {
+  const url = agentId
+    ? `/api/skills/upload?agent=${encodeURIComponent(agentId)}`
+    : "/api/skills/upload";
   const fd = new FormData();
-  fd.append('file', file);
-  const res = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
+  fd.append("file", file);
+  const res = await fetch(url, {
+    method: "POST",
+    body: fd,
+    credentials: "same-origin",
+  });
   if (!res.ok) {
     const t = await res.text();
     throw new Error(t || res.statusText);
@@ -563,19 +814,34 @@ export async function uploadSkill(file: File, agentId?: string): Promise<{ ok: b
   return res.json();
 }
 
-export async function deleteSkill(name: string, agentId?: string): Promise<{ ok: boolean }> {
-  if (agentId) return apiFetch(`/api/agents/${agentId}/skills/${encodeURIComponent(name)}`, { method: 'DELETE' });
-  return apiFetch(`/api/skills/${encodeURIComponent(name)}`, { method: 'DELETE' });
+export async function deleteSkill(
+  name: string,
+  agentId?: string,
+): Promise<{ ok: boolean }> {
+  if (agentId)
+    return apiFetch(
+      `/api/agents/${agentId}/skills/${encodeURIComponent(name)}`,
+      { method: "DELETE" },
+    );
+  return apiFetch(`/api/skills/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
 }
 
 // ---- Plugins ----
 
 export async function listPlugins(): Promise<{ plugins: PluginInfo[] }> {
-  return apiFetch<{ plugins: PluginInfo[] }>('/api/plugins');
+  return apiFetch<{ plugins: PluginInfo[] }>("/api/plugins");
 }
 
-export async function togglePlugin(id: string, enabled: boolean): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/plugins/${id}`, { method: 'PUT', body: JSON.stringify({ enabled }) });
+export async function togglePlugin(
+  id: string,
+  enabled: boolean,
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/plugins/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ enabled }),
+  });
 }
 
 // ---- Tools (global config) ----
@@ -591,79 +857,134 @@ export interface ToolConfigFull {
 export type ToolsConfigFull = Record<string, ToolConfigFull>;
 
 export async function listTools(): Promise<{ tools: ToolsConfigFull }> {
-  return apiFetch<{ tools: ToolsConfigFull }>('/api/tools');
+  return apiFetch<{ tools: ToolsConfigFull }>("/api/tools");
 }
 
-export async function saveTools(tools: ToolsConfigFull): Promise<{ ok: boolean }> {
-  return apiFetch('/api/tools', { method: 'PUT', body: JSON.stringify({ tools }) });
+export async function saveTools(
+  tools: ToolsConfigFull,
+): Promise<{ ok: boolean }> {
+  return apiFetch("/api/tools", {
+    method: "PUT",
+    body: JSON.stringify({ tools }),
+  });
 }
 
 // ---- Models ----
 
-export async function listModels(): Promise<{ models: Array<{ id: string; provider: string; label: string }> }> {
-  return apiFetch<{ models: Array<{ id: string; provider: string; label: string }> }>('/api/models');
+export async function listModels(): Promise<{
+  models: Array<{ id: string; provider: string; label: string }>;
+}> {
+  return apiFetch<{
+    models: Array<{ id: string; provider: string; label: string }>;
+  }>("/api/models");
 }
 
 // ---- API keys ----
 
 export async function listApikeys(): Promise<{ keys: ApiKeyInfo[] }> {
-  return apiFetch<{ keys: ApiKeyInfo[] }>('/api/apikeys');
+  return apiFetch<{ keys: ApiKeyInfo[] }>("/api/apikeys");
 }
 
-export async function createApikey(req: { name: string; type?: 'admin' | 'user' | 'agent' }): Promise<{ ok: boolean; key?: ApiKeyInfo; secret?: string; token?: string }> {
-  return apiFetch('/api/apikeys', { method: 'POST', body: JSON.stringify(req) });
+export async function createApikey(req: {
+  name: string;
+  type?: "admin" | "user" | "agent";
+}): Promise<{
+  ok: boolean;
+  key?: ApiKeyInfo;
+  secret?: string;
+  token?: string;
+}> {
+  return apiFetch("/api/apikeys", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
 export async function deleteApikey(id: string): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/apikeys/${id}`, { method: 'DELETE' });
+  return apiFetch(`/api/apikeys/${id}`, { method: "DELETE" });
 }
 
-export async function rotateApikey(id: string): Promise<{ ok: boolean; secret?: string }> {
-  return apiFetch(`/api/apikeys/${id}/rotate`, { method: 'POST' });
+export async function rotateApikey(
+  id: string,
+): Promise<{ ok: boolean; secret?: string }> {
+  return apiFetch(`/api/apikeys/${id}/rotate`, { method: "POST" });
 }
 
-export async function setApikeyAgents(id: string, agents: string[]): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/apikeys/${id}/agents`, { method: 'PUT', body: JSON.stringify({ agents }) });
+export async function setApikeyAgents(
+  id: string,
+  agents: string[],
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/apikeys/${id}/agents`, {
+    method: "PUT",
+    body: JSON.stringify({ agents }),
+  });
 }
 
 // ---- Admin ----
 
 export async function adminListUsers(): Promise<{ users: UserInfo[] }> {
-  return apiFetch<{ users: UserInfo[] }>('/api/admin/users');
+  return apiFetch<{ users: UserInfo[] }>("/api/admin/users");
 }
 
-export async function adminUpdateUserRole(userId: string, role: 'user' | 'admin' | 'super_admin'): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/admin/users/${userId}/role`, { method: 'POST', body: JSON.stringify({ role }) });
+export async function adminUpdateUserRole(
+  userId: string,
+  role: "user" | "admin" | "super_admin",
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/admin/users/${userId}/role`, {
+    method: "POST",
+    body: JSON.stringify({ role }),
+  });
 }
 
-export async function adminDeleteUser(userId: string): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+export async function adminDeleteUser(
+  userId: string,
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/admin/users/${userId}`, { method: "DELETE" });
 }
 
 export async function adminListChats(): Promise<{ sessions: SessionInfo[] }> {
-  return apiFetch<{ sessions: SessionInfo[] }>('/api/admin/chats');
+  return apiFetch<{ sessions: SessionInfo[] }>("/api/admin/chats");
 }
 
 export async function adminListUsage(): Promise<{ usage: UsageInfo[] }> {
-  return apiFetch<{ usage: UsageInfo[] }>('/api/admin/usage');
+  return apiFetch<{ usage: UsageInfo[] }>("/api/admin/usage");
 }
 
-export async function agentUsage(agentId: string): Promise<{ usage: UsageInfo[] }> {
+export async function agentUsage(
+  agentId: string,
+): Promise<{ usage: UsageInfo[] }> {
   return apiFetch<{ usage: UsageInfo[] }>(`/api/agents/${agentId}/usage`);
 }
 
 export async function adminGetRegistration(): Promise<{ open: boolean }> {
-  return apiFetch<{ open: boolean }>('/api/admin/registration');
+  return apiFetch<{ open: boolean }>("/api/admin/registration");
 }
 
-export async function adminSetRegistration(open: boolean): Promise<{ ok: boolean; open: boolean }> {
-  return apiFetch('/api/admin/registration', { method: 'PUT', body: JSON.stringify({ open }) });
+export async function adminSetRegistration(
+  open: boolean,
+): Promise<{ ok: boolean; open: boolean }> {
+  return apiFetch("/api/admin/registration", {
+    method: "PUT",
+    body: JSON.stringify({ open }),
+  });
 }
 
 // ---- Onboard (bootstrap) ----
 
-export async function onboard(req: { admin: { username: string; email: string; password: string; display_name?: string }; provider?: any; agent?: any }): Promise<{ ok: boolean; error?: string }> {
-  return apiFetch('/api/onboard', { method: 'POST', body: JSON.stringify(req) });
+export async function onboard(req: {
+  admin: {
+    username: string;
+    email: string;
+    password: string;
+    display_name?: string;
+  };
+  provider?: any;
+  agent?: any;
+}): Promise<{ ok: boolean; error?: string }> {
+  return apiFetch("/api/onboard", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
 // Re-export under the cleaner name the dashboard uses.
@@ -671,60 +992,95 @@ export { adminGetRegistration as getRegistrationOpen };
 
 // ---- Channel config (platform defaults) ----
 
-export async function getChannelConfig(): Promise<{ config: Record<string, any> }> {
-  return apiFetch<{ config: any }>('/api/channels-config');
+export async function getChannelConfig(): Promise<{
+  config: Record<string, any>;
+}> {
+  return apiFetch<{ config: any }>("/api/channels-config");
 }
 
-export async function saveChannelConfig(config: Record<string, any>): Promise<{ ok: boolean }> {
-  return apiFetch('/api/channels-config', { method: 'PUT', body: JSON.stringify(config) });
+export async function saveChannelConfig(
+  config: Record<string, any>,
+): Promise<{ ok: boolean }> {
+  return apiFetch("/api/channels-config", {
+    method: "PUT",
+    body: JSON.stringify(config),
+  });
 }
 
 // ---- Scoped config (system / user / agent) ----
 
-export async function readConfig(scope: 'system' | 'user' | 'agent', key: string, agentId?: string): Promise<{ value: any }> {
+export async function readConfig(
+  scope: "system" | "user" | "agent",
+  key: string,
+  agentId?: string,
+): Promise<{ value: any }> {
   const body: any = { scope, key };
   if (agentId) body.agent_id = agentId;
-  return apiFetch('/api/config', { method: 'POST', body: JSON.stringify(body) });
+  return apiFetch("/api/config", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
-export async function writeConfig(scope: 'system' | 'user' | 'agent', key: string, value: any, agentId?: string): Promise<{ ok: boolean }> {
+export async function writeConfig(
+  scope: "system" | "user" | "agent",
+  key: string,
+  value: any,
+  agentId?: string,
+): Promise<{ ok: boolean }> {
   const body: any = { scope, key, value };
   if (agentId) body.agent_id = agentId;
-  return apiFetch('/api/config', { method: 'POST', body: JSON.stringify(body) });
+  return apiFetch("/api/config", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 // ---- Tasks (admin) ----
 
 export async function listTasks(): Promise<{ tasks: any[] }> {
-  return apiFetch<{ tasks: any[] }>('/api/tasks');
+  return apiFetch<{ tasks: any[] }>("/api/tasks");
 }
 
 // ---- Global usage ----
 
 export async function getGlobalUsage(): Promise<{ usage: UsageInfo[] }> {
-  return apiFetch<{ usage: UsageInfo[] }>('/api/usage');
+  return apiFetch<{ usage: UsageInfo[] }>("/api/usage");
 }
 
 // ---- Scoped channels (multi-tenant) ----
 
 export async function listScopedChannels(): Promise<{ channels: any[] }> {
-  return apiFetch<{ channels: any[] }>('/api/scoped-channels');
+  return apiFetch<{ channels: any[] }>("/api/scoped-channels");
 }
 
-export async function createScopedChannel(req: any): Promise<{ ok: boolean; id?: string }> {
-  return apiFetch('/api/scoped-channels', { method: 'POST', body: JSON.stringify(req) });
+export async function createScopedChannel(
+  req: any,
+): Promise<{ ok: boolean; id?: string }> {
+  return apiFetch("/api/scoped-channels", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
-export async function updateScopedChannel(id: string, patch: any): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/scoped-channels/${id}`, { method: 'PUT', body: JSON.stringify(patch) });
+export async function updateScopedChannel(
+  id: string,
+  patch: any,
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/scoped-channels/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(patch),
+  });
 }
 
-export async function deleteScopedChannel(id: string): Promise<{ ok: boolean }> {
-  return apiFetch(`/api/scoped-channels/${id}`, { method: 'DELETE' });
+export async function deleteScopedChannel(
+  id: string,
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/scoped-channels/${id}`, { method: "DELETE" });
 }
 
 // ---- v1 (OpenAI-compat) ----
 
 export async function v1ListAgents(): Promise<{ data: AgentInfo[] }> {
-  return apiFetch<{ data: AgentInfo[] }>('/v1/agents');
+  return apiFetch<{ data: AgentInfo[] }>("/v1/agents");
 }

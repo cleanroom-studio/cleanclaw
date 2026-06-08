@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @theme {
   --color-background: #ffffff;
@@ -20,8 +20,8 @@
   --color-card-foreground: #0a0a0a;
 
   --radius: 0.5rem;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -44,5 +44,10 @@
   }
 }
 
-html, body { height: 100%; }
-body { font-family: var(--font-sans); }
+html,
+body {
+  height: 100%;
+}
+body {
+  font-family: var(--font-sans);
+}

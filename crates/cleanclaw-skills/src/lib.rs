@@ -149,10 +149,7 @@ pub fn render_always_loaded(skills: &[Skill]) -> String {
 
 /// Build the runtime env map: agent config `env` overrides per-skill
 /// `env` defaults. Returns `name → value`.
-pub fn resolve_env(
-    skills: &[Skill],
-    runtime: &HashMap<String, String>,
-) -> HashMap<String, String> {
+pub fn resolve_env(skills: &[Skill], runtime: &HashMap<String, String>) -> HashMap<String, String> {
     let mut out: HashMap<String, String> = runtime.clone();
     for s in skills {
         for env in &s.env {
@@ -181,7 +178,9 @@ pub fn parse_frontmatter(raw: &str) -> (SkillFrontmatter, String) {
     let after_open = after_open.trim_start_matches('\n');
     if let Some(close_idx) = after_open.find("\n---") {
         let yaml_str = &after_open[..close_idx];
-        let body = after_open[close_idx + 4..].trim_start_matches('\n').to_string();
+        let body = after_open[close_idx + 4..]
+            .trim_start_matches('\n')
+            .to_string();
         match serde_yaml::from_str::<SkillFrontmatter>(yaml_str) {
             Ok(fm) => (fm, body),
             Err(e) => {
@@ -247,10 +246,18 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let s1 = dir.path().join("a");
         std::fs::create_dir(&s1).unwrap();
-        std::fs::write(s1.join("SKILL.md"), "---\nname: a\ndescription: a\n---\nbody").unwrap();
+        std::fs::write(
+            s1.join("SKILL.md"),
+            "---\nname: a\ndescription: a\n---\nbody",
+        )
+        .unwrap();
         let s2 = dir.path().join("b");
         std::fs::create_dir(&s2).unwrap();
-        std::fs::write(s2.join("SKILL.md"), "---\nname: b\ndescription: b\n---\nbody").unwrap();
+        std::fs::write(
+            s2.join("SKILL.md"),
+            "---\nname: b\ndescription: b\n---\nbody",
+        )
+        .unwrap();
 
         let skills = discover(dir.path());
         let skills = apply_overrides(skills, &["a".into()], &["b".into()]);

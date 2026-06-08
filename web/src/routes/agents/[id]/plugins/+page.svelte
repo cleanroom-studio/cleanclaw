@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import AppShell from '$lib/components/AppShell.svelte';
-  import Card from '$lib/components/ui/Card.svelte';
-  import Button from '$lib/components/ui/Button.svelte';
-  import Switch from '$lib/components/ui/Switch.svelte';
-  import { listPlugins, togglePlugin, type PluginInfo } from '$lib/api';
+  import { onMount } from "svelte";
+  import AppShell from "$lib/components/AppShell.svelte";
+  import Card from "$lib/components/ui/Card.svelte";
+  import Button from "$lib/components/ui/Button.svelte";
+  import Switch from "$lib/components/ui/Switch.svelte";
+  import { listPlugins, togglePlugin, type PluginInfo } from "$lib/api";
 
   let { params }: { params: { id: string } } = $props();
   let plugins = $state<PluginInfo[]>([]);
@@ -36,7 +36,9 @@
   <div class="space-y-4">
     <h1 class="text-2xl font-bold">Plugins</h1>
     <Card>
-      <h2 class="text-base font-semibold mb-3">Enabled plugins for this agent</h2>
+      <h2 class="text-base font-semibold mb-3">
+        Enabled plugins for this agent
+      </h2>
       {#if loading}
         <p class="text-sm text-muted-foreground">Loading…</p>
       {:else if plugins.length === 0}
@@ -48,7 +50,9 @@
               <div class="flex-1">
                 <div class="text-sm font-medium">{p.name}</div>
                 {#if p.description}
-                  <div class="text-xs text-muted-foreground">{p.description}</div>
+                  <div class="text-xs text-muted-foreground">
+                    {p.description}
+                  </div>
                 {/if}
               </div>
               <Switch

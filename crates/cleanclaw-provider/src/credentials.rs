@@ -72,7 +72,10 @@ struct OneNonce(Option<[u8; 12]>);
 
 impl NonceSequence for OneNonce {
     fn advance(&mut self) -> Result<Nonce, ring::error::Unspecified> {
-        self.0.take().map(Nonce::assume_unique_for_key).ok_or(ring::error::Unspecified)
+        self.0
+            .take()
+            .map(Nonce::assume_unique_for_key)
+            .ok_or(ring::error::Unspecified)
     }
 }
 
@@ -91,12 +94,13 @@ impl CredentialManager {
     /// `passphrase` is empty).
     pub fn for_user(user_id: &str, passphrase: &str) -> std::result::Result<Self, CredentialError> {
         if user_id.is_empty() {
-            return Err(CredentialError::Invalid(
-                "user_id is required".into(),
-            ));
+            return Err(CredentialError::Invalid("user_id is required".into()));
         }
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-        let store_dir = PathBuf::from(&home).join(".cleanclaw").join("users").join(user_id);
+        let store_dir = PathBuf::from(&home)
+            .join(".cleanclaw")
+            .join("users")
+            .join(user_id);
         std::fs::create_dir_all(&store_dir)?;
         let master_key = derive_key_for_user(user_id, passphrase);
         let store_path = store_dir.join("credentials.json");
@@ -122,21 +126,34 @@ impl CredentialManager {
 
     /// Set a `key=value` pair on the credential named `name`.
     /// Creates the credential if it doesn't exist.
-    pub fn set(&self, name: &str, key: &str, value: &str) -> std::result::Result<(), CredentialError> {
-        let mut entries = self.entries.write().map_err(|e| CredentialError::Invalid(e.to_string()))?;
-        let entry = entries.entry(name.to_string()).or_insert_with(|| CredentialEntry {
-            name: name.to_string(),
-            r#type: "api_key".into(),
-            source: "store".into(),
-            keys: HashMap::new(),
-        });
+    pub fn set(
+        &self,
+        name: &str,
+        key: &str,
+        value: &str,
+    ) -> std::result::Result<(), CredentialError> {
+        let mut entries = self
+            .entries
+            .write()
+            .map_err(|e| CredentialError::Invalid(e.to_string()))?;
+        let entry = entries
+            .entry(name.to_string())
+            .or_insert_with(|| CredentialEntry {
+                name: name.to_string(),
+                r#type: "api_key".into(),
+                source: "store".into(),
+                keys: HashMap::new(),
+            });
         entry.keys.insert(key.to_string(), value.to_string());
         drop(entries);
         self.save()
     }
 
     pub fn get(&self, name: &str, key: &str) -> std::result::Result<String, CredentialError> {
-        let entries = self.entries.read().map_err(|e| CredentialError::Invalid(e.to_string()))?;
+        let entries = self
+            .entries
+            .read()
+            .map_err(|e| CredentialError::Invalid(e.to_string()))?;
         let entry = entries
             .get(name)
             .ok_or_else(|| CredentialError::NotFound(name.to_string()))?;
@@ -144,12 +161,18 @@ impl CredentialManager {
             .keys
             .get(key)
             .cloned()
-            .ok_or_else(|| CredentialError::KeyNotFound { name: name.into(), key: key.into() })
+            .ok_or_else(|| CredentialError::KeyNotFound {
+                name: name.into(),
+                key: key.into(),
+            })
     }
 
     /// List credentials, masking each key value (`abcd...wxyz`).
     pub fn list(&self) -> std::result::Result<Vec<CredentialEntry>, CredentialError> {
-        let entries = self.entries.read().map_err(|e| CredentialError::Invalid(e.to_string()))?;
+        let entries = self
+            .entries
+            .read()
+            .map_err(|e| CredentialError::Invalid(e.to_string()))?;
         Ok(entries
             .values()
             .map(|e| {
@@ -172,7 +195,10 @@ impl CredentialManager {
     }
 
     pub fn delete(&self, name: &str) -> std::result::Result<(), CredentialError> {
-        let mut entries = self.entries.write().map_err(|e| CredentialError::Invalid(e.to_string()))?;
+        let mut entries = self
+            .entries
+            .write()
+            .map_err(|e| CredentialError::Invalid(e.to_string()))?;
         if entries.remove(name).is_none() {
             return Err(CredentialError::NotFound(name.into()));
         }
@@ -209,7 +235,10 @@ impl CredentialManager {
     /// credentials (mapped back to their canonical env var) and
     /// env-discovered ones.
     pub fn inject_env(&self) -> std::result::Result<HashMap<String, String>, CredentialError> {
-        let entries = self.entries.read().map_err(|e| CredentialError::Invalid(e.to_string()))?;
+        let entries = self
+            .entries
+            .read()
+            .map_err(|e| CredentialError::Invalid(e.to_string()))?;
         let mut env = HashMap::new();
         let known = known_env_vars();
         for (name, entry) in entries.iter() {
@@ -237,7 +266,10 @@ impl CredentialManager {
     }
 
     fn save(&self) -> std::result::Result<(), CredentialError> {
-        let entries = self.entries.read().map_err(|e| CredentialError::Invalid(e.to_string()))?;
+        let entries = self
+            .entries
+            .read()
+            .map_err(|e| CredentialError::Invalid(e.to_string()))?;
         let plain = serde_json::to_vec(&*entries)?;
         let ct = encrypt(&plain, &self.master_key)?;
         std::fs::write(&self.store_path, ct)?;
@@ -264,7 +296,10 @@ impl CredentialManager {
             }
         };
         let map: HashMap<String, CredentialEntry> = serde_json::from_slice(&plain)?;
-        let mut entries = self.entries.write().map_err(|e| CredentialError::Invalid(e.to_string()))?;
+        let mut entries = self
+            .entries
+            .write()
+            .map_err(|e| CredentialError::Invalid(e.to_string()))?;
         *entries = map;
         Ok(())
     }
@@ -312,10 +347,12 @@ fn legacy_derive_key() -> [u8; 32] {
 }
 
 fn encrypt(plaintext: &[u8], key: &[u8; 32]) -> std::result::Result<Vec<u8>, CredentialError> {
-    let unbound = UnboundKey::new(&AES_256_GCM, key).map_err(|_| CredentialError::Ring("key".into()))?;
+    let unbound =
+        UnboundKey::new(&AES_256_GCM, key).map_err(|_| CredentialError::Ring("key".into()))?;
     let rng = SystemRandom::new();
     let mut nonce_bytes = [0u8; 12];
-    rng.fill(&mut nonce_bytes).map_err(|_| CredentialError::Ring("nonce".into()))?;
+    rng.fill(&mut nonce_bytes)
+        .map_err(|_| CredentialError::Ring("nonce".into()))?;
     let mut sealing = SealingKey::new(unbound, OneNonce(Some(nonce_bytes)));
     let mut in_out = plaintext.to_vec();
     sealing
@@ -334,7 +371,8 @@ fn decrypt(ciphertext: &[u8], key: &[u8; 32]) -> std::result::Result<Vec<u8>, Cr
     let (nonce_bytes, ct) = ciphertext.split_at(12);
     let mut nonce_arr = [0u8; 12];
     nonce_arr.copy_from_slice(nonce_bytes);
-    let unbound = UnboundKey::new(&AES_256_GCM, key).map_err(|_| CredentialError::Ring("key".into()))?;
+    let unbound =
+        UnboundKey::new(&AES_256_GCM, key).map_err(|_| CredentialError::Ring("key".into()))?;
     let mut opening = ring::aead::OpeningKey::new(unbound, OneNonce(Some(nonce_arr)));
     let mut in_out = ct.to_vec();
     let plain = opening
@@ -405,10 +443,17 @@ mod tests {
             let cm = CredentialManager::for_user("u1", "pp").unwrap();
             cm.set("openai", "apiKey", "sk-secret-99").unwrap();
             // The plaintext key must NOT appear on disk.
-            let cred_path = home.join(".cleanclaw").join("users").join("u1").join("credentials.json");
+            let cred_path = home
+                .join(".cleanclaw")
+                .join("users")
+                .join("u1")
+                .join("credentials.json");
             let bytes = std::fs::read(&cred_path).unwrap();
             let s = String::from_utf8_lossy(&bytes);
-            assert!(!s.contains("sk-secret-99"), "credential must be encrypted: {s}");
+            assert!(
+                !s.contains("sk-secret-99"),
+                "credential must be encrypted: {s}"
+            );
         });
     }
 
@@ -454,7 +499,10 @@ mod tests {
             let cm = CredentialManager::for_user("u1", "pp").unwrap();
             cm.set("customthing", "apiKey", "k-1").unwrap();
             let env = cm.inject_env().unwrap();
-            assert_eq!(env.get("CUSTOMTHING_API_KEY").map(|s| s.as_str()), Some("k-1"));
+            assert_eq!(
+                env.get("CUSTOMTHING_API_KEY").map(|s| s.as_str()),
+                Some("k-1")
+            );
         });
     }
 
@@ -464,7 +512,8 @@ mod tests {
             let prev = std::env::var("OPENAI_API_KEY").ok();
             std::env::set_var("OPENAI_API_KEY", "sk-discovered");
             let found = CredentialManager::discover();
-            assert!(found.iter().any(|c| c.name == "openai" && c.keys.get("apiKey").map(|v| v.as_str()) == Some("sk-discovered")));
+            assert!(found.iter().any(|c| c.name == "openai"
+                && c.keys.get("apiKey").map(|v| v.as_str()) == Some("sk-discovered")));
             if let Some(p) = prev {
                 std::env::set_var("OPENAI_API_KEY", p);
             } else {

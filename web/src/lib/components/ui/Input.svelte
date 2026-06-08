@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { inputClasses } from './classes';
+  import { inputClasses } from "./classes";
   let {
-    type = 'text',
-    value = $bindable(''),
-    placeholder = '',
-    class: cls = '',
+    type = "text",
+    value = $bindable(""),
+    placeholder = "",
+    class: cls = "",
     ...rest
   }: {
     type?: string;
@@ -15,10 +15,4 @@
   } = $props();
 </script>
 
-<input
-  {type}
-  bind:value
-  {placeholder}
-  class="{inputClasses} {cls}"
-  {...rest}
-/>
+<input {type} bind:value {placeholder} class="{inputClasses} {cls}" {...rest} />

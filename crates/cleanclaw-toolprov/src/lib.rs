@@ -169,7 +169,10 @@ impl Chain {
 
     /// Run the chain. Returns the first non-error response. The last
     /// error is returned if every provider fails.
-    pub async fn run(&self, mut make_req: impl FnMut(&dyn Provider) -> Request) -> Result<Response, ProviderError> {
+    pub async fn run(
+        &self,
+        mut make_req: impl FnMut(&dyn Provider) -> Request,
+    ) -> Result<Response, ProviderError> {
         let mut last_err: Option<ProviderError> = None;
         for p in &self.providers {
             let req = make_req(&**p);
@@ -291,7 +294,11 @@ pub mod imagegen {
             } else {
                 req.config.model.as_str()
             };
-            let size = if size.is_empty() { "1024x1024" } else { size.as_str() };
+            let size = if size.is_empty() {
+                "1024x1024"
+            } else {
+                size.as_str()
+            };
             let endpoint = if req.config.endpoint.is_empty() {
                 "https://api.openai.com/v1/images/generations"
             } else {
@@ -421,7 +428,11 @@ pub mod tts {
             } else {
                 req.config.model.as_str()
             };
-            let voice = if voice.is_empty() { "alloy" } else { voice.as_str() };
+            let voice = if voice.is_empty() {
+                "alloy"
+            } else {
+                voice.as_str()
+            };
             let endpoint = if req.config.endpoint.is_empty() {
                 "https://api.openai.com/v1/audio/speech"
             } else {
@@ -513,10 +524,7 @@ pub mod webfetch {
                 .await
                 .map_err(|e| ProviderError::Http(e.to_string()))?;
             if !resp.status().is_success() {
-                return Err(ProviderError::Upstream(format!(
-                    "{}",
-                    resp.status()
-                )));
+                return Err(ProviderError::Upstream(format!("{}", resp.status())));
             }
             let text = resp
                 .text()
@@ -526,7 +534,11 @@ pub mod webfetch {
             // page; the rest can be re-fetched on demand.
             let max = 16 * 1024;
             let truncated = if text.len() > max {
-                format!("{}\n\n[truncated; original {} bytes]", &text[..max], text.len())
+                format!(
+                    "{}\n\n[truncated; original {} bytes]",
+                    &text[..max],
+                    text.len()
+                )
             } else {
                 text
             };
@@ -576,10 +588,7 @@ pub mod webfetch {
                 .await
                 .map_err(|e| ProviderError::Http(e.to_string()))?;
             if !resp.status().is_success() {
-                return Err(ProviderError::Upstream(format!(
-                    "{}",
-                    resp.status()
-                )));
+                return Err(ProviderError::Upstream(format!("{}", resp.status())));
             }
             let text = resp
                 .text()
@@ -587,7 +596,11 @@ pub mod webfetch {
                 .map_err(|e| ProviderError::Http(e.to_string()))?;
             let max = 32 * 1024;
             let truncated = if text.len() > max {
-                format!("{}\n\n[truncated; original {} bytes]", &text[..max], text.len())
+                format!(
+                    "{}\n\n[truncated; original {} bytes]",
+                    &text[..max],
+                    text.len()
+                )
             } else {
                 text
             };
@@ -685,7 +698,11 @@ pub mod websearch {
                 .map_err(|e| ProviderError::Decode(e.to_string()))?;
             let mut out = String::new();
             out.push_str(&format!("Search results for: {query}\n\n"));
-            if let Some(results) = v.get("web").and_then(|w| w.get("results")).and_then(|r| r.as_array()) {
+            if let Some(results) = v
+                .get("web")
+                .and_then(|w| w.get("results"))
+                .and_then(|r| r.as_array())
+            {
                 for (i, r) in results.iter().take(n).enumerate() {
                     let title = r.get("title").and_then(|x| x.as_str()).unwrap_or("");
                     let url = r.get("url").and_then(|x| x.as_str()).unwrap_or("");
@@ -745,9 +762,14 @@ pub mod websearch {
             if !resp.status().is_success() {
                 let status = resp.status();
                 let txt = resp.text().await.unwrap_or_default();
-                return Err(ProviderError::Upstream(format!("duckduckgo {status}: {txt}")));
+                return Err(ProviderError::Upstream(format!(
+                    "duckduckgo {status}: {txt}"
+                )));
             }
-            let html = resp.text().await.map_err(|e| ProviderError::Decode(e.to_string()))?;
+            let html = resp
+                .text()
+                .await
+                .map_err(|e| ProviderError::Decode(e.to_string()))?;
             // Cheap HTML extraction: `<a class="result__a" href="…" rel="noopener">title</a>`
             // followed by `.result__snippet`. The class names are
             // stable across DDG's HTML lite endpoint.
@@ -789,10 +811,8 @@ pub mod websearch {
                         );
                         // Snippet: optional `<a class="result__snippet"…>…</a>`.
                         let snip: Option<String> = (|| -> Option<String> {
-                            let sn_start = find_from(
-                                &bytes[cursor + end_a..],
-                                b"class=\"result__snippet\"",
-                            )?;
+                            let sn_start =
+                                find_from(&bytes[cursor + end_a..], b"class=\"result__snippet\"")?;
                             let abs = cursor + end_a + sn_start;
                             let end_s = bytes[abs..].iter().position(|&b| b == b'>')?;
                             let s = abs + end_s + 1;
@@ -805,7 +825,11 @@ pub mod websearch {
                         out.push_str(&format!(
                             "{}. {}\n   {}\n{}\n\n",
                             idx,
-                            if title.is_empty() { "(no title)" } else { &title },
+                            if title.is_empty() {
+                                "(no title)"
+                            } else {
+                                &title
+                            },
                             if url.is_empty() { "(no url)" } else { &url },
                             snip.unwrap_or_default(),
                         ));
@@ -967,7 +991,11 @@ pub mod websearch {
                 .map_err(|e| ProviderError::Decode(e.to_string()))?;
             let mut out = String::new();
             out.push_str(&format!("Search results for: {query}\n\n"));
-            let results = v.get("items").and_then(|r| r.as_array()).cloned().unwrap_or_default();
+            let results = v
+                .get("items")
+                .and_then(|r| r.as_array())
+                .cloned()
+                .unwrap_or_default();
             for (i, r) in results.iter().take(n).enumerate() {
                 let title = r.get("title").and_then(|x| x.as_str()).unwrap_or("");
                 let url = r.get("link").and_then(|x| x.as_str()).unwrap_or("");
@@ -1031,7 +1059,10 @@ pub mod websearch {
                 let txt = resp.text().await.unwrap_or_default();
                 return Err(ProviderError::Upstream(format!("baidu {status}: {txt}")));
             }
-            let html = resp.text().await.map_err(|e| ProviderError::Decode(e.to_string()))?;
+            let html = resp
+                .text()
+                .await
+                .map_err(|e| ProviderError::Decode(e.to_string()))?;
             // Baidu's result entries: `<h3 class="t"><a href="…" …>title</a></h3>`.
             // The actual destination URL is in the surrounding
             // `<a>` whose `href` is a redirect — but the visible
@@ -1043,12 +1074,16 @@ pub mod websearch {
             let mut cursor = 0usize;
             let mut idx = 0;
             while idx < n {
-                let Some(pos) = find_from(&bytes[cursor..], needle) else { break };
+                let Some(pos) = find_from(&bytes[cursor..], needle) else {
+                    break;
+                };
                 cursor += pos + needle.len();
                 // Skip the rest of the <h3 …> opening tag.
                 if let Some(gt) = bytes[cursor..].iter().position(|&b| b == b'>') {
                     cursor += gt + 1;
-                } else { break; }
+                } else {
+                    break;
+                }
                 // The title sits inside the <a>…</a> immediately after.
                 if let Some(a_end) = find_from(&bytes[cursor..], b"</a>") {
                     let raw = std::str::from_utf8(&bytes[cursor..cursor + a_end])
@@ -1071,8 +1106,8 @@ pub mod websearch {
                         .iter()
                         .position(|&b| b == b'"')
                         .unwrap_or(0);
-                    let url_raw = std::str::from_utf8(&bytes[url_start..url_start + url_end])
-                        .unwrap_or("");
+                    let url_raw =
+                        std::str::from_utf8(&bytes[url_start..url_start + url_end]).unwrap_or("");
                     let url = if url_raw.starts_with("http") {
                         url_raw.to_string()
                     } else {
@@ -1082,11 +1117,17 @@ pub mod websearch {
                     out.push_str(&format!(
                         "{}. {}\n   {}\n\n",
                         idx,
-                        if title.is_empty() { "(no title)" } else { &title },
+                        if title.is_empty() {
+                            "(no title)"
+                        } else {
+                            &title
+                        },
                         if url.is_empty() { "(no url)" } else { &url },
                     ));
                     cursor += a_end + 4;
-                } else { break; }
+                } else {
+                    break;
+                }
             }
             if idx == 0 {
                 return Err(ProviderError::NoResults("baidu"));
@@ -1134,11 +1175,11 @@ fn decode_html_entities(s: &str) -> String {
                                 .and_then(char::from_u32)
                                 .map(|c| c.to_string())
                         }
-                        _ if entity.starts_with("&#") => {
-                            entity[2..entity.len() - 1].parse::<u32>().ok()
-                                .and_then(char::from_u32)
-                                .map(|c| c.to_string())
-                        }
+                        _ if entity.starts_with("&#") => entity[2..entity.len() - 1]
+                            .parse::<u32>()
+                            .ok()
+                            .and_then(char::from_u32)
+                            .map(|c| c.to_string()),
                         _ => None,
                     };
                     if let Some(d) = decoded {
@@ -1243,9 +1284,7 @@ mod tests {
 
     #[tokio::test]
     async fn imagegen_missing_prompt() {
-        let p: Arc<dyn Provider> = Arc::new(imagegen::OpenAI::new(
-            reqwest::Client::new(),
-        ));
+        let p: Arc<dyn Provider> = Arc::new(imagegen::OpenAI::new(reqwest::Client::new()));
         let r = p
             .execute(Request {
                 args: serde_json::json!({}),
@@ -1257,9 +1296,7 @@ mod tests {
 
     #[tokio::test]
     async fn imagegen_openai_missing_key() {
-        let p: Arc<dyn Provider> = Arc::new(imagegen::OpenAI::new(
-            reqwest::Client::new(),
-        ));
+        let p: Arc<dyn Provider> = Arc::new(imagegen::OpenAI::new(reqwest::Client::new()));
         let r = p
             .execute(Request {
                 args: serde_json::json!({"prompt": "x"}),
@@ -1331,8 +1368,7 @@ mod tests {
 
     #[tokio::test]
     async fn webfetch_missing_url() {
-        let p: Arc<dyn Provider> =
-            Arc::new(webfetch::Direct::new(reqwest::Client::new()));
+        let p: Arc<dyn Provider> = Arc::new(webfetch::Direct::new(reqwest::Client::new()));
         let r = p
             .execute(Request {
                 args: serde_json::json!({}),

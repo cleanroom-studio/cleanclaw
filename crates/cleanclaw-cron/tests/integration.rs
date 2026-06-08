@@ -78,7 +78,10 @@ async fn tick_fires_due_job() {
     let next = updated.next_run.unwrap();
     let expected = now + chrono::Duration::minutes(5);
     let drift = (next - expected).num_seconds().abs();
-    assert!(drift < 2, "next_run should be ~5 minutes from now, got {next}");
+    assert!(
+        drift < 2,
+        "next_run should be ~5 minutes from now, got {next}"
+    );
 }
 
 #[tokio::test]
@@ -175,7 +178,10 @@ async fn compute_next_run_for_interval() {
 #[tokio::test]
 async fn parse_duration_variants() {
     assert_eq!(parse_duration("5m").unwrap(), Duration::from_secs(300));
-    assert_eq!(parse_duration("every 5m").unwrap(), Duration::from_secs(300));
+    assert_eq!(
+        parse_duration("every 5m").unwrap(),
+        Duration::from_secs(300)
+    );
     assert_eq!(parse_duration("1h30m").unwrap(), Duration::from_secs(5400));
     assert!(parse_duration("").is_err());
     assert!(parse_duration("5x").is_err());

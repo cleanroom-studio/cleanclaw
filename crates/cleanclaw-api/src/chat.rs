@@ -3,7 +3,6 @@
 //! `HandleChatStream` + the agent loop wiring.
 
 use super::ApiState;
-use std::convert::Infallible;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -19,6 +18,7 @@ use cleanclaw_provider::Provider;
 use cleanclaw_store::Store;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::convert::Infallible;
 use std::sync::Arc;
 
 pub use cleanclaw_agent::tools::builtins;
@@ -40,7 +40,11 @@ pub struct ChatService {
 
 impl ChatService {
     pub fn new(store: Arc<dyn Store>, default_model: String) -> Self {
-        Self::new_with_toolprov(store, default_model, Arc::new(cleanclaw_toolprov::Registry::new()))
+        Self::new_with_toolprov(
+            store,
+            default_model,
+            Arc::new(cleanclaw_toolprov::Registry::new()),
+        )
     }
 
     /// Construct with a pre-built toolprov registry. The gateway
@@ -147,13 +151,8 @@ impl ChatService {
             }
         }
         let adapter = StoreAdapter(self.store.clone(), user_id.to_string());
-        let files = cleanclaw_agent::IdentityFiles::load(
-            &adapter,
-            agent_id,
-            user_id,
-            user_id,
-        )
-        .await?;
+        let files =
+            cleanclaw_agent::IdentityFiles::load(&adapter, agent_id, user_id, user_id).await?;
 
         // Build the tool registry with builtins.
         let mut tools = cleanclaw_agent::ToolRegistry::new();
@@ -164,14 +163,18 @@ impl ChatService {
             user_id.to_string(),
             agent_id.to_string(),
         )));
-        tools.register(Arc::new(cleanclaw_agent::tools::cron_tool::ListCronTool::new(
-            self.store.clone(),
-            agent_id.to_string(),
-        )));
-        tools.register(Arc::new(cleanclaw_agent::tools::cron_tool::DeleteCronTool::new(
-            self.store.clone(),
-            user_id.to_string(),
-        )));
+        tools.register(Arc::new(
+            cleanclaw_agent::tools::cron_tool::ListCronTool::new(
+                self.store.clone(),
+                agent_id.to_string(),
+            ),
+        ));
+        tools.register(Arc::new(
+            cleanclaw_agent::tools::cron_tool::DeleteCronTool::new(
+                self.store.clone(),
+                user_id.to_string(),
+            ),
+        ));
 
         let agent = AgentBuilder::new(agent_id, user_id, model_name, provider, self.store.clone())
             .display_name(agent_id)
@@ -225,7 +228,9 @@ impl ChatService {
             }
         }
 
-        self.agents.write().insert(agent_id.to_string(), arc.clone());
+        self.agents
+            .write()
+            .insert(agent_id.to_string(), arc.clone());
         Ok(arc)
     }
 }
@@ -247,7 +252,9 @@ pub async fn stream(
         Ok(i) => i,
         Err(r) => return r,
     };
-    let model = req.model.unwrap_or_else(|| state.chat.default_model.clone());
+    let model = req
+        .model
+        .unwrap_or_else(|| state.chat.default_model.clone());
 
     // Drive the turn and forward every event from the broadcast
     // event hub as a server-sent-event. Mirrors the CleanClaw
@@ -258,7 +265,7 @@ pub async fn stream(
     //   event: tool_result\ndata: {"id":..., "result":...}\n\n
     //   event: done\ndata: {"finish_reason":..., "usage":...}\n\n
     //   event: error\ndata: {"message": "..."}\n\n
-//
+    //
     // Implementation note: we follow the same pattern as
     // `chat_ws::run_turn_and_stream` — subscribe to the hub
     // BEFORE spawning the turn, so no deltas are lost between
@@ -284,7 +291,13 @@ pub async fn stream(
     let turn_session = session_key.clone();
     let turn_task = tokio::spawn(async move {
         turn_chat
-            .run(&turn_user, &turn_agent, &turn_model, &turn_message, &turn_session)
+            .run(
+                &turn_user,
+                &turn_agent,
+                &turn_model,
+                &turn_message,
+                &turn_session,
+            )
             .await
     });
 
@@ -343,8 +356,8 @@ pub async fn stream(
     // exact bound axum expects.
     let stream = stream.map(Ok::<_, Infallible>);
 
-    let sse = Sse::new(stream)
-        .keep_alive(KeepAlive::new().interval(std::time::Duration::from_secs(15)));
+    let sse =
+        Sse::new(stream).keep_alive(KeepAlive::new().interval(std::time::Duration::from_secs(15)));
     sse.into_response()
 }
 
@@ -397,15 +410,39 @@ pub async fn get_history(
     // (preserves messages from older installs that wrote to
     // `session_messages` directly).
     let mut out: Vec<HistoryMessage> = Vec::new();
-    if let Ok(session) = state.store.get_session(&ident.user_id, &q.agent_id, &q.session_key).await {
+    if let Ok(session) = state
+        .store
+        .get_session(&ident.user_id, &q.agent_id, &q.session_key)
+        .await
+    {
         if let Some(arr) = session.messages.as_array() {
             for m in arr {
-                let role = m.get("role").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let content = m.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let thinking = m.get("thinking").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let role = m
+                    .get("role")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let content = m
+                    .get("content")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let thinking = m
+                    .get("thinking")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
                 let tool_calls = m.get("tool_calls").cloned().unwrap_or(Value::Null);
-                let tool_call_id = m.get("tool_call_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let name = m.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let tool_call_id = m
+                    .get("tool_call_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let name = m
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
                 out.push(HistoryMessage {
                     role,
                     content,
@@ -468,11 +505,7 @@ pub async fn list_sessions(
         Ok(i) => i,
         Err(r) => return r,
     };
-    let rows = match state
-        .store
-        .list_sessions(&ident.user_id, &q.agent_id)
-        .await
-    {
+    let rows = match state.store.list_sessions(&ident.user_id, &q.agent_id).await {
         Ok(v) => v,
         Err(e) => {
             return (
@@ -519,7 +552,11 @@ pub async fn rename_session(
     // The store's `rename_session` is keyed on the user/agent/session
     // triple, but the path only carries the session key. The
     // dashboard sends `?agent_id=<id>` alongside.
-    let agent_id = if q.agent_id.is_empty() { "default".to_string() } else { q.agent_id };
+    let agent_id = if q.agent_id.is_empty() {
+        "default".to_string()
+    } else {
+        q.agent_id
+    };
     if let Err(e) = state
         .store
         .rename_session(&ident.user_id, &agent_id, &key, &req.title)
@@ -550,7 +587,11 @@ pub async fn delete_session(
         Ok(i) => i,
         Err(r) => return r,
     };
-    let agent_id = if q.agent_id.is_empty() { "default".to_string() } else { q.agent_id };
+    let agent_id = if q.agent_id.is_empty() {
+        "default".to_string()
+    } else {
+        q.agent_id
+    };
     if let Err(e) = state
         .store
         .delete_session(&ident.user_id, &agent_id, &key)
@@ -581,10 +622,18 @@ pub async fn move_session_project(
         Ok(i) => i,
         Err(r) => return r,
     };
-    let agent_id = if q.agent_id.is_empty() { "default".to_string() } else { q.agent_id };
+    let agent_id = if q.agent_id.is_empty() {
+        "default".to_string()
+    } else {
+        q.agent_id
+    };
     // Read the existing session, update its project_id, then save
     // the new record.
-    let existing = match state.store.get_session(&ident.user_id, &agent_id, &key).await {
+    let existing = match state
+        .store
+        .get_session(&ident.user_id, &agent_id, &key)
+        .await
+    {
         Ok(s) => s,
         Err(_) => {
             return (
@@ -596,7 +645,11 @@ pub async fn move_session_project(
     };
     let mut s = existing;
     s.project_id = req.project_id.clone();
-    if let Err(e) = state.store.save_session(&ident.user_id, &agent_id, &key, &s).await {
+    if let Err(e) = state
+        .store
+        .save_session(&ident.user_id, &agent_id, &key, &s)
+        .await
+    {
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({ "error": e.to_string() })),
@@ -680,7 +733,11 @@ pub async fn create_project(
         )
             .into_response();
     }
-    (StatusCode::OK, Json(json!({ "id": project_id, "ok": true }))).into_response()
+    (
+        StatusCode::OK,
+        Json(json!({ "id": project_id, "ok": true })),
+    )
+        .into_response()
 }
 
 #[derive(Deserialize)]
@@ -701,7 +758,11 @@ pub async fn update_project(
         Ok(i) => i,
         Err(r) => return r,
     };
-    let existing = match state.store.get_project(&ident.user_id, &agent_id, &pid).await {
+    let existing = match state
+        .store
+        .get_project(&ident.user_id, &agent_id, &pid)
+        .await
+    {
         Ok(p) => p,
         Err(_) => {
             return (

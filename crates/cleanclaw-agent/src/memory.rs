@@ -19,9 +19,8 @@ pub async fn read_memory(workspace_root: &str) -> Result<String> {
     if !path.exists() {
         return Ok(String::new());
     }
-    std::fs::read_to_string(&path).map_err(|e| {
-        cleanclaw_core::CleanClawError::Internal(format!("read MEMORY.md: {e}"))
-    })
+    std::fs::read_to_string(&path)
+        .map_err(|e| cleanclaw_core::CleanClawError::Internal(format!("read MEMORY.md: {e}")))
 }
 
 /// Append a timestamped entry. Idempotent against concurrent writes
@@ -40,9 +39,9 @@ pub async fn append_memory(workspace_root: &str, entry: &str) -> Result<()> {
     use std::io::Write;
     let mut opts = std::fs::OpenOptions::new();
     opts.create(true).append(true);
-    let mut f = opts.open(&path).map_err(|e| {
-        cleanclaw_core::CleanClawError::Internal(format!("open MEMORY.md: {e}"))
-    })?;
+    let mut f = opts
+        .open(&path)
+        .map_err(|e| cleanclaw_core::CleanClawError::Internal(format!("open MEMORY.md: {e}")))?;
     f.write_all(body.as_bytes())
         .map_err(|e| cleanclaw_core::CleanClawError::Internal(format!("write MEMORY.md: {e}")))?;
     Ok(())
@@ -55,9 +54,8 @@ pub async fn compact_memory(workspace_root: &str, keep: usize) -> Result<usize> 
     if !path.exists() {
         return Ok(0);
     }
-    let content = std::fs::read_to_string(&path).map_err(|e| {
-        cleanclaw_core::CleanClawError::Internal(format!("read MEMORY.md: {e}"))
-    })?;
+    let content = std::fs::read_to_string(&path)
+        .map_err(|e| cleanclaw_core::CleanClawError::Internal(format!("read MEMORY.md: {e}")))?;
     let sections = split_sections(&content);
     if sections.len() <= keep {
         return Ok(0);
@@ -71,9 +69,8 @@ pub async fn compact_memory(workspace_root: &str, keep: usize) -> Result<usize> 
         new_content.push_str(&s);
         new_content.push('\n');
     }
-    std::fs::write(&path, new_content).map_err(|e| {
-        cleanclaw_core::CleanClawError::Internal(format!("write MEMORY.md: {e}"))
-    })?;
+    std::fs::write(&path, new_content)
+        .map_err(|e| cleanclaw_core::CleanClawError::Internal(format!("write MEMORY.md: {e}")))?;
     Ok(drop)
 }
 
@@ -123,7 +120,11 @@ pub async fn distill_session(messages: &[SimpleMessage]) -> String {
         .find(|m| m.role == "assistant")
         .map(|m| m.content.clone());
     match (last_user, last_assistant) {
-        (Some(u), Some(a)) => format!("User: {}\n\nAgent: {}", truncate(&u, 400), truncate(&a, 600)),
+        (Some(u), Some(a)) => format!(
+            "User: {}\n\nAgent: {}",
+            truncate(&u, 400),
+            truncate(&a, 600)
+        ),
         (Some(u), None) => format!("User: {}", truncate(&u, 400)),
         (None, Some(a)) => format!("Agent: {}", truncate(&a, 600)),
         (None, None) => String::new(),
@@ -191,7 +192,9 @@ mod tests {
             "# Memory\n\n## 2026-01-01T00:00:00Z\n\nfirst\n\n## 2026-02-01T00:00:00Z\n\nsecond\n\n## 2026-03-01T00:00:00Z\n\nthird\n",
         )
         .unwrap();
-        let dropped = compact_memory(dir.path().to_str().unwrap(), 2).await.unwrap();
+        let dropped = compact_memory(dir.path().to_str().unwrap(), 2)
+            .await
+            .unwrap();
         assert_eq!(dropped, 1);
         let after = std::fs::read_to_string(&path).unwrap();
         assert!(after.contains("third"));
@@ -200,7 +203,8 @@ mod tests {
 
     #[test]
     fn split_sections_splits_correctly() {
-        let content = "# Memory\n\n## 2026-01-01T00:00:00Z\n\nfirst\n\n## 2026-02-01T00:00:00Z\n\nsecond\n";
+        let content =
+            "# Memory\n\n## 2026-01-01T00:00:00Z\n\nfirst\n\n## 2026-02-01T00:00:00Z\n\nsecond\n";
         let sections = split_sections(content);
         assert_eq!(sections.len(), 2);
     }
@@ -208,10 +212,22 @@ mod tests {
     #[test]
     fn distill_picks_last_user_and_assistant() {
         let msgs = vec![
-            SimpleMessage { role: "user".into(), content: "earlier question".into() },
-            SimpleMessage { role: "assistant".into(), content: "earlier answer".into() },
-            SimpleMessage { role: "user".into(), content: "follow-up question".into() },
-            SimpleMessage { role: "assistant".into(), content: "follow-up answer".into() },
+            SimpleMessage {
+                role: "user".into(),
+                content: "earlier question".into(),
+            },
+            SimpleMessage {
+                role: "assistant".into(),
+                content: "earlier answer".into(),
+            },
+            SimpleMessage {
+                role: "user".into(),
+                content: "follow-up question".into(),
+            },
+            SimpleMessage {
+                role: "assistant".into(),
+                content: "follow-up answer".into(),
+            },
         ];
         let summary = futures::executor::block_on(distill_session(&msgs));
         assert!(summary.contains("follow-up question"));

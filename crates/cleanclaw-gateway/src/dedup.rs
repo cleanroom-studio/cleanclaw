@@ -45,7 +45,12 @@ impl Dedup {
         if g.contains_key(&key) {
             return true;
         }
-        g.insert(key, DedupEntry { seen_at: Instant::now() });
+        g.insert(
+            key,
+            DedupEntry {
+                seen_at: Instant::now(),
+            },
+        );
         false
     }
 
@@ -75,7 +80,10 @@ impl Default for Dedup {
 fn dedup_key(msg: &InboundMessage) -> String {
     if msg.peer_kind == "group" {
         let h = fnv1a(&msg.text);
-        format!("group:{}:{}:{}:{:08x}", msg.channel, msg.chat_id, msg.user_id, h)
+        format!(
+            "group:{}:{}:{}:{:08x}",
+            msg.channel, msg.chat_id, msg.user_id, h
+        )
     } else if !msg.message_id.is_empty() {
         format!("dm:{}:{}:{}", msg.channel, msg.account_id, msg.message_id)
     } else {
@@ -135,7 +143,10 @@ mod tests {
     #[tokio::test]
     async fn dedup_first_message_passes() {
         let d = Dedup::new();
-        assert!(!d.is_duplicate(&dm("telegram", "bot1", "c1", "m1", "hi")).await);
+        assert!(
+            !d.is_duplicate(&dm("telegram", "bot1", "c1", "m1", "hi"))
+                .await
+        );
     }
 
     #[tokio::test]
@@ -149,9 +160,18 @@ mod tests {
     #[tokio::test]
     async fn dedup_dm_message_id_distinguishes() {
         let d = Dedup::new();
-        assert!(!d.is_duplicate(&dm("telegram", "bot1", "c1", "m1", "hi")).await);
-        assert!(!d.is_duplicate(&dm("telegram", "bot1", "c1", "m2", "hi")).await);
-        assert!(d.is_duplicate(&dm("telegram", "bot1", "c1", "m1", "hi")).await);
+        assert!(
+            !d.is_duplicate(&dm("telegram", "bot1", "c1", "m1", "hi"))
+                .await
+        );
+        assert!(
+            !d.is_duplicate(&dm("telegram", "bot1", "c1", "m2", "hi"))
+                .await
+        );
+        assert!(
+            d.is_duplicate(&dm("telegram", "bot1", "c1", "m1", "hi"))
+                .await
+        );
     }
 
     #[tokio::test]
@@ -182,7 +202,8 @@ mod tests {
     #[tokio::test]
     async fn dedup_cleanup_removes_old_entries() {
         let d = Dedup::new();
-        d.is_duplicate(&dm("telegram", "bot1", "c1", "m1", "hi")).await;
+        d.is_duplicate(&dm("telegram", "bot1", "c1", "m1", "hi"))
+            .await;
         assert_eq!(d.len().await, 1);
         {
             let mut g = d.inner.lock().await;

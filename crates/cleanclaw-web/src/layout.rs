@@ -61,19 +61,71 @@ pub struct NavItem {
 /// The 15 nav items that live in the sidebar. Mirrors
 /// .
 pub const NAV_ITEMS: &[NavItem] = &[
-    NavItem { key: NavKey::Overview, label: "Overview", icon: "■" },
-    NavItem { key: NavKey::Chat, label: "Chat", icon: "✦" },
-    NavItem { key: NavKey::Agents, label: "Agents", icon: "✚" },
-    NavItem { key: NavKey::Channels, label: "Channels", icon: "✉" },
-    NavItem { key: NavKey::ChannelsConfig, label: "Channel config", icon: "⚙" },
-    NavItem { key: NavKey::Cron, label: "Scheduler", icon: "⏱" },
-    NavItem { key: NavKey::Models, label: "Models", icon: "◊" },
-    NavItem { key: NavKey::Providers, label: "Providers", icon: "↯" },
-    NavItem { key: NavKey::Skills, label: "Skills", icon: "★" },
-    NavItem { key: NavKey::Tools, label: "Tools", icon: "✤" },
-    NavItem { key: NavKey::Plugins, label: "Plugins", icon: "▣" },
-    NavItem { key: NavKey::ApiKeys, label: "API keys", icon: "⚷" },
-    NavItem { key: NavKey::Settings, label: "Settings", icon: "✦" },
+    NavItem {
+        key: NavKey::Overview,
+        label: "Overview",
+        icon: "■",
+    },
+    NavItem {
+        key: NavKey::Chat,
+        label: "Chat",
+        icon: "✦",
+    },
+    NavItem {
+        key: NavKey::Agents,
+        label: "Agents",
+        icon: "✚",
+    },
+    NavItem {
+        key: NavKey::Channels,
+        label: "Channels",
+        icon: "✉",
+    },
+    NavItem {
+        key: NavKey::ChannelsConfig,
+        label: "Channel config",
+        icon: "⚙",
+    },
+    NavItem {
+        key: NavKey::Cron,
+        label: "Scheduler",
+        icon: "⏱",
+    },
+    NavItem {
+        key: NavKey::Models,
+        label: "Models",
+        icon: "◊",
+    },
+    NavItem {
+        key: NavKey::Providers,
+        label: "Providers",
+        icon: "↯",
+    },
+    NavItem {
+        key: NavKey::Skills,
+        label: "Skills",
+        icon: "★",
+    },
+    NavItem {
+        key: NavKey::Tools,
+        label: "Tools",
+        icon: "✤",
+    },
+    NavItem {
+        key: NavKey::Plugins,
+        label: "Plugins",
+        icon: "▣",
+    },
+    NavItem {
+        key: NavKey::ApiKeys,
+        label: "API keys",
+        icon: "⚷",
+    },
+    NavItem {
+        key: NavKey::Settings,
+        label: "Settings",
+        icon: "✦",
+    },
 ];
 
 /// Render the sidebar nav. The active item gets a stronger background
@@ -90,7 +142,11 @@ pub fn sidebar(active: NavKey) -> String {
         let is_active = item.key == active;
         let cls = cn([
             "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-            if is_active { "bg-sidebar-accent text-sidebar-accent-foreground font-medium" } else { "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" },
+            if is_active {
+                "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+            } else {
+                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            },
         ]);
         out.push_str(&format!(
             r#"<a class="{cls}" href="{}"><span class="w-4 text-center text-base">{icon}</span><span>{label}</span></a>"#,
@@ -115,14 +171,23 @@ pub fn topbar(user_display: Option<&str>, user_role: Option<&str>) -> String {
         r#"<header class="{cls}"><div class="flex items-center gap-2"><a class="font-semibold" href="/overview">CleanClaw</a></div><div class="flex items-center gap-2"><a class="text-sm text-muted-foreground hover:text-foreground" href="/?theme=dark" title="Switch theme">◐</a><div class="flex items-center gap-2"><span class="text-sm">{display}</span>{role_badge}</div></div></header>"#,
         cls = cls,
         display = esc(display),
-        role_badge = if role.is_empty() { String::new() } else { format!(r#"<span class="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">{}</span>"#, esc(role)) },
+        role_badge = if role.is_empty() {
+            String::new()
+        } else {
+            format!(
+                r#"<span class="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">{}</span>"#,
+                esc(role)
+            )
+        },
     )
 }
 
 /// Render the full app shell. Returns the body fragment that goes
 /// inside the `<html>` envelope.
 pub fn app_shell(active: NavKey, body: &str, user: Option<(&str, &str)>) -> String {
-    let user_part = user.map(|(d, r)| topbar(Some(d), Some(r))).unwrap_or_else(|| topbar(None, None));
+    let user_part = user
+        .map(|(d, r)| topbar(Some(d), Some(r)))
+        .unwrap_or_else(|| topbar(None, None));
     format!(
         r#"<div class="flex min-h-screen">{sidebar}<div class="flex-1 flex flex-col">{topbar}<main class="flex-1 p-6">{body}</main></div></div>"#,
         sidebar = sidebar(active),
@@ -132,7 +197,13 @@ pub fn app_shell(active: NavKey, body: &str, user: Option<(&str, &str)>) -> Stri
 }
 
 /// Render a complete page (html envelope + shell + body).
-pub fn render(title: &str, active: NavKey, body: &str, user: Option<(&str, &str)>, theme: Theme) -> String {
+pub fn render(
+    title: &str,
+    active: NavKey,
+    body: &str,
+    user: Option<(&str, &str)>,
+    theme: Theme,
+) -> String {
     let body = app_shell(active, body, user);
     render_page(title, &body, BASE_CSS, theme)
 }
@@ -203,7 +274,13 @@ mod tests {
 
     #[test]
     fn render_wraps_full_doc() {
-        let s = render("Test", NavKey::Agents, "<p>x</p>", Some(("Ada", "user")), Theme::Light);
+        let s = render(
+            "Test",
+            NavKey::Agents,
+            "<p>x</p>",
+            Some(("Ada", "user")),
+            Theme::Light,
+        );
         assert!(s.starts_with("<!DOCTYPE"));
         assert!(s.contains("<title>Test</title>"));
     }

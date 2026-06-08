@@ -36,7 +36,9 @@ impl Tool for LoadSkillTool {
     async fn call(&self, _ctx: &ToolContext, args: Value) -> Result<Value> {
         let a: Args = serde_json::from_value(args)?;
         if a.name.is_empty() {
-            return Err(CleanClawError::InvalidArgument("skill name is required".into()));
+            return Err(CleanClawError::InvalidArgument(
+                "skill name is required".into(),
+            ));
         }
         // Search skill dirs in priority order. For the first cut we
         // just look under the workspace root + a `skills/` subdir.
@@ -46,7 +48,10 @@ impl Tool for LoadSkillTool {
             if let Ok(content) = std::fs::read_to_string(&path) {
                 // Substitute {baseDir} with the skill's absolute dir.
                 let abs = match std::fs::canonicalize(&path) {
-                    Ok(p) => p.parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default(),
+                    Ok(p) => p
+                        .parent()
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or_default(),
                     Err(_) => String::new(),
                 };
                 let substituted = content.replace("{baseDir}", &abs);

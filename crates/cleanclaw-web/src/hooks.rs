@@ -83,12 +83,18 @@ mod tests {
 
     #[test]
     fn extract_agent_id_with_tab() {
-        assert_eq!(extract_agent_id("/agents/abc/chat"), Some("abc".to_string()));
+        assert_eq!(
+            extract_agent_id("/agents/abc/chat"),
+            Some("abc".to_string())
+        );
     }
 
     #[test]
     fn extract_agent_id_with_project() {
-        assert_eq!(extract_agent_id("/agents/abc/project/p1"), Some("abc".to_string()));
+        assert_eq!(
+            extract_agent_id("/agents/abc/project/p1"),
+            Some("abc".to_string())
+        );
     }
 
     #[test]
@@ -100,7 +106,10 @@ mod tests {
     #[test]
     fn extract_agent_id_decodes() {
         // %20 = space
-        assert_eq!(extract_agent_id("/agents/ada%20bot/chat"), Some("ada bot".to_string()));
+        assert_eq!(
+            extract_agent_id("/agents/ada%20bot/chat"),
+            Some("ada bot".to_string())
+        );
     }
 
     #[test]
@@ -133,7 +142,10 @@ mod tests {
     #[test]
     fn mobile_viewport_user_agent_desktop() {
         let mut h = HeaderMap::new();
-        h.insert("user-agent", "Mozilla/5.0 (X11; Linux x86_64)".parse().unwrap());
+        h.insert(
+            "user-agent",
+            "Mozilla/5.0 (X11; Linux x86_64)".parse().unwrap(),
+        );
         assert!(!mobile_viewport(&h));
     }
 

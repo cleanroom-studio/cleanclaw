@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { getStatus } from '$lib/api';
+  import { onMount } from "svelte";
+  import { goto } from "$app/navigation";
+  import { getStatus } from "$lib/api";
 
   // Index route — if no users exist, send to /onboard;
   // otherwise show a tiny sign-in prompt (the actual login
@@ -13,12 +13,14 @@
       const s = await getStatus();
       // If the platform is unconfigured, push to /onboard.
       if (!s.user_count && !s.configured) {
-        await goto('/onboard/');
+        await goto("/onboard/");
       }
     } catch {}
   });
 </script>
 
-<div class="min-h-screen flex items-center justify-center text-zinc-400 text-sm">
+<div
+  class="min-h-screen flex items-center justify-center text-zinc-400 text-sm"
+>
   Redirecting…
 </div>

@@ -23,7 +23,11 @@ pub struct CronTool {
 
 impl CronTool {
     pub fn new(store: Arc<dyn Store>, user_id: String, agent_id: String) -> Self {
-        Self { store, user_id, agent_id }
+        Self {
+            store,
+            user_id,
+            agent_id,
+        }
     }
 }
 

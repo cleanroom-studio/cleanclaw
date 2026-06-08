@@ -34,9 +34,7 @@ pub use orchestrator::{Orchestrator, OrchestratorError};
 // `userspace::UserSpace` (a generic handle container used by the
 // in-process `UserSpaceCache`) is re-exported under a distinct name
 // to avoid clobbering the orchestrator's `UserSpace` type.
-pub use userspace::{
-    CacheStats, SpaceFactory, UserSpaceCache, UserSpace as UserSpaceHandle,
-};
+pub use userspace::{CacheStats, SpaceFactory, UserSpace as UserSpaceHandle, UserSpaceCache};
 pub use userspace_loader::{Binding, UserSpace, UserSpaceError};
 
 /// Per-(channel, account, chat) routing key used by the task queue
@@ -85,10 +83,7 @@ impl Gateway {
     /// plugin manager, channel manager, webhook bridge). The HTTP
     /// server is bound lazily by `start_http` so the orchestrator can
     /// still be inspected via tests without binding a port.
-    pub async fn boot(
-        env: EnvConfig,
-        port: u16,
-    ) -> Result<Arc<Self>, GatewayError> {
+    pub async fn boot(env: EnvConfig, port: u16) -> Result<Arc<Self>, GatewayError> {
         let bus = Arc::new(MessageBus::new(100));
         let home = cleanclaw_config::home_dir();
         // Clone the env so we can both pass it to the orchestrator
@@ -120,8 +115,8 @@ impl Gateway {
         // The default model falls back to `MiniMax-M3` (matches the
         // shipped `.env` / e2e tests) so a fresh install can stream
         // a turn without manually adding a provider first.
-        let default_model = std::env::var("CLEANCLAW_DEFAULT_MODEL")
-            .unwrap_or_else(|_| "MiniMax-M3".to_string());
+        let default_model =
+            std::env::var("CLEANCLAW_DEFAULT_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string());
 
         // Build the per-process toolprov registry. Built-ins are
         // registered up front so the `web_search` tool can dispatch

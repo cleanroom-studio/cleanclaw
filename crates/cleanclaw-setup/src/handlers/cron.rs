@@ -159,7 +159,11 @@ async fn create(
         created_at: now,
     };
     match state.store.save_cron_job(&job).await {
-        Ok(()) => (StatusCode::CREATED, Json(json!({"job": CronJobDto::from(job)}))).into_response(),
+        Ok(()) => (
+            StatusCode::CREATED,
+            Json(json!({"job": CronJobDto::from(job)})),
+        )
+            .into_response(),
         Err(e) => internal(e).into_response(),
     }
 }

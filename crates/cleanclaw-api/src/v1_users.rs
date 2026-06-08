@@ -92,11 +92,7 @@ fn user_err_to_response(e: cleanclaw_auth::users::UserError) -> axum::response::
                 .into_response();
         }
     };
-    (
-        status,
-        Json(json!({ "error": { "message": msg } })),
-    )
-        .into_response()
+    (status, Json(json!({ "error": { "message": msg } }))).into_response()
 }
 
 fn err_to_response(e: cleanclaw_core::CleanClawError) -> axum::response::Response {

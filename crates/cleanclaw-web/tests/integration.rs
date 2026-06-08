@@ -15,9 +15,7 @@ async fn pick_port() -> std::net::SocketAddr {
 
 async fn http_get(addr: std::net::SocketAddr, path: &str) -> (u16, String, String) {
     let mut s = TcpStream::connect(addr).await.unwrap();
-    let req = format!(
-        "GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"
-    );
+    let req = format!("GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
     s.write_all(req.as_bytes()).await.unwrap();
     let mut buf = Vec::new();
     s.read_to_end(&mut buf).await.unwrap();

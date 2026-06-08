@@ -50,14 +50,45 @@ impl IdentityFiles {
                 .map(|opt| opt.unwrap_or_default())
         }
         let soul = fetch_one(store, agent_id, owner_user_id, chatter_user_id, "SOUL.md").await?;
-        let identity = fetch_one(store, agent_id, owner_user_id, chatter_user_id, "IDENTITY.md").await?;
+        let identity = fetch_one(
+            store,
+            agent_id,
+            owner_user_id,
+            chatter_user_id,
+            "IDENTITY.md",
+        )
+        .await?;
         let user = fetch_one(store, agent_id, owner_user_id, chatter_user_id, "USER.md").await?;
-        let memory = fetch_one(store, agent_id, owner_user_id, chatter_user_id, "MEMORY.md").await?;
-        let agents = fetch_one(store, agent_id, owner_user_id, chatter_user_id, "AGENTS.md").await?;
-        let bootstrap = fetch_one(store, agent_id, owner_user_id, chatter_user_id, "BOOTSTRAP.md").await?;
-        let tools_md = fetch_one(store, agent_id, owner_user_id, chatter_user_id, "TOOLS.md").await?;
-        let heartbeat = fetch_one(store, agent_id, owner_user_id, chatter_user_id, "HEARTBEAT.md").await?;
-        let agent_json = fetch_one(store, agent_id, owner_user_id, chatter_user_id, "agent.json").await?;
+        let memory =
+            fetch_one(store, agent_id, owner_user_id, chatter_user_id, "MEMORY.md").await?;
+        let agents =
+            fetch_one(store, agent_id, owner_user_id, chatter_user_id, "AGENTS.md").await?;
+        let bootstrap = fetch_one(
+            store,
+            agent_id,
+            owner_user_id,
+            chatter_user_id,
+            "BOOTSTRAP.md",
+        )
+        .await?;
+        let tools_md =
+            fetch_one(store, agent_id, owner_user_id, chatter_user_id, "TOOLS.md").await?;
+        let heartbeat = fetch_one(
+            store,
+            agent_id,
+            owner_user_id,
+            chatter_user_id,
+            "HEARTBEAT.md",
+        )
+        .await?;
+        let agent_json = fetch_one(
+            store,
+            agent_id,
+            owner_user_id,
+            chatter_user_id,
+            "agent.json",
+        )
+        .await?;
         Ok(Self {
             soul,
             identity,
@@ -107,12 +138,7 @@ impl ContextBuilder {
 
     /// Render the system prompt. Order matches the CleanClaw convention
     /// (date anchor → identity scaffolding → skills).
-    pub fn build(
-        &self,
-        files: &IdentityFiles,
-        skills: &[Skill],
-        tools_section: &str,
-    ) -> String {
+    pub fn build(&self, files: &IdentityFiles, skills: &[Skill], tools_section: &str) -> String {
         let mut out = String::new();
 
         // 1. Date / timezone anchor.

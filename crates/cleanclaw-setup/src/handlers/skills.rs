@@ -42,10 +42,7 @@ pub fn router() -> Router<Arc<ServerState>> {
         .route("/api/skills/upload", post(upload_skill))
         .route("/api/skills/:name", delete(delete_skill))
         .route("/api/agents/:id/skills", get(list_agent_skills))
-        .route(
-            "/api/agents/:id/skills/:name",
-            delete(delete_agent_skill),
-        )
+        .route("/api/agents/:id/skills/:name", delete(delete_agent_skill))
 }
 
 #[derive(Serialize)]
@@ -96,10 +93,7 @@ async fn search_skills(
     let url = match source {
         "clawhub" => "https://api.clawhub.dev/skills".to_string(),
         // default: skills.sh
-        _ => format!(
-            "https://skills.sh/api/search?q={}",
-            urlencoding(q.q.trim())
-        ),
+        _ => format!("https://skills.sh/api/search?q={}", urlencoding(q.q.trim())),
     };
 
     let res = match state.http_client.get(&url).send().await {
@@ -135,28 +129,35 @@ async fn search_skills(
     // dashboard's expected `{ "results": [{name,description,source}] }`.
     // `clawhub` already returns the target shape, so we pass it
     // through unchanged when it's an array.
-    let results: Vec<serde_json::Value> = if let Some(arr) = body.get("skills").and_then(|v| v.as_array()) {
-        arr.iter().map(|s| {
-            let name = s.get("skillId").or_else(|| s.get("id"))
-                .and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let description = format!(
-                "{} · {} installs",
-                s.get("name").and_then(|v| v.as_str()).unwrap_or(&name),
-                s.get("installs").and_then(|v| v.as_i64()).unwrap_or(0)
-            );
-            let source_path = s.get("source").and_then(|v| v.as_str()).unwrap_or("");
-            json!({
-                "name": name,
-                "description": description,
-                "source": source_path,
-                "url": format!("https://skills.sh/{}", source_path),
-            })
-        }).collect()
-    } else if let Some(arr) = body.as_array() {
-        arr.clone()
-    } else {
-        Vec::new()
-    };
+    let results: Vec<serde_json::Value> =
+        if let Some(arr) = body.get("skills").and_then(|v| v.as_array()) {
+            arr.iter()
+                .map(|s| {
+                    let name = s
+                        .get("skillId")
+                        .or_else(|| s.get("id"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let description = format!(
+                        "{} · {} installs",
+                        s.get("name").and_then(|v| v.as_str()).unwrap_or(&name),
+                        s.get("installs").and_then(|v| v.as_i64()).unwrap_or(0)
+                    );
+                    let source_path = s.get("source").and_then(|v| v.as_str()).unwrap_or("");
+                    json!({
+                        "name": name,
+                        "description": description,
+                        "source": source_path,
+                        "url": format!("https://skills.sh/{}", source_path),
+                    })
+                })
+                .collect()
+        } else if let Some(arr) = body.as_array() {
+            arr.clone()
+        } else {
+            Vec::new()
+        };
     (StatusCode::OK, Json(json!({ "results": results }))).into_response()
 }
 
@@ -202,9 +203,7 @@ async fn install_skill(
     let target_dir = state.skills_target_dir();
     let client = state.http_client.clone();
     let install_result = match req.source.as_str() {
-        "github" => {
-            install_from_github(client, &req.spec, &req.name, &target_dir).await
-        }
+        "github" => install_from_github(client, &req.spec, &req.name, &target_dir).await,
         "tarball" => {
             let p = PathBuf::from(&req.spec);
             install_from_tarball(&p, &req.name, &target_dir).await
@@ -214,9 +213,9 @@ async fn install_skill(
             install_from_path(&p, &req.name, &target_dir).await
         }
         "clawhub" => install_from_clawhub(client, &req.spec, &target_dir).await,
-        other => Err(cleanclaw_skills::install::InstallError::Invalid(
-            format!("unknown source: {other}"),
-        )),
+        other => Err(cleanclaw_skills::install::InstallError::Invalid(format!(
+            "unknown source: {other}"
+        ))),
     };
     match install_result {
         Ok(r) => (

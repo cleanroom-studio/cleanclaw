@@ -208,7 +208,11 @@ mod tests {
         assert_eq!(ctr.load(Ordering::SeqCst), 1);
         let s2 = cache.get_or_create("u1").await;
         assert!(Arc::ptr_eq(&s1, &s2));
-        assert_eq!(ctr.load(Ordering::SeqCst), 1, "second hit must not call factory");
+        assert_eq!(
+            ctr.load(Ordering::SeqCst),
+            1,
+            "second hit must not call factory"
+        );
         let stats = cache.stats().await;
         assert_eq!(stats.entries, 1);
         assert_eq!(stats.hits, 1);

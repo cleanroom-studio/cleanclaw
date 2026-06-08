@@ -2,7 +2,9 @@
 //! . Lists the caller's
 //! apikeys and exposes create / delete / rotate / set-agents actions.
 
-use crate::html::{card_open, card_close, card_header, card_title, card_content, esc, badge, BadgeVariant, Theme};
+use crate::html::{
+    badge, card_close, card_content, card_header, card_open, card_title, esc, BadgeVariant, Theme,
+};
 use crate::layout::{render, NavKey};
 use crate::types::APIKey;
 
@@ -21,11 +23,22 @@ pub fn apikeys(theme: Theme, keys: &[APIKey]) -> String {
         card_header = card_header(),
         card_title = card_title("API keys"),
         card_content = card_content(""),
-        create_btn = crate::html::button("New key", crate::html::ButtonVariant::Default, crate::html::ButtonSize::Sm, Some("/apikeys/new")),
+        create_btn = crate::html::button(
+            "New key",
+            crate::html::ButtonVariant::Default,
+            crate::html::ButtonSize::Sm,
+            Some("/apikeys/new")
+        ),
         table = render_table(keys),
         card_close = card_close(),
     );
-    render("API keys · CleanClaw", NavKey::ApiKeys, &body, Some(("Ada", "user")), theme)
+    render(
+        "API keys · CleanClaw",
+        NavKey::ApiKeys,
+        &body,
+        Some(("Ada", "user")),
+        theme,
+    )
 }
 
 fn render_table(keys: &[APIKey]) -> String {

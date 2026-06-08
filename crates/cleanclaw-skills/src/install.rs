@@ -55,7 +55,13 @@ fn default_http_client() -> reqwest::Client {
 
 fn sanitize_path_component(s: &str) -> String {
     s.chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 
@@ -131,14 +137,15 @@ pub async fn install_from_github(
 ) -> std::result::Result<InstallResult, InstallError> {
     let parts: Vec<&str> = repo.splitn(2, '/').collect();
     if parts.len() != 2 {
-        return Err(InstallError::Invalid(format!("repo must be owner/repo, got {repo}")));
+        return Err(InstallError::Invalid(format!(
+            "repo must be owner/repo, got {repo}"
+        )));
     }
     let (owner, name) = (parts[0], parts[1]);
     let mut last_err: Option<InstallError> = None;
     for branch in ["main", "master"] {
-        let tar_url = format!(
-            "https://codeload.github.com/{owner}/{name}/tar.gz/refs/heads/{branch}"
-        );
+        let tar_url =
+            format!("https://codeload.github.com/{owner}/{name}/tar.gz/refs/heads/{branch}");
         let resp = client
             .get(&tar_url)
             .send()
@@ -240,11 +247,7 @@ pub async fn install_from_path(
     })
 }
 
-fn extract_tar_gz(
-    data: &[u8],
-    subpath: &str,
-    dest: &Path,
-) -> Result<usize, InstallError> {
+fn extract_tar_gz(data: &[u8], subpath: &str, dest: &Path) -> Result<usize, InstallError> {
     let gz = GzDecoder::new(data);
     let mut archive = Archive::new(gz);
     std::fs::create_dir_all(dest)?;
@@ -406,7 +409,9 @@ mod tests {
         tokio::fs::create_dir_all(&src).await.unwrap();
         tokio::fs::write(src.join("a.txt"), b"hello").await.unwrap();
         tokio::fs::create_dir_all(src.join("sub")).await.unwrap();
-        tokio::fs::write(src.join("sub/b.txt"), b"world").await.unwrap();
+        tokio::fs::write(src.join("sub/b.txt"), b"world")
+            .await
+            .unwrap();
 
         let target = dir.path().join("target");
         let r = install_from_path(&src, "", &target).await.unwrap();
@@ -439,7 +444,8 @@ mod tests {
         let mut header = tar::Header::new_gnu();
         header.set_size(data.len() as u64);
         header.set_mode(0o644);
-        b.append_data(&mut header, "skill-SHA/file.txt", &data[..]).unwrap();
+        b.append_data(&mut header, "skill-SHA/file.txt", &data[..])
+            .unwrap();
         let gz = b.into_inner().unwrap();
         let _ = gz.finish().unwrap();
         let target = dir.path().join("out");
