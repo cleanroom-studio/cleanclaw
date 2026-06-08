@@ -20,6 +20,7 @@ use axum::{
 };
 use cleanclaw_core::CleanClawError;
 use cleanclaw_store::Store;
+use serde_json::Value;
 use serde_json::json;
 
 use crate::ServerState;
@@ -44,6 +45,20 @@ async fn read_tools(State(state): State<Arc<ServerState>>) -> impl IntoResponse 
     (StatusCode::OK, Json(json!({"tools": value}))).into_response()
 }
 
+/// Whitelist of providers we know how to talk to. Any other name
+/// the dashboard sends is dropped on the floor so a typo can't
+/// silently re-route searches to a dead upstream.
+const WEB_SEARCH_PROVIDERS: &[&str] = &[
+    "duckduckgo",
+    "brave",
+    "bing",
+    "google",
+    "baidu",
+    "searxng",
+    "exa",
+    "none",
+];
+
 async fn write_tools(
     State(state): State<Arc<ServerState>>,
     Json(body): Json<serde_json::Value>,
@@ -52,6 +67,26 @@ async fn write_tools(
         .get("tools")
         .cloned()
         .unwrap_or_else(|| body.clone());
+    // Sanitize web_search.provider against the whitelist so a
+    // typo or an untrusted admin can't route searches to a
+    // provider we never registered.
+    let mut value = value;
+    if let Some(ws) = value.get_mut("web_search").and_then(|v| v.as_object_mut()) {
+        if let Some(p) = ws.get("provider").and_then(|v| v.as_str()) {
+            if !WEB_SEARCH_PROVIDERS.contains(&p) {
+                ws.insert(
+                    "provider".to_string(),
+                    Value::String("duckduckgo".to_string()),
+                );
+            }
+        }
+        // Also ensure the category object has the standard shape
+        // (enabled + provider + optional api_key + endpoint) so
+        // downstream code can rely on it.
+        if !ws.contains_key("enabled") {
+            ws.insert("enabled".to_string(), Value::Bool(true));
+        }
+    }
     let now = chrono::Utc::now();
     let rec = cleanclaw_store::models::ConfigRecord {
         id: format!("cfg_{}", uuid::Uuid::new_v4().simple()),
@@ -74,7 +109,12 @@ async fn write_tools(
 
 fn default_tools_config() -> serde_json::Value {
     json!({
-        "web_search": { "enabled": true,  "provider": "brave" },
+        // DuckDuckGo is the default primary because it ships
+        // credential-free and works out-of-the-box without an
+        // API key — operators who want better relevance add a
+        // key-bearing provider (brave / bing / google) which
+        // the chain will pick up via the tools.chain() list.
+        "web_search": { "enabled": true,  "provider": "duckduckgo" },
         "image_gen":  { "enabled": false, "provider": "openai" },
         "tts":        { "enabled": false, "provider": "openai" },
         "webfetch":   { "enabled": true,  "provider": "direct" },

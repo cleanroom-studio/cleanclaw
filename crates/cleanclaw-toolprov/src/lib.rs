@@ -702,6 +702,476 @@ pub mod websearch {
             Ok(Response::from_text(out))
         }
     }
+
+    /// DuckDuckGo HTML search — `credential_free` (no key).
+    /// Scrapes `https://html.duckduckgo.com/html/?q=...` (the
+    /// "lite" endpoint) and returns the top `n` results. Used as
+    /// the default primary so the dashboard works out-of-the-box
+    /// even when no paid search API is configured.
+    pub struct DuckDuckGo {
+        client: reqwest::Client,
+    }
+
+    impl DuckDuckGo {
+        pub fn new(client: reqwest::Client) -> Self {
+            Self { client }
+        }
+    }
+
+    #[async_trait]
+    impl Provider for DuckDuckGo {
+        fn category(&self) -> &'static str {
+            CATEGORY
+        }
+        fn name(&self) -> &'static str {
+            "duckduckgo"
+        }
+        fn credential_free(&self) -> bool {
+            true
+        }
+        async fn execute(&self, req: Request) -> Result<Response, ProviderError> {
+            let (query, n) = parse_args(&req.args)?;
+            // DDG's "lite" HTML endpoint requires a UA and the
+            // POST form. We send as POST so the q= is in the body,
+            // matching what a browser would do.
+            let resp = self
+                .client
+                .post("https://html.duckduckgo.com/html/")
+                .header("User-Agent", "Mozilla/5.0 (compatible; CleanClaw/0.1)")
+                .form(&[("q", query.as_str())])
+                .send()
+                .await
+                .map_err(|e| ProviderError::Http(e.to_string()))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let txt = resp.text().await.unwrap_or_default();
+                return Err(ProviderError::Upstream(format!("duckduckgo {status}: {txt}")));
+            }
+            let html = resp.text().await.map_err(|e| ProviderError::Decode(e.to_string()))?;
+            // Cheap HTML extraction: `<a class="result__a" href="…" rel="noopener">title</a>`
+            // followed by `.result__snippet`. The class names are
+            // stable across DDG's HTML lite endpoint.
+            let mut out = String::new();
+            out.push_str(&format!("Search results for: {query}\n\n"));
+            let mut idx = 0;
+            let bytes = html.as_bytes();
+            let needle = b"class=\"result__a\"";
+            let mut cursor = 0usize;
+            while idx < n && cursor < bytes.len() {
+                if let Some(pos) = find_from(&bytes[cursor..], needle) {
+                    cursor += pos + needle.len();
+                    // Walk to the closing `>` of the opening tag.
+                    if let Some(end_tag) = bytes[cursor..].iter().position(|&b| b == b'>') {
+                        cursor += end_tag + 1;
+                    }
+                    // Read up to `</a>` for the title.
+                    if let Some(end_a) = find_from(&bytes[cursor..], b"</a>") {
+                        let title = decode_html_entities(
+                            std::str::from_utf8(&bytes[cursor..cursor + end_a])
+                                .unwrap_or("")
+                                .trim(),
+                        );
+                        // URL: walk back from the title's anchor
+                        // to find `href="…"` on the same line.
+                        let url_start = bytes[..cursor + end_a]
+                            .windows(5)
+                            .rposition(|w| w == b"href=\"")
+                            .map(|p| p + 6)
+                            .unwrap_or(cursor);
+                        let url_end = bytes[url_start..]
+                            .iter()
+                            .position(|&b| b == b'"')
+                            .unwrap_or(0);
+                        let url = decode_html_entities(
+                            std::str::from_utf8(&bytes[url_start..url_start + url_end])
+                                .unwrap_or("")
+                                .trim(),
+                        );
+                        // Snippet: optional `<a class="result__snippet"…>…</a>`.
+                        let snip: Option<String> = (|| -> Option<String> {
+                            let sn_start = find_from(
+                                &bytes[cursor + end_a..],
+                                b"class=\"result__snippet\"",
+                            )?;
+                            let abs = cursor + end_a + sn_start;
+                            let end_s = bytes[abs..].iter().position(|&b| b == b'>')?;
+                            let s = abs + end_s + 1;
+                            let e = find_from(&bytes[s..], b"</a>")?;
+                            Some(decode_html_entities(
+                                std::str::from_utf8(&bytes[s..s + e]).unwrap_or("").trim(),
+                            ))
+                        })();
+                        idx += 1;
+                        out.push_str(&format!(
+                            "{}. {}\n   {}\n{}\n\n",
+                            idx,
+                            if title.is_empty() { "(no title)" } else { &title },
+                            if url.is_empty() { "(no url)" } else { &url },
+                            snip.unwrap_or_default(),
+                        ));
+                        cursor += end_a + 4;
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+            if idx == 0 {
+                return Err(ProviderError::NoResults("duckduckgo"));
+            }
+            Ok(Response::from_text(out))
+        }
+    }
+
+    /// Microsoft Bing Web Search API v7.
+    /// Endpoint: `GET https://api.bing.microsoft.com/v7.0/search?q=...`
+    /// Header:   `Ocp-Apim-Subscription-Key: <key>`
+    pub struct Bing {
+        client: reqwest::Client,
+    }
+
+    impl Bing {
+        pub fn new(client: reqwest::Client) -> Self {
+            Self { client }
+        }
+    }
+
+    #[async_trait]
+    impl Provider for Bing {
+        fn category(&self) -> &'static str {
+            CATEGORY
+        }
+        fn name(&self) -> &'static str {
+            "bing"
+        }
+        async fn execute(&self, req: Request) -> Result<Response, ProviderError> {
+            let (query, n) = parse_args(&req.args)?;
+            if req.config.api_key.is_empty() {
+                return Err(ProviderError::MissingApiKey("bing"));
+            }
+            let endpoint = if req.config.endpoint.is_empty() {
+                "https://api.bing.microsoft.com/v7.0/search"
+            } else {
+                req.config.endpoint.as_str()
+            };
+            let resp = self
+                .client
+                .get(endpoint)
+                .header("Ocp-Apim-Subscription-Key", &req.config.api_key)
+                .query(&[("q", query.as_str()), ("count", &n.to_string())])
+                .send()
+                .await
+                .map_err(|e| ProviderError::Http(e.to_string()))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let txt = resp.text().await.unwrap_or_default();
+                return Err(ProviderError::Upstream(format!("bing {status}: {txt}")));
+            }
+            let v: serde_json::Value = resp
+                .json()
+                .await
+                .map_err(|e| ProviderError::Decode(e.to_string()))?;
+            let mut out = String::new();
+            out.push_str(&format!("Search results for: {query}\n\n"));
+            let results = v
+                .get("webPages")
+                .and_then(|w| w.get("value"))
+                .and_then(|r| r.as_array())
+                .cloned()
+                .unwrap_or_default();
+            for (i, r) in results.iter().take(n).enumerate() {
+                let title = r.get("name").and_then(|x| x.as_str()).unwrap_or("");
+                let url = r.get("url").and_then(|x| x.as_str()).unwrap_or("");
+                let snippet = r.get("snippet").and_then(|x| x.as_str()).unwrap_or("");
+                out.push_str(&format!(
+                    "{}. {}\n   {}\n   {}\n\n",
+                    i + 1,
+                    title,
+                    url,
+                    snippet
+                ));
+            }
+            if results.is_empty() {
+                return Err(ProviderError::NoResults("bing"));
+            }
+            Ok(Response::from_text(out))
+        }
+    }
+
+    /// Google Programmable Search Engine (Custom Search JSON API).
+    /// Endpoint: `GET https://www.googleapis.com/customsearch/v1?q=…&key=…&cx=…`
+    /// The `cx` (search-engine id) is taken from the `endpoint`
+    /// config field (formatted as `cx=<id>`) so we don't have to
+    /// extend the `ProviderConfig` struct just for this.
+    pub struct Google {
+        client: reqwest::Client,
+    }
+
+    impl Google {
+        pub fn new(client: reqwest::Client) -> Self {
+            Self { client }
+        }
+    }
+
+    #[async_trait]
+    impl Provider for Google {
+        fn category(&self) -> &'static str {
+            CATEGORY
+        }
+        fn name(&self) -> &'static str {
+            "google"
+        }
+        async fn execute(&self, req: Request) -> Result<Response, ProviderError> {
+            let (query, n) = parse_args(&req.args)?;
+            if req.config.api_key.is_empty() {
+                return Err(ProviderError::MissingApiKey("google"));
+            }
+            // Parse `cx=` out of the endpoint field, e.g.
+            // "cx=0123456789abcdef" or "https://cse.google.com/cse?cx=…"
+            let cx = req
+                .config
+                .endpoint
+                .split('?')
+                .last()
+                .unwrap_or("")
+                .split('&')
+                .find_map(|kv| kv.strip_prefix("cx="))
+                .unwrap_or("")
+                .to_string();
+            if cx.is_empty() {
+                return Err(ProviderError::InvalidArgs(
+                    "google: missing `cx` (set endpoint to `cx=<engine-id>`)".into(),
+                ));
+            }
+            let resp = self
+                .client
+                .get("https://www.googleapis.com/customsearch/v1")
+                .query(&[
+                    ("q", query.as_str()),
+                    ("key", req.config.api_key.as_str()),
+                    ("cx", cx.as_str()),
+                    ("num", &n.to_string()),
+                ])
+                .send()
+                .await
+                .map_err(|e| ProviderError::Http(e.to_string()))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let txt = resp.text().await.unwrap_or_default();
+                return Err(ProviderError::Upstream(format!("google {status}: {txt}")));
+            }
+            let v: serde_json::Value = resp
+                .json()
+                .await
+                .map_err(|e| ProviderError::Decode(e.to_string()))?;
+            let mut out = String::new();
+            out.push_str(&format!("Search results for: {query}\n\n"));
+            let results = v.get("items").and_then(|r| r.as_array()).cloned().unwrap_or_default();
+            for (i, r) in results.iter().take(n).enumerate() {
+                let title = r.get("title").and_then(|x| x.as_str()).unwrap_or("");
+                let url = r.get("link").and_then(|x| x.as_str()).unwrap_or("");
+                let snippet = r.get("snippet").and_then(|x| x.as_str()).unwrap_or("");
+                out.push_str(&format!(
+                    "{}. {}\n   {}\n   {}\n\n",
+                    i + 1,
+                    title,
+                    url,
+                    snippet
+                ));
+            }
+            if results.is_empty() {
+                return Err(ProviderError::NoResults("google"));
+            }
+            Ok(Response::from_text(out))
+        }
+    }
+
+    /// Baidu search — `credential_free` (no key, but Baidu
+    /// sometimes serves a captcha to non-CN IPs; the chain will
+    /// transparently fall through to the next provider in that
+    /// case). Endpoint: `https://www.baidu.com/s?wd=…`
+    pub struct Baidu {
+        client: reqwest::Client,
+    }
+
+    impl Baidu {
+        pub fn new(client: reqwest::Client) -> Self {
+            Self { client }
+        }
+    }
+
+    #[async_trait]
+    impl Provider for Baidu {
+        fn category(&self) -> &'static str {
+            CATEGORY
+        }
+        fn name(&self) -> &'static str {
+            "baidu"
+        }
+        fn credential_free(&self) -> bool {
+            true
+        }
+        async fn execute(&self, req: Request) -> Result<Response, ProviderError> {
+            let (query, n) = parse_args(&req.args)?;
+            // Baidu's HTML search needs a referer + a modern UA
+            // to avoid the anti-bot page; we use the desktop UA
+            // the browser would send.
+            let resp = self
+                .client
+                .get("https://www.baidu.com/s")
+                .header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36")
+                .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+                .query(&[("wd", query.as_str())])
+                .send()
+                .await
+                .map_err(|e| ProviderError::Http(e.to_string()))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let txt = resp.text().await.unwrap_or_default();
+                return Err(ProviderError::Upstream(format!("baidu {status}: {txt}")));
+            }
+            let html = resp.text().await.map_err(|e| ProviderError::Decode(e.to_string()))?;
+            // Baidu's result entries: `<h3 class="t"><a href="…" …>title</a></h3>`.
+            // The actual destination URL is in the surrounding
+            // `<a>` whose `href` is a redirect — but the visible
+            // text is what we want.
+            let mut out = String::new();
+            out.push_str(&format!("Search results for: {query}\n\n"));
+            let bytes = html.as_bytes();
+            let needle = b"<h3 class=\"t\"";
+            let mut cursor = 0usize;
+            let mut idx = 0;
+            while idx < n {
+                let Some(pos) = find_from(&bytes[cursor..], needle) else { break };
+                cursor += pos + needle.len();
+                // Skip the rest of the <h3 …> opening tag.
+                if let Some(gt) = bytes[cursor..].iter().position(|&b| b == b'>') {
+                    cursor += gt + 1;
+                } else { break; }
+                // The title sits inside the <a>…</a> immediately after.
+                if let Some(a_end) = find_from(&bytes[cursor..], b"</a>") {
+                    let raw = std::str::from_utf8(&bytes[cursor..cursor + a_end])
+                        .unwrap_or("")
+                        .trim();
+                    let title = decode_html_entities(&strip_tags(raw));
+                    // The redirect URL is in the parent <a> tag's
+                    // `href`. Walk back to find it.
+                    let url_start = bytes[..cursor]
+                        .windows(5)
+                        .rposition(|w| w == b"href=\"")
+                        .map(|p| {
+                            // Find the end of that anchor tag.
+                            let after = p + 6;
+                            let _ = after;
+                            p + 6
+                        })
+                        .unwrap_or(cursor);
+                    let url_end = bytes[url_start..]
+                        .iter()
+                        .position(|&b| b == b'"')
+                        .unwrap_or(0);
+                    let url_raw = std::str::from_utf8(&bytes[url_start..url_start + url_end])
+                        .unwrap_or("");
+                    let url = if url_raw.starts_with("http") {
+                        url_raw.to_string()
+                    } else {
+                        String::new()
+                    };
+                    idx += 1;
+                    out.push_str(&format!(
+                        "{}. {}\n   {}\n\n",
+                        idx,
+                        if title.is_empty() { "(no title)" } else { &title },
+                        if url.is_empty() { "(no url)" } else { &url },
+                    ));
+                    cursor += a_end + 4;
+                } else { break; }
+            }
+            if idx == 0 {
+                return Err(ProviderError::NoResults("baidu"));
+            }
+            Ok(Response::from_text(out))
+        }
+    }
+}
+
+/// Find the first occurrence of `needle` in `haystack` starting
+/// from `start`. Returns the byte offset relative to `start`, or
+/// `None` if not found.
+fn find_from(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    if needle.is_empty() || haystack.len() < needle.len() {
+        return None;
+    }
+    haystack.windows(needle.len()).position(|w| w == needle)
+}
+
+/// Decode the small subset of HTML entities that turn up in
+/// search-result titles (`&amp;` / `&lt;` / `&gt;` / `&quot;` /
+/// `&#39;` / `&nbsp;` / numeric entities). Avoids pulling in a
+/// full HTML-decoder crate.
+fn decode_html_entities(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'&' {
+            if let Some(end) = bytes[i..].iter().position(|&b| b == b';') {
+                let end_abs = i + end;
+                if end_abs - i <= 8 {
+                    let entity = &s[i..=end_abs];
+                    let decoded: Option<String> = match entity {
+                        "&amp;" => Some("&".to_string()),
+                        "&lt;" => Some("<".to_string()),
+                        "&gt;" => Some(">".to_string()),
+                        "&quot;" => Some("\"".to_string()),
+                        "&#39;" => Some("'".to_string()),
+                        "&apos;" => Some("'".to_string()),
+                        "&nbsp;" => Some(" ".to_string()),
+                        _ if entity.starts_with("&#x") => {
+                            u32::from_str_radix(&entity[3..entity.len() - 1], 16)
+                                .ok()
+                                .and_then(char::from_u32)
+                                .map(|c| c.to_string())
+                        }
+                        _ if entity.starts_with("&#") => {
+                            entity[2..entity.len() - 1].parse::<u32>().ok()
+                                .and_then(char::from_u32)
+                                .map(|c| c.to_string())
+                        }
+                        _ => None,
+                    };
+                    if let Some(d) = decoded {
+                        out.push_str(&d);
+                        i = end_abs + 1;
+                        continue;
+                    }
+                }
+            }
+        }
+        // SAFETY: `i` always lands on a UTF-8 char boundary
+        // because we only advance past `;` (which is ASCII).
+        let ch = s[i..].chars().next().unwrap();
+        out.push(ch);
+        i += ch.len_utf8();
+    }
+    out
+}
+
+/// Strip `<…>` tags from a string — used to remove inner `<em>`
+/// / `<span>` markup from scraped search-result titles. Returns
+/// an owned `String` to avoid lifetime gymnastics; the inputs
+/// are small (one search-result title) so the alloc is cheap.
+fn strip_tags(s: &str) -> String {
+    if let Some(start) = s.find('<') {
+        if let Some(end) = s[start..].find('>') {
+            let mut out = String::with_capacity(s.len());
+            out.push_str(&s[..start]);
+            out.push_str(&strip_tags(&s[start + end + 1..]));
+            return out;
+        }
+    }
+    s.to_string()
 }
 
 /// Convenience: register every built-in provider this crate ships.
@@ -718,7 +1188,11 @@ pub fn register_builtin(reg: &Registry) {
     reg.register(Arc::new(webfetch::Direct::new(client.clone())));
     reg.register(Arc::new(webfetch::Jina::new(client.clone())));
     reg.register(Arc::new(websearch::None));
+    reg.register(Arc::new(websearch::DuckDuckGo::new(client.clone())));
     reg.register(Arc::new(websearch::Brave::new(client.clone())));
+    reg.register(Arc::new(websearch::Bing::new(client.clone())));
+    reg.register(Arc::new(websearch::Google::new(client.clone())));
+    reg.register(Arc::new(websearch::Baidu::new(client.clone())));
     // The 7 additional backends (Fal / Replicate / ElevenLabs /
     // Fish / MiniMax / Firecrawl / Exa / SearXNG) live in
     // `extra_backends` and are registered separately so the

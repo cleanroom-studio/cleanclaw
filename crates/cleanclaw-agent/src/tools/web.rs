@@ -1,16 +1,19 @@
 //! `web_fetch` and `web_search` tools.
 //!
-//! For the first cut these are minimal placeholders that surface the URL
-//! content (web_fetch) or return a stub response (web_search). The full
-//! tool provider / chain implementation lives in `cleanclaw-toolprov`
-//! (future phase) — when the providers are registered, these tools will
-//! dispatch to them.
+//! `web_fetch` is a direct reqwest call (the model needs the
+//! ability to grab any URL on demand, not just configured
+//! providers). `web_search` dispatches into the toolprov chain
+//! — operators pick the upstream (DuckDuckGo, Brave, Bing,
+//! Google, Baidu) via the Tools page; the chain runs primary
+//! first then fallbacks on credential / network errors.
 
 use super::{Tool, ToolContext};
 use async_trait::async_trait;
 use cleanclaw_core::{CleanClawError, Result};
+use cleanclaw_toolprov::{websearch, ProviderConfig, Registry as ToolprovRegistry};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use std::sync::Arc;
 
 pub struct WebFetchTool;
 
@@ -73,7 +76,23 @@ impl Tool for WebFetchTool {
     }
 }
 
-pub struct WebSearchTool;
+/// `web_search` — dispatches to the toolprov chain. The
+/// `Arc<Registry>` is the per-process toolprov registry built
+/// at gateway boot (see `ChatService::new_with_toolprov`).
+///
+/// Per-call credentials come through `ToolContext.extra` under
+/// the key `"web_search_configs"`, populated by the chat
+/// service before each turn. The shape matches `HashMap<String,
+/// ProviderConfig>` keyed by provider name.
+pub struct WebSearchTool {
+    pub registry: Arc<ToolprovRegistry>,
+}
+
+impl WebSearchTool {
+    pub fn new(registry: Arc<ToolprovRegistry>) -> Self {
+        Self { registry }
+    }
+}
 
 #[derive(Deserialize)]
 struct SearchArgs {
@@ -82,13 +101,15 @@ struct SearchArgs {
     limit: Option<usize>,
 }
 
+const CONFIGS_KEY: &str = "web_search_configs";
+
 #[async_trait]
 impl Tool for WebSearchTool {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "web_search"
     }
-    fn description(&self) -> &str {
-        "Search the web. Returns an ordered list of {title, url, snippet}. Backed by the agent's configured search provider chain."
+    fn description(&self) -> &'static str {
+        "Search the web. Returns an ordered list of {title, url, snippet}. Backed by the operator-configured search chain (DuckDuckGo / Brave / Bing / Google / Baidu). Works without an API key via the default DuckDuckGo primary."
     }
     fn parameters(&self) -> Value {
         json!({
@@ -100,13 +121,46 @@ impl Tool for WebSearchTool {
             "required": ["query"]
         })
     }
-    async fn call(&self, _ctx: &ToolContext, args: Value) -> Result<Value> {
-        let a: SearchArgs = serde_json::from_value(args)?;
-        // Web search is plumbed through the tool-provider chain; for
-        // the first cut we surface a clear "not configured" message
-        // instead of a silent failure so the model knows what to do.
-        Err(CleanClawError::NotImplemented(
-            "web_search: no provider configured. Add one via the dashboard's Tools page or `cleanclaw provider add`.".into()
-        ))
+    async fn call(&self, ctx: &ToolContext, args: Value) -> Result<Value> {
+        let mut args = args;
+        let a: SearchArgs = serde_json::from_value(args.clone())?;
+        // Mirror the LLM's `limit` into the provider chain's
+        // `n` argument so providers can clamp their own result
+        // window.
+        if let Some(n) = a.limit {
+            args.as_object_mut()
+                .map(|o| o.insert("n".to_string(), json!(n)));
+        }
+        let chain = cleanclaw_toolprov::Chain::from_registry(
+            &self.registry,
+            websearch::CATEGORY,
+        );
+        if chain.is_empty() {
+            return Err(CleanClawError::NotImplemented(
+                "web_search: no provider registered in the toolprov chain".into(),
+            ));
+        }
+        // Pull the per-provider credentials out of ToolContext.extra.
+        // The chat service stashes them there before each turn
+        // (after reading the system tools config row).
+        let configs: std::collections::HashMap<String, ProviderConfig> = ctx
+            .extra
+            .get(CONFIGS_KEY)
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_default();
+        let make_req = |p: &dyn cleanclaw_toolprov::Provider| {
+            let cfg = configs
+                .get(p.name())
+                .cloned()
+                .unwrap_or_else(|| ProviderConfig::default());
+            cleanclaw_toolprov::Request {
+                args: args.clone(),
+                config: cfg,
+            }
+        };
+        match chain.run(make_req).await {
+            Ok(r) => Ok(json!({ "results": r.text })),
+            Err(e) => Err(CleanClawError::Upstream(format!("web_search: {e}"))),
+        }
     }
 }

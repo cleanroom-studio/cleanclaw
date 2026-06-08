@@ -31,16 +31,34 @@ pub struct ChatService {
     pub store: Arc<dyn Store>,
     pub event_hub: SharedEventHub,
     pub agents: parking_lot::RwLock<std::collections::HashMap<String, Arc<cleanclaw_agent::Agent>>>,
+    /// Per-process toolprov registry. Built once at gateway boot
+    /// (see `Gateway::boot`) and shared with every agent so the
+    /// `web_search` tool can dispatch to the operator-configured
+    /// chain.
+    pub toolprov: Arc<cleanclaw_toolprov::Registry>,
 }
 
 impl ChatService {
     pub fn new(store: Arc<dyn Store>, default_model: String) -> Self {
+        Self::new_with_toolprov(store, default_model, Arc::new(cleanclaw_toolprov::Registry::new()))
+    }
+
+    /// Construct with a pre-built toolprov registry. The gateway
+    /// uses this to share the registry across the whole process;
+    /// tests can call `ChatService::new` to get a fresh empty
+    /// registry and then `register_builtin` on it.
+    pub fn new_with_toolprov(
+        store: Arc<dyn Store>,
+        default_model: String,
+        toolprov: Arc<cleanclaw_toolprov::Registry>,
+    ) -> Self {
         Self {
             providers: Default::default(),
             default_model,
             store,
             event_hub: cleanclaw_agent::event_hub::new_shared(1024),
             agents: Default::default(),
+            toolprov,
         }
     }
 
@@ -139,7 +157,7 @@ impl ChatService {
 
         // Build the tool registry with builtins.
         let mut tools = cleanclaw_agent::ToolRegistry::new();
-        builtins::register_builtins(&mut tools);
+        builtins::register_builtins(&mut tools, &self.toolprov);
         // Wire the cron tools.
         tools.register(Arc::new(cleanclaw_agent::tools::cron_tool::CronTool::new(
             self.store.clone(),
@@ -165,6 +183,48 @@ impl ChatService {
             .identity(files)
             .build();
         let arc = Arc::new(agent);
+
+        // Read the system tools config (Brave key / Bing key /
+        // Google cx / etc.) and stash it on the agent's
+        // `tool_extras` so `web_search` can pick it up on every
+        // turn. The agent cache rebuild fires the next time the
+        // agent is asked to run, so an admin can rotate keys
+        // without restarting the gateway.
+        if let Ok(rows) = self.store.list_configs("tools", "", "").await {
+            if let Some(row) = rows.into_iter().next() {
+                if let Some(map) = row.data.get("web_search").and_then(|v| v.as_object()) {
+                    let provider = map
+                        .get("provider")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("duckduckgo")
+                        .to_string();
+                    let api_key = map
+                        .get("api_key")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let endpoint = map
+                        .get("endpoint")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let cfg = cleanclaw_toolprov::ProviderConfig {
+                        api_key,
+                        endpoint,
+                        model: String::new(),
+                        options: Default::default(),
+                    };
+                    let mut configs = std::collections::HashMap::new();
+                    configs.insert(provider, cfg);
+                    if let Ok(v) = serde_json::to_value(configs) {
+                        arc.tool_extras
+                            .write()
+                            .insert("web_search_configs".to_string(), v);
+                    }
+                }
+            }
+        }
+
         self.agents.write().insert(agent_id.to_string(), arc.clone());
         Ok(arc)
     }

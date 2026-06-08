@@ -11,6 +11,7 @@ cleanclaw-auth = { workspace = true, features = ["axum"] }
 cleanclaw-store = { workspace = true }
 cleanclaw-provider = { workspace = true }
 cleanclaw-agent = { workspace = true }
+cleanclaw-toolprov = { workspace = true }
 cleanclaw-cron = { workspace = true }
 axum = { workspace = true }
 tokio = { workspace = true }

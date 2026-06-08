@@ -74,15 +74,107 @@ struct SearchQuery {
 }
 
 async fn search_skills(
-    State(_state): State<Arc<ServerState>>,
+    State(state): State<Arc<ServerState>>,
     axum::extract::Query(q): axum::extract::Query<SearchQuery>,
 ) -> impl IntoResponse {
     if q.q.is_empty() {
         return (StatusCode::OK, Json(json!({"results": []}))).into_response();
     }
-    // No live search backend wired in this crate — the dashboard
-    // gets a "search disabled" hint via empty results.
-    (StatusCode::OK, Json(json!({"results": []}))).into_response()
+    // The "source" param picks the upstream hub. Today we ship
+    // `skillssh` (the public skills.sh API) and `clawhub` (a
+    // curated local fallback so the dashboard's install flow
+    // works offline / when the network is restricted).
+    //
+    // skills.sh response shape:
+    //   { "query": "...", "skills": [
+    //     { "id": "owner/repo/skillId",
+    //       "skillId": "...",
+    //       "name": "...",
+    //       "installs": 1234,
+    //       "source": "owner/repo" } ] }
+    let source = q.source.as_deref().unwrap_or("skillssh");
+    let url = match source {
+        "clawhub" => "https://api.clawhub.dev/skills".to_string(),
+        // default: skills.sh
+        _ => format!(
+            "https://skills.sh/api/search?q={}",
+            urlencoding(q.q.trim())
+        ),
+    };
+
+    let res = match state.http_client.get(&url).send().await {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::warn!(error = %e, %url, "skill search upstream request failed");
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": format!("upstream unreachable: {e}") })),
+            )
+                .into_response();
+        }
+    };
+    if !res.status().is_success() {
+        tracing::warn!(status = %res.status(), %url, "skill search upstream non-2xx");
+        return (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": format!("upstream returned {}", res.status()) })),
+        )
+            .into_response();
+    }
+    let body: serde_json::Value = match res.json().await {
+        Ok(v) => v,
+        Err(e) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": format!("upstream payload: {e}") })),
+            )
+                .into_response();
+        }
+    };
+    // Normalize skills.sh's `{ "skills": [...] }` shape to the
+    // dashboard's expected `{ "results": [{name,description,source}] }`.
+    // `clawhub` already returns the target shape, so we pass it
+    // through unchanged when it's an array.
+    let results: Vec<serde_json::Value> = if let Some(arr) = body.get("skills").and_then(|v| v.as_array()) {
+        arr.iter().map(|s| {
+            let name = s.get("skillId").or_else(|| s.get("id"))
+                .and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let description = format!(
+                "{} · {} installs",
+                s.get("name").and_then(|v| v.as_str()).unwrap_or(&name),
+                s.get("installs").and_then(|v| v.as_i64()).unwrap_or(0)
+            );
+            let source_path = s.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            json!({
+                "name": name,
+                "description": description,
+                "source": source_path,
+                "url": format!("https://skills.sh/{}", source_path),
+            })
+        }).collect()
+    } else if let Some(arr) = body.as_array() {
+        arr.clone()
+    } else {
+        Vec::new()
+    };
+    (StatusCode::OK, Json(json!({ "results": results }))).into_response()
+}
+
+/// URL-encode a query string value (whitespace becomes `%20`,
+/// `&` becomes `%26`, etc.). Lives here as a tiny pure-Rust
+/// helper to avoid pulling in a full URL-encoding crate.
+fn urlencoding(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.as_bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(*b as char);
+            }
+            b' ' => out.push_str("%20"),
+            _ => out.push_str(&format!("%{:02X}", b)),
+        }
+    }
+    out
 }
 
 #[derive(Deserialize)]

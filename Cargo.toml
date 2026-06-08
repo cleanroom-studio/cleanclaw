@@ -129,6 +129,7 @@ cleanclaw-config = { path = "crates/cleanclaw-config" }
 cleanclaw-provider = { path = "crates/cleanclaw-provider" }
 cleanclaw-skills = { path = "crates/cleanclaw-skills" }
 cleanclaw-agent = { path = "crates/cleanclaw-agent" }
+cleanclaw-toolprov = { path = "crates/cleanclaw-toolprov" }
 cleanclaw-auth = { path = "crates/cleanclaw-auth" }
 cleanclaw-bus = { path = "crates/cleanclaw-bus" }
 cleanclaw-api = { path = "crates/cleanclaw-api" }

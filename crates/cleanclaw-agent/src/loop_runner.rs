@@ -65,9 +65,22 @@ pub struct Agent {
     pub store: Arc<dyn Store>,
     pub hooks: Option<Arc<HookRegistry>>,
     pub turn_failures: Arc<TurnFailures>,
+    /// Per-tool runtime context that the agent loop spreads
+    /// into every `ToolContext.extra` it builds. The chat
+    /// service uses this to hand per-turn config (e.g. the
+    /// web_search provider credentials) to tool impls without
+    /// mutating the tool itself.
+    pub tool_extras: parking_lot::RwLock<std::collections::HashMap<String, serde_json::Value>>,
 }
 
 impl Agent {
+    /// Snapshot the tool_extras map so the agent loop can
+    /// safely share an `Arc<HashMap>` with the tool dispatcher.
+    /// Reads the `RwLock` once per turn.
+    fn tool_extras_snapshot(&self) -> Arc<std::collections::HashMap<String, serde_json::Value>> {
+        Arc::new(self.tool_extras.read().clone())
+    }
+
     /// Run one ReAct turn.
     pub async fn run_turn(&self, input: TurnInput) -> Result<AgentOutput> {
         let mut messages = input.history.clone();
@@ -225,7 +238,7 @@ impl Agent {
                 project_id: String::new(),
                 is_admin: input.is_admin,
                 workspace_root: String::new(),
-                extra: Arc::new(Default::default()),
+                extra: self.tool_extras_snapshot(),
             };
 
             for tc in &assistant_message.tool_calls {
@@ -565,7 +578,7 @@ impl Agent {
                 project_id: String::new(),
                 is_admin: input.is_admin,
                 workspace_root: String::new(),
-                extra: Arc::new(Default::default()),
+                extra: self.tool_extras_snapshot(),
             };
 
             for tc in &pending_tool_calls {
@@ -847,6 +860,7 @@ impl AgentBuilder {
             store: self.store,
             hooks: self.hooks,
             turn_failures: Arc::new(TurnFailures::new()),
+            tool_extras: parking_lot::RwLock::new(std::collections::HashMap::new()),
         }
     }
 }

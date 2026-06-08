@@ -580,11 +580,21 @@ export async function togglePlugin(id: string, enabled: boolean): Promise<{ ok: 
 
 // ---- Tools (global config) ----
 
-export async function listTools(): Promise<{ tools: ToolsConfig }> {
-  return apiFetch<{ tools: ToolsConfig }>('/api/tools');
+export interface ToolConfigFull {
+  enabled: boolean;
+  provider: string;
+  api_key?: string;
+  endpoint?: string;
+  /// Provider-specific extras (currently unused but reserved).
+  options?: Record<string, string>;
+}
+export type ToolsConfigFull = Record<string, ToolConfigFull>;
+
+export async function listTools(): Promise<{ tools: ToolsConfigFull }> {
+  return apiFetch<{ tools: ToolsConfigFull }>('/api/tools');
 }
 
-export async function saveTools(tools: ToolsConfig): Promise<{ ok: boolean }> {
+export async function saveTools(tools: ToolsConfigFull): Promise<{ ok: boolean }> {
   return apiFetch('/api/tools', { method: 'PUT', body: JSON.stringify({ tools }) });
 }
 

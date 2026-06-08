@@ -94,7 +94,16 @@ impl Tool for HttpGet {
 }
 
 /// Register every built-in tool on the given registry.
-pub fn register_builtins(reg: &mut super::ToolRegistry) {
+///
+/// `toolprov` is the per-process toolprov `Registry` (built
+/// once at gateway boot). `web_search` is the only tool that
+/// needs it — the other tools do their own direct I/O. We
+/// accept the parameter so call sites don't have to plumb a
+/// separate `web::WebSearchTool::new` call.
+pub fn register_builtins(
+    reg: &mut super::ToolRegistry,
+    toolprov: &std::sync::Arc<cleanclaw_toolprov::Registry>,
+) {
     reg.register(Arc::new(CurrentTime));
     reg.register(Arc::new(Echo));
     reg.register(Arc::new(HttpGet));
@@ -107,7 +116,7 @@ pub fn register_builtins(reg: &mut super::ToolRegistry) {
     reg.register(Arc::new(super::exec::ExecTool));
     // Web
     reg.register(Arc::new(super::web::WebFetchTool));
-    reg.register(Arc::new(super::web::WebSearchTool));
+    reg.register(Arc::new(super::web::WebSearchTool::new(toolprov.clone())));
     // Skills
     reg.register(Arc::new(super::load_skill::LoadSkillTool));
     reg.register(Arc::new(super::skill_install::SearchSkillsTool));

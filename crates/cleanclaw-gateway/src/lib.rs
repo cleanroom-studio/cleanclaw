@@ -122,9 +122,23 @@ impl Gateway {
         // a turn without manually adding a provider first.
         let default_model = std::env::var("CLEANCLAW_DEFAULT_MODEL")
             .unwrap_or_else(|_| "MiniMax-M3".to_string());
-        let chat = Arc::new(cleanclaw_api::chat::ChatService::new(
+
+        // Build the per-process toolprov registry. Built-ins are
+        // registered up front so the `web_search` tool can dispatch
+        // to the operator-configured chain (DuckDuckGo by default,
+        // plus Brave / Bing / Google / Baidu / SearXNG / Exa from
+        // the extra_backends module). Per-provider credentials are
+        // pulled from the `tools` config row inside ChatService
+        // when an agent is built.
+        let toolprov_registry = {
+            let r = Arc::new(cleanclaw_toolprov::Registry::new());
+            cleanclaw_toolprov::register_builtin(&r);
+            r
+        };
+        let chat = Arc::new(cleanclaw_api::chat::ChatService::new_with_toolprov(
             store.clone(),
             default_model,
+            toolprov_registry,
         ));
 
         // Register a default provider if the operator exported

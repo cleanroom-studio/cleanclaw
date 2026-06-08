@@ -92,6 +92,13 @@
   let messageListEl: HTMLElement | undefined = $state();
   let textareaEl: HTMLTextAreaElement | undefined = $state();
   let liveAssistant = $state<{ content: string; toolCalls: { id: string; name: string; arguments: string; result?: string }[] }>({ content: '', toolCalls: [] });
+  /// Bumped on every "New chat" click so the route effect can
+  /// distinguish a fresh empty state from a route that just
+  /// happens to have no `?session=` query. Without this, the
+  /// effect's `activeSessionId || sorted[0]?.key` fallback
+  /// would silently re-load the most recent session every time
+  /// the user clicks "+ New chat".
+  let freshNonce = $state(0);
 
   // ---- Lifecycle ---------------------------------------------------
 
@@ -115,9 +122,14 @@
   });
 
   // Re-run when the active agent / session changes via the URL.
+  // `freshNonce` is the "+ New chat" toggle — when the user
+  // clicks it we want a blank slate even though the URL is
+  // still `/agents/<id>/chat/`. Including it in the key makes
+  // the effect fire, and `onRouteChange` reads it to clear
+  // `messages` instead of loading the most recent session.
   let lastRouteKey = '';
   $effect(() => {
-    const key = `${routeAgentId || queryAgentId || ''}|${activeSessionId || ''}`;
+    const key = `${routeAgentId || queryAgentId || ''}|${activeSessionId || ''}|${freshNonce}`;
     if (key === lastRouteKey) return;
     lastRouteKey = key;
     void onRouteChange();
@@ -134,6 +146,15 @@
       }
     }
     await refetchSessions();
+    // `freshNonce` got bumped since the last run → the user
+    // explicitly asked for a clean slate. Wipe the bubble stack
+    // and skip the history fetch entirely (so we don't
+    // silently re-populate from the most recent session).
+    if (freshNonce > 0 && !activeSessionId) {
+      messages = [];
+      liveAssistant = { content: '', toolCalls: [] };
+      return;
+    }
     await loadHistory();
   }
 

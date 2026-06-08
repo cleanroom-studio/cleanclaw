@@ -11,6 +11,7 @@ cleanclaw-config = { workspace = true }
 cleanclaw-store = { path = "../cleanclaw-store" }
 cleanclaw-auth = { workspace = true }
 cleanclaw-provider = { workspace = true }
+cleanclaw-toolprov = { workspace = true }
 cleanclaw-api = { workspace = true }
 cleanclaw-setup = { workspace = true }
 cleanclaw-bus = { workspace = true }
