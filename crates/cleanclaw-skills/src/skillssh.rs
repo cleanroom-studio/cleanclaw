@@ -135,11 +135,11 @@ fn find_skill_dir_in_tarball(data: &[u8], skill_id: &str) -> Result<String, Skil
     let gz = GzDecoder::new(data);
     let mut archive = Archive::new(gz);
     let suffix = format!("/{}/SKILL.md", skill_id);
-    for entry in archive.entries().map_err(|e| SkillsShError::Io(e.into()))? {
-        let mut entry = entry.map_err(|e| SkillsShError::Io(e.into()))?;
+    for entry in archive.entries().map_err(SkillsShError::Io)? {
+        let entry = entry.map_err(SkillsShError::Io)?;
         let path = entry
             .path()
-            .map_err(|e| SkillsShError::Io(e.into()))?
+            .map_err(SkillsShError::Io)?
             .into_owned();
         let path_str = path.to_string_lossy().to_string();
         // Strip the top-level "<repo>-<sha>/" prefix.
@@ -302,11 +302,11 @@ fn extract_skill_from_tar(data: &[u8], subpath: &str, dest: &Path) -> Result<usi
     std::fs::create_dir_all(dest)?;
     let subpath = subpath.trim_end_matches('/');
     let mut count = 0;
-    for entry in archive.entries().map_err(|e| SkillsShError::Io(e.into()))? {
-        let mut entry = entry.map_err(|e| SkillsShError::Io(e.into()))?;
+    for entry in archive.entries().map_err(SkillsShError::Io)? {
+        let mut entry = entry.map_err(SkillsShError::Io)?;
         let path = entry
             .path()
-            .map_err(|e| SkillsShError::Io(e.into()))?
+            .map_err(SkillsShError::Io)?
             .into_owned();
         let path_str = path.to_string_lossy().to_string();
         // Strip top-level dir.

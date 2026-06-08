@@ -25,6 +25,7 @@
 
   import { onMount, onDestroy } from "svelte";
   import { page } from "$app/state";
+  import { goto } from "$app/navigation";
   import {
     getStatus,
     getMe,
@@ -153,12 +154,16 @@
     activeAgentId
       ? [
           {
-            title: "New chat",
-            url: `/agents/${activeAgentId}/chat/`,
-            icon: "Plus",
-            active:
-              page.url?.pathname === `/agents/${activeAgentId}/chat` ||
-              page.url?.pathname === `/agents/${activeAgentId}/chat/`,
+            // The cache-busting `?_=<ts>` query is read by
+            // ChatScreen's route-effect key, so clicking the
+            // sidebar's "New chat" actually re-runs the effect
+            // even when the pathname is the same. Without it the
+            // user would land back on the previous session's
+            // bubbles.
+            title: 'New chat',
+            url: `/agents/${activeAgentId}/chat/?_=${Date.now()}`,
+            icon: 'Plus',
+            active: page.url?.pathname === `/agents/${activeAgentId}/chat` || page.url?.pathname === `/agents/${activeAgentId}/chat/`,
           },
         ]
       : [],

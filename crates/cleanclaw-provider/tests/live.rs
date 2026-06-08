@@ -6,7 +6,6 @@ mod common;
 use common::MockBackend;
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use cleanclaw_provider::anthropic::AnthropicConfig;
 use cleanclaw_provider::anthropic::AnthropicProvider;

@@ -8,8 +8,7 @@
 //! current OR previous hash is rejected.
 
 use chrono::{DateTime, Duration, Utc};
-use cleanclaw_core::{CleanClawError, Result};
-use cleanclaw_store::models::ApiKeyRecord;
+use cleanclaw_core::CleanClawError;
 use cleanclaw_store::Store;
 use std::sync::Arc;
 

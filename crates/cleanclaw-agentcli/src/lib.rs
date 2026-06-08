@@ -112,7 +112,7 @@ pub async fn init(
     opts: InitOptions,
 ) -> Result<InitResult, AgentCliError> {
     let name = validate_name(name)?.to_string();
-    let display_name = name.clone();
+    let _display_name = name.clone();
 
     let mut save_provider = false;
     let mut provider_short = String::new();

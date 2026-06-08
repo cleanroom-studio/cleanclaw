@@ -13,6 +13,7 @@ use cleanclaw_core::{CleanClawError, Result};
 use cleanclaw_toolprov::{websearch, ProviderConfig, Registry as ToolprovRegistry};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct WebFetchTool;
@@ -159,5 +160,117 @@ impl Tool for WebSearchTool {
             Ok(r) => Ok(json!({ "results": r.text })),
             Err(e) => Err(CleanClawError::Upstream(format!("web_search: {e}"))),
         }
+    }
+}
+
+// =====================================================================
+// Tests
+// =====================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cleanclaw_toolprov::{Provider, ProviderError, Request, Response};
+
+    /// A mock provider that returns hard-coded search results
+    /// without any HTTP call.
+    struct MockSearch;
+
+    #[async_trait]
+    impl Provider for MockSearch {
+        fn category(&self) -> &'static str {
+            websearch::CATEGORY
+        }
+        fn name(&self) -> &'static str {
+            "mock"
+        }
+        fn credential_free(&self) -> bool {
+            true
+        }
+        async fn execute(&self, req: Request) -> std::result::Result<Response, ProviderError> {
+            let query = req.args.get("query").and_then(|v| v.as_str()).unwrap_or("");
+            if query.is_empty() {
+                return Err(ProviderError::InvalidArgs("query required".into()));
+            }
+            Ok(Response::from_text(&format!(
+                "Search results for: {query}\n\n1. Mock Result\n   https://example.com\n   A fake result for testing.\n"
+            )))
+        }
+    }
+
+    #[tokio::test]
+    async fn web_search_tool_empty_registry_errors() {
+        let registry = Arc::new(ToolprovRegistry::new());
+        let tool = WebSearchTool::new(registry);
+        let ctx = ToolContext::default();
+        let r = tool.call(&ctx, json!({"query": "test"})).await;
+        assert!(r.is_err());
+        let err = r.unwrap_err().to_string();
+        assert!(err.contains("no provider registered"));
+    }
+
+    #[tokio::test]
+    async fn web_search_tool_with_mock_provider_succeeds() {
+        let registry = Arc::new(ToolprovRegistry::new());
+        registry.register(Arc::new(MockSearch));
+        let tool = WebSearchTool::new(registry);
+        let ctx = ToolContext::default();
+        let r = tool
+            .call(&ctx, json!({"query": "rust programming"}))
+            .await
+            .unwrap();
+        let results = r.get("results").and_then(|v| v.as_str()).unwrap();
+        assert!(results.contains("Mock Result"));
+        assert!(results.contains("rust programming"));
+    }
+
+    #[tokio::test]
+    async fn web_search_tool_missing_query_errors() {
+        let registry = Arc::new(ToolprovRegistry::new());
+        registry.register(Arc::new(MockSearch));
+        let tool = WebSearchTool::new(registry);
+        let ctx = ToolContext::default();
+        let r = tool.call(&ctx, json!({})).await;
+        assert!(r.is_err());
+    }
+
+    #[tokio::test]
+    async fn web_search_tool_passes_configs_from_context() {
+        let registry = Arc::new(ToolprovRegistry::new());
+        registry.register(Arc::new(MockSearch));
+        let tool = WebSearchTool::new(registry);
+        let mut extra = HashMap::new();
+        extra.insert(
+            CONFIGS_KEY.to_string(),
+            json!({"mock": {"api_key": "test-key", "endpoint": ""}}),
+        );
+        let ctx = ToolContext {
+            extra: Arc::new(extra),
+            ..Default::default()
+        };
+        let r = tool.call(&ctx, json!({"query": "test"})).await.unwrap();
+        let results = r.get("results").and_then(|v| v.as_str()).unwrap();
+        assert!(results.contains("test"));
+    }
+
+    #[tokio::test]
+    async fn web_search_tool_name_and_params_match() {
+        let registry = Arc::new(ToolprovRegistry::new());
+        let tool = WebSearchTool::new(registry);
+        assert_eq!(tool.name(), "web_search");
+        let params = tool.parameters();
+        let props = params.get("properties").unwrap();
+        assert!(props.get("query").is_some());
+        assert!(props.get("limit").is_some());
+        let req = params.get("required").unwrap().as_array().unwrap();
+        assert!(req.contains(&json!("query")));
+    }
+
+    #[test]
+    fn web_search_tool_description_not_empty() {
+        let registry = Arc::new(ToolprovRegistry::new());
+        let tool = WebSearchTool::new(registry);
+        assert!(!tool.description().is_empty());
+        assert!(tool.description().contains("DuckDuckGo"));
     }
 }

@@ -13,7 +13,6 @@
 //! `Factory` picks the backend at startup; `Metered` wraps any Store
 //! to count bytes flowing through `Put`.
 
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -21,7 +20,6 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
 use thiserror::Error;
-use tokio::sync::Mutex;
 
 #[derive(Debug, Error)]
 pub enum WorkspaceError {

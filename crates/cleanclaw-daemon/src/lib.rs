@@ -15,7 +15,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
-use tracing::{error, info, warn};
+use tracing::info;
 
 pub const PID_FILENAME: &str = "daemon.pid";
 pub const LOG_FILENAME: &str = "daemon.log";
@@ -118,8 +118,7 @@ pub fn send_signal(pid: u32, sig: &str) -> std::io::Result<()> {
         .args(["-s", sig, &pid.to_string()])
         .status()?;
     if !status.success() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
+        return Err(std::io::Error::other(
             format!("kill returned {status:?}"),
         ));
     }

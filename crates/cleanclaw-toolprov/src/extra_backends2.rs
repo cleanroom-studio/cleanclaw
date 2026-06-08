@@ -115,6 +115,12 @@ pub mod none_imagegen {
 
     pub struct None;
 
+    impl Default for None {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl None {
         pub fn new() -> Self {
             Self
@@ -229,6 +235,12 @@ pub mod none_tts {
     use super::*;
 
     pub struct None;
+
+    impl Default for None {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
 
     impl None {
         pub fn new() -> Self {
@@ -468,6 +480,12 @@ pub mod none_search {
     use super::*;
 
     pub struct None;
+
+    impl Default for None {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
 
     impl None {
         pub fn new() -> Self {

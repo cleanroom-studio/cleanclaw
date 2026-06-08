@@ -290,7 +290,7 @@ impl WebhookBridge {
     pub async fn handle_discord(
         &self,
         body: &Value,
-        account_id: &str,
+        _account_id: &str,
     ) -> Result<usize, WebhookError> {
         // Discord webhook body shape: `{type, data, channel_id,
         // user, message, ...}`. For a Message Create event

@@ -334,7 +334,7 @@ impl Accounts {
             apikey_id: apikey_id.to_string(),
             external_id: external_id.to_string(),
             avatar_url: String::new(),
-            agent_quota: -1 as i32,
+            agent_quota: -1_i32,
             created_at: now,
             updated_at: now,
         };

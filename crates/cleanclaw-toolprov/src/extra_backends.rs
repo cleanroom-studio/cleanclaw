@@ -618,6 +618,15 @@ pub mod searxng_search {
         fn name(&self) -> &'static str {
             "searxng"
         }
+        // Self-hosted: the operator must supply the instance URL
+        // via the `endpoint` config field. The chain will silently
+        // skip this provider when the field is empty so we don't
+        // surface a misleading "endpoint required" error from the
+        // *last* provider when the user just hasn't configured
+        // it.
+        fn needs_endpoint(&self) -> bool {
+            true
+        }
         async fn execute(&self, req: Request) -> Result<Response, ProviderError> {
             let q = str_field(&req.args, "query");
             if q.is_empty() {

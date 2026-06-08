@@ -8,7 +8,7 @@ use super::message::*;
 use super::provider::*;
 use async_trait::async_trait;
 use futures_util::Stream;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Value};
 use std::time::Duration;
 

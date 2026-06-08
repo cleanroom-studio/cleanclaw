@@ -160,7 +160,10 @@ async fn full_loop_with_tools_and_hooks() {
     }));
 
     let mut tools = cleanclaw_agent::ToolRegistry::new();
-    cleanclaw_agent::builtins::register_builtins(&mut tools);
+    cleanclaw_agent::builtins::register_builtins(
+        &mut tools,
+        &std::sync::Arc::new(cleanclaw_toolprov::Registry::new()),
+    );
 
     let agent: Arc<Agent> = Arc::new(
         AgentBuilder::new(
@@ -216,7 +219,10 @@ async fn tool_failure_records_in_turn_failures() {
         ));
     }
     let mut tools = cleanclaw_agent::ToolRegistry::new();
-    cleanclaw_agent::builtins::register_builtins(&mut tools);
+    cleanclaw_agent::builtins::register_builtins(
+        &mut tools,
+        &std::sync::Arc::new(cleanclaw_toolprov::Registry::new()),
+    );
     let agent: Arc<Agent> = Arc::new(
         AgentBuilder::new(
             "agt_1",

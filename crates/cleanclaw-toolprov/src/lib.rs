@@ -87,11 +87,24 @@ impl Response {
 pub trait Provider: Send + Sync {
     fn category(&self) -> &'static str;
     fn name(&self) -> &'static str;
+
+    /// Run the provider. `args` is the LLM-supplied tool args;
+    /// `config` is the resolved per-tenant config (api_key, etc.).
     async fn execute(&self, req: Request) -> Result<Response, ProviderError>;
-    /// Opt-in flag for backends that work without per-tenant config
-    /// (e.g. direct HTTP fetch). Lets the chain report them as
-    /// always available.
+
+    /// When `true`, the chain will call this provider even if
+    /// `api_key` is empty in the config. Providers that expose a
+    /// public, key-less endpoint (DuckDuckGo / Baidu / SearXNG-public)
+    /// flip this on. Default: `false`.
     fn credential_free(&self) -> bool {
+        false
+    }
+
+    /// When `true`, the chain needs a non-empty `endpoint` URL
+    /// (e.g. self-hosted SearXNG, or Google CSE's `cx=…` field).
+    /// Providers that don't need an endpoint leave this `false`
+    /// (the default).
+    fn needs_endpoint(&self) -> bool {
         false
     }
 }
@@ -167,15 +180,45 @@ impl Chain {
         &self.providers
     }
 
-    /// Run the chain. Returns the first non-error response. The last
-    /// error is returned if every provider fails.
+    /// Decide whether a provider should be skipped because its
+    /// required config is missing. A key-bearing provider without
+    /// an API key can never succeed; a self-hosted endpoint
+    /// provider without an endpoint URL can never succeed. We
+    /// skip these **silently** (no entry in the error log) so the
+    /// final error message stays focused on the providers we
+    /// actually attempted.
+    fn should_skip(&self, p: &dyn Provider, cfg: &ProviderConfig) -> bool {
+        if !p.credential_free() && cfg.api_key.is_empty() {
+            return true;
+        }
+        if p.needs_endpoint() && cfg.endpoint.is_empty() {
+            return true;
+        }
+        false
+    }
+
+    /// Run the chain. Returns the first non-error response. If
+    /// every attempted provider fails, the returned error carries
+    /// a per-provider breakdown so the caller (or the LLM) can
+    /// see exactly what went wrong with each one. Providers that
+    /// are skipped because of missing config are not in the
+    /// breakdown — only the providers we actually called.
     pub async fn run(
         &self,
         mut make_req: impl FnMut(&dyn Provider) -> Request,
     ) -> Result<Response, ProviderError> {
         let mut last_err: Option<ProviderError> = None;
+        let mut tried: Vec<String> = Vec::new();
         for p in &self.providers {
             let req = make_req(&**p);
+            if self.should_skip(&**p, &req.config) {
+                tracing::debug!(
+                    provider = p.name(),
+                    "chain skipping provider (missing required config)"
+                );
+                continue;
+            }
+            tried.push(p.name().to_string());
             match p.execute(req).await {
                 Ok(r) => return Ok(r),
                 Err(e) => {
@@ -184,7 +227,35 @@ impl Chain {
                 }
             }
         }
-        Err(last_err.unwrap_or_else(|| ProviderError::NoResults("chain")))
+        if let Some(err) = last_err {
+            // The single `last_err` is usually the most actionable
+            // (e.g. network error from the *attempted* primary).
+            // We surface a hint about which other providers were
+            // skipped so the LLM / user can route around them.
+            let skipped: Vec<&str> = self
+                .providers
+                .iter()
+                .filter_map(|p| {
+                    let req = make_req(&**p);
+                    if self.should_skip(&**p, &req.config) {
+                        Some(p.name())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            let summary = match skipped.len() {
+                0 => format!("{} (tried: {})", err, tried.join(", ")),
+                _ => format!(
+                    "{} (tried: {}; skipped unconfigured: {})",
+                    err,
+                    tried.join(", "),
+                    skipped.join(", ")
+                ),
+            };
+            return Err(ProviderError::Upstream(summary));
+        }
+        Err(ProviderError::NoResults("chain"))
     }
 }
 
@@ -618,7 +689,7 @@ pub mod websearch {
 
     pub const CATEGORY: &str = "web_search";
 
-    fn parse_args(raw: &serde_json::Value) -> Result<(String, usize), ProviderError> {
+    pub(crate) fn parse_args(raw: &serde_json::Value) -> Result<(String, usize), ProviderError> {
         let query = raw
             .get("query")
             .and_then(|v| v.as_str())
@@ -946,6 +1017,13 @@ pub mod websearch {
         fn name(&self) -> &'static str {
             "google"
         }
+        // Google CSE needs `cx=<engine-id>` parsed out of the
+        // `endpoint` field. Without it the request would 400 from
+        // the upstream, so the chain skips this provider silently
+        // when the field is empty.
+        fn needs_endpoint(&self) -> bool {
+            true
+        }
         async fn execute(&self, req: Request) -> Result<Response, ProviderError> {
             let (query, n) = parse_args(&req.args)?;
             if req.config.api_key.is_empty() {
@@ -957,7 +1035,7 @@ pub mod websearch {
                 .config
                 .endpoint
                 .split('?')
-                .last()
+                .next_back()
                 .unwrap_or("")
                 .split('&')
                 .find_map(|kv| kv.strip_prefix("cx="))
@@ -1342,6 +1420,55 @@ mod tests {
         assert!(matches!(r, Err(ProviderError::MissingApiKey(_))));
     }
 
+    // ---- websearch::parse_args ----
+
+    #[test]
+    fn websearch_parse_args_query_only() {
+        let (q, n) = websearch::parse_args(&serde_json::json!({"query": "hello world"})).unwrap();
+        assert_eq!(q, "hello world");
+        assert_eq!(n, 5); // default
+    }
+
+    #[test]
+    fn websearch_parse_args_with_n() {
+        let (q, n) = websearch::parse_args(&serde_json::json!({"query": "test", "n": 3})).unwrap();
+        assert_eq!(q, "test");
+        assert_eq!(n, 3);
+    }
+
+    #[test]
+    fn websearch_parse_args_query_trimmed() {
+        let (q, n) = websearch::parse_args(&serde_json::json!({"query": "  spaced  "})).unwrap();
+        assert_eq!(q, "spaced");
+        assert_eq!(n, 5);
+    }
+
+    #[test]
+    fn websearch_parse_args_n_clamped_low() {
+        let (_, n) = websearch::parse_args(&serde_json::json!({"query": "x", "n": 0})).unwrap();
+        assert_eq!(n, 1);
+    }
+
+    #[test]
+    fn websearch_parse_args_n_clamped_high() {
+        let (_, n) = websearch::parse_args(&serde_json::json!({"query": "x", "n": 100})).unwrap();
+        assert_eq!(n, 20);
+    }
+
+    #[test]
+    fn websearch_parse_args_missing_query_errors() {
+        let r = websearch::parse_args(&serde_json::json!({}));
+        assert!(matches!(r, Err(ProviderError::InvalidArgs(_))));
+    }
+
+    #[test]
+    fn websearch_parse_args_empty_query_errors() {
+        let r = websearch::parse_args(&serde_json::json!({"query": ""}));
+        assert!(matches!(r, Err(ProviderError::InvalidArgs(_))));
+    }
+
+    // ---- websearch::None ----
+
     #[tokio::test]
     async fn websearch_none_returns_no_results() {
         let p: Arc<dyn Provider> = Arc::new(websearch::None);
@@ -1364,6 +1491,101 @@ mod tests {
             })
             .await;
         assert!(matches!(r, Err(ProviderError::MissingApiKey(_))));
+    }
+
+    // ---- websearch::DuckDuckGo ----
+
+    #[tokio::test]
+    async fn websearch_duckduckgo_missing_query() {
+        let p: Arc<dyn Provider> = Arc::new(websearch::DuckDuckGo::new(reqwest::Client::new()));
+        let r = p
+            .execute(Request {
+                args: serde_json::json!({}),
+                config: empty_config(),
+            })
+            .await;
+        assert!(matches!(r, Err(ProviderError::InvalidArgs(_))));
+    }
+
+    // ---- websearch::Bing ----
+
+    #[tokio::test]
+    async fn websearch_bing_missing_query() {
+        let p: Arc<dyn Provider> = Arc::new(websearch::Bing::new(reqwest::Client::new()));
+        let r = p
+            .execute(Request {
+                args: serde_json::json!({}),
+                config: empty_config(),
+            })
+            .await;
+        assert!(matches!(r, Err(ProviderError::InvalidArgs(_))));
+    }
+
+    #[tokio::test]
+    async fn websearch_bing_missing_key() {
+        let p: Arc<dyn Provider> = Arc::new(websearch::Bing::new(reqwest::Client::new()));
+        let r = p
+            .execute(Request {
+                args: serde_json::json!({"query": "x"}),
+                config: empty_config(),
+            })
+            .await;
+        assert!(matches!(r, Err(ProviderError::MissingApiKey(_))));
+    }
+
+    // ---- websearch::Google ----
+
+    #[tokio::test]
+    async fn websearch_google_missing_query() {
+        let p: Arc<dyn Provider> = Arc::new(websearch::Google::new(reqwest::Client::new()));
+        let r = p
+            .execute(Request {
+                args: serde_json::json!({}),
+                config: empty_config(),
+            })
+            .await;
+        assert!(matches!(r, Err(ProviderError::InvalidArgs(_))));
+    }
+
+    #[tokio::test]
+    async fn websearch_google_missing_key() {
+        let p: Arc<dyn Provider> = Arc::new(websearch::Google::new(reqwest::Client::new()));
+        let r = p
+            .execute(Request {
+                args: serde_json::json!({"query": "x"}),
+                config: empty_config(),
+            })
+            .await;
+        assert!(matches!(r, Err(ProviderError::MissingApiKey(_))));
+    }
+
+    #[tokio::test]
+    async fn websearch_google_missing_cx() {
+        let p: Arc<dyn Provider> = Arc::new(websearch::Google::new(reqwest::Client::new()));
+        let r = p
+            .execute(Request {
+                args: serde_json::json!({"query": "x"}),
+                config: ProviderConfig {
+                    api_key: "key".into(),
+                    ..Default::default()
+                },
+            })
+            .await;
+        assert!(matches!(r, Err(ProviderError::InvalidArgs(_))));
+    }
+
+    // ---- websearch::Baidu ----
+
+    #[tokio::test]
+    async fn websearch_baidu_missing_query() {
+        let p: Arc<dyn Provider> = Arc::new(websearch::Baidu::new(reqwest::Client::new()));
+        let r = p
+            .execute(Request {
+                args: serde_json::json!({}),
+                config: empty_config(),
+            })
+            .await;
+        assert!(matches!(r, Err(ProviderError::InvalidArgs(_))));
     }
 
     #[tokio::test]
@@ -1421,5 +1643,85 @@ mod tests {
         let r = Response::from_text("hello");
         assert_eq!(r.text, "hello");
         assert!(r.extra.is_none());
+    }
+
+    // ---- helper: find_from ----
+
+    #[test]
+    fn find_from_found() {
+        let h = b"hello world";
+        let n = b"world";
+        assert_eq!(find_from(h, n), Some(6));
+    }
+
+    #[test]
+    fn find_from_not_found() {
+        let h = b"hello";
+        let n = b"xyz";
+        assert_eq!(find_from(h, n), None);
+    }
+
+    #[test]
+    fn find_from_needle_longer_than_haystack() {
+        assert_eq!(find_from(b"ab", b"abc"), None);
+    }
+
+    #[test]
+    fn find_from_empty_needle() {
+        assert_eq!(find_from(b"abc", b""), None);
+    }
+
+    // ---- helper: decode_html_entities ----
+
+    #[test]
+    fn decode_html_entities_basic() {
+        assert_eq!(decode_html_entities("&amp;"), "&");
+        assert_eq!(decode_html_entities("&lt;"), "<");
+        assert_eq!(decode_html_entities("&gt;"), ">");
+        assert_eq!(decode_html_entities("&quot;"), "\"");
+        assert_eq!(decode_html_entities("&#39;"), "'");
+        assert_eq!(decode_html_entities("&nbsp;"), " ");
+    }
+
+    #[test]
+    fn decode_html_entities_numeric() {
+        assert_eq!(decode_html_entities("&#38;"), "&");
+        assert_eq!(decode_html_entities("&#x26;"), "&");
+    }
+
+    #[test]
+    fn decode_html_entities_no_change() {
+        assert_eq!(decode_html_entities("hello world"), "hello world");
+        assert_eq!(decode_html_entities(""), "");
+    }
+
+    #[test]
+    fn decode_html_entities_mixed() {
+        assert_eq!(
+            decode_html_entities("foo &amp; bar &lt; baz"),
+            "foo & bar < baz"
+        );
+    }
+
+    // ---- helper: strip_tags ----
+
+    #[test]
+    fn strip_tags_no_tags() {
+        assert_eq!(strip_tags("hello world"), "hello world");
+    }
+
+    #[test]
+    fn strip_tags_simple() {
+        assert_eq!(strip_tags("hello <em>world</em>"), "hello world");
+    }
+
+    #[test]
+    fn strip_tags_nested() {
+        assert_eq!(strip_tags("<b><i>bold</i></b>"), "bold");
+    }
+
+    #[test]
+    fn strip_tags_empty() {
+        assert_eq!(strip_tags(""), "");
     }
 }

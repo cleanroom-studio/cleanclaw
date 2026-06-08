@@ -569,7 +569,7 @@ impl Manager {
     }
 
     pub async fn close_all(&self) {
-        for (_name, server) in &self.servers {
+        for server in self.servers.values() {
             let _ = server.close().await;
         }
     }

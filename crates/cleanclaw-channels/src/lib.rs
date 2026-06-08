@@ -815,7 +815,7 @@ impl LongPollTask {
     }
 
     pub fn is_running(&self) -> bool {
-        self.shutdown.load(Ordering::Acquire) == false
+        !self.shutdown.load(Ordering::Acquire)
             && self.handle.try_lock().map(|g| g.is_some()).unwrap_or(false)
     }
 }
@@ -1748,7 +1748,7 @@ impl Channel for LineChannel {
 #[cfg(test)]
 mod platform_tests {
     use super::*;
-    use cleanclaw_bus::OutboundButton;
+    
 
     fn client() -> reqwest::Client {
         reqwest::Client::new()

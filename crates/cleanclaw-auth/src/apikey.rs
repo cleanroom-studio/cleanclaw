@@ -21,7 +21,7 @@ pub fn generate() -> (String, String, String) {
     // URL-safe base64 w/o padding → 43 chars from 32 bytes.
     let b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(body);
     let key = format!("{PREFIX}{b64}");
-    let id = ApiKeyId::generate();
+    let _id = ApiKeyId::generate();
     let prefix = key[..KEY_PREFIX_LEN + PREFIX.len()].to_string();
     let hash = sha256_hex(&key);
     (key, hash, prefix)

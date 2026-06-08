@@ -39,7 +39,7 @@ fn host_exec_var() -> String {
 /// 1. operator opt-in via `CLEANCLAW_ALLOW_HOST_EXEC=1|true|yes`, AND
 /// 2. process is NOT a hosted multi-tenant deploy.
 //
-/// Default OFF. Hosted deploys are always denied.
+///    Default OFF. Hosted deploys are always denied.
 pub fn is_host_exec_allowed() -> bool {
     if is_hosted_deploy() {
         return false;

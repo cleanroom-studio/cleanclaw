@@ -327,11 +327,10 @@ impl<P: Plugin + 'static> InProcPluginClient<P> {
             while let Some(req) = host_to_plugin_rx.recv().await {
                 let is_notification = req.id.is_none();
                 let resp = inproc_dispatch(plugin_arc.as_ref(), req).await;
-                if !is_notification {
-                    if plugin_to_host_tx.send(resp).await.is_err() {
+                if !is_notification
+                    && plugin_to_host_tx.send(resp).await.is_err() {
                         break;
                     }
-                }
             }
             drop(notif_tx);
             let _ = notif_task.await;
@@ -370,8 +369,7 @@ impl<P: Plugin + 'static> InProcPluginClient<P> {
             params,
         };
         self.tx.send(req).await.map_err(|e| {
-            PluginError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
+            PluginError::Io(std::io::Error::other(
                 e.to_string(),
             ))
         })?;

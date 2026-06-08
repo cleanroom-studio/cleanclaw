@@ -14,9 +14,9 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use cleanclaw_provider::message::Message as ProviderMessage;
-use cleanclaw_store::models::{SessionMessageRecord, SessionMeta, SessionRecord};
+use cleanclaw_store::models::{SessionMessageRecord, SessionRecord};
 use cleanclaw_store::Store;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};

@@ -153,7 +153,7 @@ pub fn resolve_env(skills: &[Skill], runtime: &HashMap<String, String>) -> HashM
     let mut out: HashMap<String, String> = runtime.clone();
     for s in skills {
         for env in &s.env {
-            if let Some(v) = out.get(&env.name) {
+            if let Some(_v) = out.get(&env.name) {
                 tracing::debug!(skill = %s.name, env = %env.name, "skill env already set");
                 continue;
             }

@@ -19,7 +19,7 @@ use cron::Schedule;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 pub const MAX_CONSECUTIVE_FAILURES: i32 = 3;
 
@@ -304,6 +304,16 @@ pub fn new_job(
     }
 }
 
+fn compute_next_run_with_schedule(
+    schedule: &str,
+    now: DateTime<Utc>,
+) -> std::result::Result<DateTime<Utc>, Box<dyn std::error::Error>> {
+    use cron::Schedule;
+    let schedule: Schedule = schedule.parse()?;
+    let next = schedule.after(&now).next().ok_or("no next fire")?;
+    Ok(next)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -374,14 +384,4 @@ mod tests {
         // tick interval (used by `run()` to space out ticks).
         assert!(Duration::from_secs(30).as_nanos() > 0);
     }
-}
-
-fn compute_next_run_with_schedule(
-    schedule: &str,
-    now: DateTime<Utc>,
-) -> std::result::Result<DateTime<Utc>, Box<dyn std::error::Error>> {
-    use cron::Schedule;
-    let schedule: Schedule = schedule.parse()?;
-    let next = schedule.after(&now).next().ok_or("no next fire")?;
-    Ok(next)
 }

@@ -522,19 +522,19 @@ impl WorkspaceStore for WorkspaceStoreAdapter {
         self.inner
             .get(user_id, "", "", path)
             .await
-            .map_err(|e| SandboxError::Workspace(e))
+            .map_err(SandboxError::Workspace)
     }
     async fn put(&self, user_id: &str, path: &str, content: Bytes) -> Result<(), SandboxError> {
         self.inner
             .put(user_id, "", "", path, content, "application/octet-stream")
             .await
-            .map_err(|e| SandboxError::Workspace(e))
+            .map_err(SandboxError::Workspace)
     }
     async fn delete(&self, user_id: &str, path: &str) -> Result<(), SandboxError> {
         self.inner
             .delete(user_id, "", "", path)
             .await
-            .map_err(|e| SandboxError::Workspace(e))
+            .map_err(SandboxError::Workspace)
     }
 }
 

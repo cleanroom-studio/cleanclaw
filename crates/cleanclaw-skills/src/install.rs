@@ -18,7 +18,6 @@ use flate2::read::GzDecoder;
 use serde::{Deserialize, Serialize};
 use tar::Archive;
 use thiserror::Error;
-use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, Error)]
 pub enum InstallError {
@@ -253,11 +252,11 @@ fn extract_tar_gz(data: &[u8], subpath: &str, dest: &Path) -> Result<usize, Inst
     std::fs::create_dir_all(dest)?;
     let mut count = 0;
     let subpath = subpath.trim_end_matches('/');
-    for entry in archive.entries().map_err(|e| InstallError::Io(e.into()))? {
-        let mut entry = entry.map_err(|e| InstallError::Io(e.into()))?;
+    for entry in archive.entries().map_err(InstallError::Io)? {
+        let mut entry = entry.map_err(InstallError::Io)?;
         let path = entry
             .path()
-            .map_err(|e| InstallError::Io(e.into()))?
+            .map_err(InstallError::Io)?
             .into_owned();
         // Top-level dir is the repo name (e.g. "repo-SHA/..."); strip
         // it. Then optionally strip the requested subpath.

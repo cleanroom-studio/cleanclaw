@@ -23,7 +23,7 @@ BIN_NAME ?= cleanclaw
 CARGO    ?= cargo
 TARGET   ?= target/release/$(BIN_NAME)
 
-.PHONY: all build build-debug build-web bundle-skills clean ci dev docker docker-multi fmt install lint release release-local test test-scripts
+.PHONY: all build build-debug build-web bundle-skills clean ci dev docker docker-multi fmt install lint lint-fix release release-local test test-scripts
 
 all: build
 
@@ -109,6 +109,12 @@ fmt:
 
 lint:
 	$(CARGO) clippy --workspace --all-targets -- -D warnings
+
+# `lint-fix` auto-fixes clippy suggestions (e.g. redundant variables,
+# unnecessary references, etc.). Run `make fmt` afterwards to
+# re-normalize formatting.
+lint-fix:
+	$(CARGO) clippy --fix --workspace --all-targets --allow-dirty --allow-staged
 
 # `docker` builds the image for the host arch (single arch,
 # loadable into the local daemon). The `TAG` env var picks

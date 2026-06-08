@@ -24,7 +24,7 @@
 //! (DSML/OpenAI-ish).
 
 use crate::message::ToolCall;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 /// Scan `text` for embedded Claude-style tool-call XML. Returns
 /// the cleaned text and a list of synthesized `ToolCall`s.
@@ -288,7 +288,7 @@ fn skip_ws(s: &str, mut i: usize) -> usize {
     i
 }
 
-fn read_attr(s: &str, i: usize, attr: &str) -> Option<String> {
+fn read_attr(s: &str, _i: usize, attr: &str) -> Option<String> {
     // Scan the entire string for `attr="..."` rather than assuming
     // it starts at position `i`. The caller passes `i` as a hint
     // for where attributes begin (after the tag name), but the
