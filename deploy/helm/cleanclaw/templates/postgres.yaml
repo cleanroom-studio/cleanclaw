@@ -1,0 +1,57 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "cleanclaw.fullname" . }}-db
+  labels:
+    {{- include "cleanclaw.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "cleanclaw.fullname" . }}-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "cleanclaw.fullname" . }}-db
+  template:
+    metadata:
+      labels:
+        app: {{ include "cleanclaw.fullname" . }}-db
+    spec:
+      containers:
+      - name: postgres
+        image: {{ .Values.postgres.image }}
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: cleanclaw
+        - name: POSTGRES_USER
+          value: cleanclaw
+        - name: POSTGRES_PASSWORD
+          value: {{ .Values.postgres.password | quote }}
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        resources:
+          {{- toYaml .Values.postgres.resources | nindent 10 }}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: {{ .Values.postgres.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cleanclaw.fullname" . }}-db
+  labels:
+    {{- include "cleanclaw.labels" . | nindent 4 }}
+spec:
+  ports:
+  - port: 5432
+    name: postgres
+  selector:
+    app: {{ include "cleanclaw.fullname" . }}-db
+{{- end }}

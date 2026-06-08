@@ -1,0 +1,188 @@
+# CleanClaw — single-file K8s deployment.
+#
+# The Go pipeline shipped one Deployment + Service + Ingress + Secret + ConfigMap.
+# The Rust pipeline is identical because everything in the Go
+# deployment is configuration, not code.
+#
+# ┌─ ONE-SHOT DEPLOY ──────────────────────────────────────────────────────┐
+# │  1. Edit the 3 (or 4) values in `cleanclaw-secrets`                     │
+# │     (DSN + object-store AK/SK, optionally E2B key).                    │
+# │  2. In `cleanclaw-config`, pick ONE object-store provider block;        │
+# │     leave the rest commented out.                                      │
+# │  3. Edit the Ingress host (or delete the whole Ingress section if      │
+# │     you don't need public access).                                     │
+# │  4. kubectl apply -f CleanClaw.yaml                                     │
+# │  5. Create a super-admin:                                              │
+# │     kubectl -n cleanclaw exec deploy/cleanclaw -- \                    │
+# │       cleanclaw admin create-user --username alice \                    │
+# │         --email alice@example.com --password 'hunter2' \               │
+# │         --role super_admin                                             │
+# │     Then sign in at /login — no admin token needed.                    │
+# └─────────────────────────────────────────────────────────────────────────┘
+#
+# Prerequisites:
+#   - Managed PostgreSQL 16+ (Aliyun RDS / AWS RDS / etc.)
+#   - One object-store bucket (AWS S3 / R2 / B2 / OSS / MinIO — your pick)
+#   - Image: ghcr.io/cleanroom-studio/cleanclaw:dev (auto-pushed by GitHub Actions, public)
+#   - Optional: cert-manager + ClusterIssuer (if you want HTTPS)
+#
+# Configuration is fully driven by CLEANCLAW_* env vars — there is
+# no config file. Users / agents / providers / channels all live
+# in Postgres.
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cleanclaw
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cleanclaw-secrets
+  namespace: cleanclaw
+type: Opaque
+stringData:
+  # Required: PostgreSQL DSN. The Go pipeline used a single
+  # `dsn` key; the Rust pipeline keeps the same name for parity.
+  dsn: "postgres://cleanclaw:CHANGE_ME@postgres:5432/cleanclaw?sslmode=disable"
+  # Required: object-store credentials. Pick ONE provider block
+  # below; the others stay commented out.
+  s3-access-key: ""
+  s3-secret-key: ""
+  s3-endpoint: ""
+  # Optional: E2B API key for the E2B sandbox backend.
+  e2b-api-key: ""
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cleanclaw-config
+  namespace: cleanclaw
+data:
+  # All non-secret configuration.
+  CLEANCLAW_PORT: "18953"
+  CLEANCLAW_LOG: "info"
+  CLEANCLAW_STORAGE_TYPE: "postgres"
+  CLEANCLAW_STORAGE_AUTOMIGRATE: "true"
+  CLEANCLAW_SANDBOX_ENABLED: "true"
+  CLEANCLAW_SANDBOX_BACKEND: "docker"
+  CLEANCLAW_SANDBOX_IMAGE: "thinkany/cleanclaw-sandbox:latest"
+  CLEANCLAW_HOOKS_ENABLED: "true"
+  CLEANCLAW_HOOKS_PATH: "/hooks"
+  CLEANCLAW_HOOKS_PORT: "18954"
+  CLEANCLAW_LOG_LEVEL: "info"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cleanclaw
+  namespace: cleanclaw
+  labels:
+    app: cleanclaw
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cleanclaw
+  template:
+    metadata:
+      labels:
+        app: cleanclaw
+    spec:
+      containers:
+        - name: cleanclaw
+          image: ghcr.io/cleanroom-studio/cleanclaw:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 18953
+            - name: hooks
+              containerPort: 18954
+          envFrom:
+            - configMapRef:
+                name: cleanclaw-config
+            - secretRef:
+                name: cleanclaw-secrets
+          env:
+            - name: CLEANCLAW_HOME
+              value: /data
+            - name: CLEANCLAW_STORAGE_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: cleanclaw-secrets
+                  key: dsn
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cleanclaw
+  namespace: cleanclaw
+spec:
+  type: ClusterIP
+  selector:
+    app: cleanclaw
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+    - name: hooks
+      port: 18954
+      targetPort: hooks
+---
+# Optional: Ingress for HTTPS access. Delete this block if you
+# don't need public access.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cleanclaw
+  namespace: cleanclaw
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - cleanclaw.example.com
+      secretName: cleanclaw-tls
+  rules:
+    - host: cleanclaw.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cleanclaw
+                port:
+                  number: 80

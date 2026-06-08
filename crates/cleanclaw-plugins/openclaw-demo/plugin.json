@@ -1,0 +1,10 @@
+{
+  "id": "openclaw-plugin-demo",
+  "name": "OpenClaw Plugin Demo",
+  "version": "0.1.0",
+  "description": "Demo plugin showing what an OpenClaw-style plugin looks like. Provides get_weather and calculate tools.",
+  "type": "tool",
+  "command": "cleanclaw-openclaw-demo",
+  "capabilities": ["tool"],
+  "config": {}
+}

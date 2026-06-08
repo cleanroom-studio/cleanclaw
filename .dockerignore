@@ -1,0 +1,25 @@
+# Exclude the reference Go repo — the Dockerfile only needs the
+# Rust workspace. Copying _ref/ would add ~80MB to the build
+# context and slow the COPY step by an order of magnitude.
+_ref/
+# Build artifacts
+target/
+.git/
+.github/
+docs/
+deploy/
+scripts/
+*.md
+!crates/*/README.md
+# Editor / OS noise
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+# CI / release metadata
+*.tar.gz
+*.sha256
+# Test artifacts
+/coverage/
+/tmp/

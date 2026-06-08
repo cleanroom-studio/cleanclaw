@@ -1,0 +1,10 @@
+{
+  "id": "cleanclaw-plugin-demo",
+  "name": "CleanClaw Plugin Demo",
+  "version": "0.1.0",
+  "description": "A demo plugin showing how to build a CleanClaw native plugin",
+  "type": "tool",
+  "command": "cleanclaw-plugin-demo",
+  "capabilities": ["tool"],
+  "config": {}
+}

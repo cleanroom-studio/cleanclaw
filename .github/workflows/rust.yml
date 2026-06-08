@@ -1,0 +1,94 @@
+name: Rust
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "."
+          shared-key: ${{ matrix.os }}-test
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo build
+        run: cargo build --workspace --locked
+
+      - name: cargo test
+        run: cargo test --workspace --locked
+
+      - name: Script tests (arch detection + Dockerfile lint)
+        run: bash scripts/tests/run_all.sh
+
+      - name: Bash syntax check
+        # Cheap belt-and-suspenders for the new build scripts.
+        # `bash -n` parses without executing.
+        run: |
+          for s in scripts/release.sh scripts/build-docker.sh scripts/dev-build.sh; do
+            bash -n "$s" || { echo "syntax error in $s" >&2; exit 1; }
+          done
+          for t in scripts/tests/*_test.sh; do
+            bash -n "$t" || { echo "syntax error in $t" >&2; exit 1; }
+          done
+
+  release-build:
+    name: Release build
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "."
+          shared-key: release-build
+
+      - name: Release build
+        env:
+          CLEANCLAW_VERSION: ${{ github.ref_name }}
+          CLEANCLAW_COMMIT: ${{ github.sha }}
+          CLEANCLAW_DATE: ${{ github.event.repository.updated_at }}
+        run: make release-local
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cleanclaw-${{ github.ref_name }}
+          path: |
+            target/release/cleanclaw
+            target/release/cleanclaw-plugin-demo
+            target/release/cleanclaw-mem0
+            target/release/cleanclaw-post-turn-echo
+            target/release/cleanclaw-openclaw-demo

@@ -1,0 +1,17 @@
+[package]
+name = "cleanclaw-mem0"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "cleanclaw-mem0"
+path = "src/main.rs"
+
+[dependencies]
+cleanclaw-plugin-runtime = { path = "../../cleanclaw-plugin-runtime" }
+async-trait = "0.1"
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"

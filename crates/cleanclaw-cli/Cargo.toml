@@ -1,0 +1,33 @@
+[package]
+name = "cleanclaw-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "cleanclaw"
+path = "src/main.rs"
+
+[dependencies]
+cleanclaw-core = { workspace = true }
+cleanclaw-config = { workspace = true }
+cleanclaw-store = { workspace = true }
+cleanclaw-auth = { workspace = true }
+cleanclaw-provider = { workspace = true }
+cleanclaw-agent = { workspace = true }
+cleanclaw-skills = { workspace = true }
+cleanclaw-policy = { workspace = true }
+cleanclaw-plugin = { workspace = true }
+cleanclaw-sandbox = { workspace = true }
+cleanclaw-daemon = { workspace = true }
+cleanclaw-gateway = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rand = { workspace = true }
+chrono = { workspace = true }
+reqwest = { workspace = true }

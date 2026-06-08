@@ -1,0 +1,76 @@
+## CleanClaw — single-machine deployment with Postgres.
+##
+## Quick start:
+##   docker compose up -d
+##   open http://localhost:18953        # walks the onboard wizard:
+##                                       # super-admin account + first
+##                                       # provider + first agent
+##
+## Or initialize from CLI without opening the web UI:
+##   docker compose exec cleanclaw cleanclaw admin create-user \
+##     --username alice --email alice@example.com --password 'hunter2' \
+##     --role super_admin
+##
+## All runtime config goes through CLEANCLAW_* env vars — no config file.
+##
+## Multi-arch: `cleanclaw/cleanclaw:latest` is published as a
+## multi-arch manifest (linux/amd64 + linux/arm64), so this
+## compose file works unchanged on Apple Silicon, AWS Graviton,
+## Raspberry Pi 4/5, and the usual x86_64 hosts. The Postgres
+## image (`postgres:16-alpine`) is also multi-arch.
+
+services:
+  cleanclaw:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: cleanclaw/cleanclaw:latest
+    restart: unless-stopped
+    ports:
+      - "${CLEANCLAW_PORT:-18953}:18953"
+    volumes:
+      - cleanclaw-data:/data/.cleanclaw
+    environment:
+      # CLEANCLAW_HOME — sqlite db path + sandbox root + skill cache live here
+      CLEANCLAW_HOME: /data/.cleanclaw
+      CLEANCLAW_PORT: "18953"
+      CLEANCLAW_LOG: info
+      # Storage
+      CLEANCLAW_STORAGE_TYPE: postgres
+      CLEANCLAW_STORAGE_DSN: postgres://cleanclaw:${POSTGRES_PASSWORD:-cleanclaw}@postgres:5432/cleanclaw?sslmode=disable
+      CLEANCLAW_STORAGE_AUTOMIGRATE: "true"
+      # Sandbox (docker backend, no nested docker)
+      CLEANCLAW_SANDBOX_ENABLED: "false"
+      CLEANCLAW_SANDBOX_BACKEND: docker
+      CLEANCLAW_SANDBOX_IMAGE: thinkany/cleanclaw-sandbox:latest
+      # Hooks
+      CLEANCLAW_HOOKS_ENABLED: "true"
+      CLEANCLAW_HOOKS_PATH: /hooks
+      CLEANCLAW_HOOKS_PORT: "18954"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "cleanclaw", "daemon", "status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cleanclaw
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cleanclaw}
+      POSTGRES_DB: cleanclaw
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cleanclaw -d cleanclaw"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  cleanclaw-data:
+  postgres-data:

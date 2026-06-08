@@ -1,0 +1,121 @@
+# CleanClaw Helm chart — default values.
+#
+# The Go pipeline used env-var driven config; the Rust pipeline keeps
+# the same surface so the same deployment templates work.
+
+image:
+  repository: ghcr.io/cleanroom-studio/cleanclaw
+  # In production, pin to :v0.x.y or a commit sha — don't use
+  # latest/dev.
+  tag: dev
+  pullPolicy: IfNotPresent
+  # imagePullSecrets:
+  #   - name: regcred
+
+# Gateway
+gateway:
+  replicas: 2
+  port: 18953
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+  # Drain budget for SSE/WS. preStop sleep takes the bulk of it;
+  # the remainder is for the Rust gateway's graceful shutdown.
+  preStopSleepSeconds: 15
+  terminationGracePeriodSeconds: 30
+
+# Sandbox (docker backend; off by default)
+sandbox:
+  enabled: false
+  backend: docker
+  image: thinkany/cleanclaw-sandbox:latest
+
+# Hooks server (inbound webhooks for /hooks)
+hooks:
+  enabled: true
+  path: /hooks
+  port: 18954
+
+# Storage
+storage:
+  type: sqlite
+  # For postgres, set type=postgres and supply `dsn` below.
+  dsn: ""
+
+# Logging
+log:
+  level: info
+  # RUST_LOG override (forwarded to the gateway process).
+  rustLog: "info"
+
+# Object store for workspace files. The Rust pipeline uses the
+# same S3-compatible protocol as the Go pipeline.
+objectStore:
+  # s3, r2, b2, oss, minio — pick one.
+  driver: s3
+  # The `type` field is the same as our `driver`; the
+  # template maps "local" → empty credentials.
+  type: s3
+  endpoint: ""
+  region: us-east-1
+  bucket: cleanclaw
+  prefix: ""
+  accountId: ""
+  useSSL: true
+  # Inline access/secret keys are convenient for dev; production
+  # installs should set `existingSecret` and leave these blank.
+  accessKey: ""
+  secretKey: ""
+
+# E2B (optional)
+e2b:
+  enabled: false
+  apiKey: ""
+
+# Bundled Postgres (off by default; prefer an external RDS /
+# Cloud SQL in production via `externalDSN`).
+postgres:
+  enabled: false
+  image: postgres:16
+  password: cleanclaw-dev-password
+  storage: 8Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# When set, takes precedence over the bundled postgres for
+# STORAGE_DSN. Typical value: an RDS connection string.
+externalDSN: ""
+
+# Extra secret entries — `secrets.extra` is a map of additional
+# keys to inject into the gateway's Secret (e.g. provider
+# API keys, channel tokens, etc).
+secrets:
+  extra: {}
+
+# Ingress — disabled by default. Set `ingress.enabled: true` to
+# expose the gateway publicly.
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: cleanclaw.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resource quotas / pod disruption budgets are off by default;
+# enable per-cluster.
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1

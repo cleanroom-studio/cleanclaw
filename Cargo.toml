@@ -1,0 +1,155 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/cleanclaw-core",
+    "crates/cleanclaw-config",
+    "crates/cleanclaw-store",
+    "crates/cleanclaw-bus",
+    "crates/cleanclaw-taskqueue",
+    "crates/cleanclaw-webhook",
+    "crates/cleanclaw-agentcli",
+    "crates/cleanclaw-auth",
+    "crates/cleanclaw-provider",
+    "crates/cleanclaw-toolprov",
+    "crates/cleanclaw-workspace",
+    "crates/cleanclaw-skills",
+    "crates/cleanclaw-session",
+    "crates/cleanclaw-scope",
+    "crates/cleanclaw-usage",
+    "crates/cleanclaw-privacy",
+    "crates/cleanclaw-policy",
+    "crates/cleanclaw-sandbox",
+    "crates/cleanclaw-mcp",
+    "crates/cleanclaw-plugin",
+    "crates/cleanclaw-cron",
+    "crates/cleanclaw-channels",
+    "crates/cleanclaw-agent",
+    "crates/cleanclaw-api",
+    "crates/cleanclaw-setup",
+    "crates/cleanclaw-gateway",
+    "crates/cleanclaw-daemon",
+    "crates/cleanclaw-web",
+    "crates/cleanclaw-plugin-runtime",
+    "crates/cleanclaw-plugins/plugin-demo",
+    "crates/cleanclaw-plugins/mem0",
+    "crates/cleanclaw-plugins/post-turn-echo",
+    "crates/cleanclaw-plugins/openclaw-demo",
+    "crates/cleanclaw-plugin-bridge",
+    "crates/cleanclaw-skills-bundled",
+    "crates/cleanclaw-workspace-defaults",
+    "crates/cleanclaw-e2e",
+    "crates/cleanclaw-cli",
+    "crates/cleanclaw-embed",
+    "crates/cleanclaw-skills",
+    "crates/cleanclaw-toolprov",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Apache-2.0"
+repository = "https://github.com/cleanroom-studio/cleanclaw"
+publish = false
+
+[workspace.dependencies]
+# Runtime
+tokio = { version = "1.40", features = ["full"] }
+tokio-util = { version = "0.7", features = ["io"] }
+tokio-stream = "0.1"
+async-trait = "0.1"
+futures = "0.3"
+futures-util = "0.3"
+
+# HTTP / web
+axum = { version = "0.7", features = ["macros", "ws", "multipart", "http2"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["trace", "cors", "fs", "limit"] }
+hyper = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls", "multipart"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+toml = "0.8"
+csv = "1"
+
+# Database
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "postgres", "macros", "chrono", "uuid", "json", "migrate"] }
+
+# Logging / tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Errors
+thiserror = "1"
+anyhow = "1"
+
+# Time / ids
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+ulid = "1"
+
+# Crypto / auth
+argon2 = "0.5"
+rand = "0.8"
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
+base64 = "0.22"
+constant_time_eq = "0.3"
+
+# CLI
+clap = { version = "4.5", features = ["derive", "env"] }
+clap_complete = "4.5"
+
+# Config
+dotenvy = "0.15"
+
+# Concurrency
+parking_lot = "0.12"
+
+# Utilities
+once_cell = "1"
+url = "2"
+regex = "1"
+glob = "0.3"
+bytes = "1"
+mime = "0.3"
+mime_guess = "2"
+dirs = "5"
+tempfile = "3"
+rust-embed = "8"
+
+# Internal cross-crate shortcuts
+cleanclaw-core = { path = "crates/cleanclaw-core" }
+cleanclaw-store = { path = "crates/cleanclaw-store" }
+cleanclaw-config = { path = "crates/cleanclaw-config" }
+cleanclaw-provider = { path = "crates/cleanclaw-provider" }
+cleanclaw-skills = { path = "crates/cleanclaw-skills" }
+cleanclaw-agent = { path = "crates/cleanclaw-agent" }
+cleanclaw-auth = { path = "crates/cleanclaw-auth" }
+cleanclaw-bus = { path = "crates/cleanclaw-bus" }
+cleanclaw-api = { path = "crates/cleanclaw-api" }
+cleanclaw-cron = { path = "crates/cleanclaw-cron" }
+cleanclaw-setup = { path = "crates/cleanclaw-setup" }
+cleanclaw-daemon = { path = "crates/cleanclaw-daemon" }
+cleanclaw-gateway = { path = "crates/cleanclaw-gateway" }
+cleanclaw-plugin = { path = "crates/cleanclaw-plugin" }
+cleanclaw-plugin-runtime = { path = "crates/cleanclaw-plugin-runtime" }
+cleanclaw-sandbox = { path = "crates/cleanclaw-sandbox" }
+cleanclaw-policy = { path = "crates/cleanclaw-policy" }
+cleanclaw-channels = { path = "crates/cleanclaw-channels" }
+cleanclaw-usage = { path = "crates/cleanclaw-usage" }
+cleanclaw-webhook = { path = "crates/cleanclaw-webhook" }
+cleanclaw-workspace = { path = "crates/cleanclaw-workspace" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = 1

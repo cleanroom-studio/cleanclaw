@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cleanclaw.fullname" . }}-config
+  labels:
+    {{- include "cleanclaw.labels" . | nindent 4 }}
+data:
+  CLEANCLAW_PORT: {{ .Values.gateway.port | quote }}
+  CLEANCLAW_BIND: "all"
+  CLEANCLAW_STORAGE_TYPE: "postgres"
+  CLEANCLAW_STORAGE_AUTO_MIGRATE: "true"
+
+  ## Object store
+  CLEANCLAW_OBJECT_STORE_TYPE: {{ .Values.objectStore.type | quote }}
+  {{- with .Values.objectStore.bucket }}
+  CLEANCLAW_OBJECT_STORE_BUCKET: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.objectStore.region }}
+  CLEANCLAW_OBJECT_STORE_REGION: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.objectStore.endpoint }}
+  CLEANCLAW_OBJECT_STORE_ENDPOINT: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.objectStore.accountId }}
+  CLEANCLAW_OBJECT_STORE_ACCOUNTID: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.objectStore.prefix }}
+  CLEANCLAW_OBJECT_STORE_PREFIX: {{ . | quote }}
+  {{- end }}
+  CLEANCLAW_OBJECT_STORE_USESSL: {{ .Values.objectStore.useSSL | quote }}
+
+  ## Sandbox
+  CLEANCLAW_SANDBOX_ENABLED: {{ .Values.sandbox.enabled | quote }}
+  {{- if .Values.sandbox.enabled }}
+  CLEANCLAW_SANDBOX_BACKEND: {{ .Values.sandbox.backend | quote }}
+  CLEANCLAW_SANDBOX_IMAGE: {{ .Values.sandbox.image | quote }}
+  {{- end }}
+
+  ## Hooks
+  CLEANCLAW_HOOKS_ENABLED: {{ .Values.hooks.enabled | quote }}
+  CLEANCLAW_HOOKS_PORT: {{ .Values.hooks.port | quote }}
+  CLEANCLAW_HOOKS_PATH: {{ .Values.hooks.path | quote }}
+
+  ## Log
+  CLEANCLAW_LOG: {{ .Values.log.rustLog | quote }}

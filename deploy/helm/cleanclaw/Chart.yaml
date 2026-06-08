@@ -1,0 +1,16 @@
+apiVersion: v2
+name: cleanclaw
+description: CleanClaw — multi-tenant AI agent runtime (Helm chart)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - ai
+  - agents
+  - cleanclaw
+home: https://github.com/cleanroom-studio/cleanclaw
+sources:
+  - https://github.com/cleanroom-studio/cleanclaw
+maintainers:
+  - name: CleanClaw
+    email: dev@cleanclaw.local

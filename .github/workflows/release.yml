@@ -1,0 +1,61 @@
+name: Release
+
+# The Go pipeline used GoReleaser. The Rust pipeline is a hand-rolled
+# tarball + GitHub Release publish that's simpler and matches
+# `scripts/release.sh` 1:1.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "."
+          shared-key: release
+
+      - name: Run release script
+        env:
+          CLEANCLAW_VERSION: ${{ github.ref_name }}
+          CLEANCLAW_COMMIT: ${{ github.sha }}
+          CLEANCLAW_DATE: ${{ github.event.repository.updated_at }}
+        run: bash scripts/release.sh "${{ github.ref_name }}"
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: cleanclaw-${{ github.ref_name }}
+          path: |
+            cleanclaw_*.tar.gz
+            cleanclaw_*.tar.gz.sha256
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: |
+            CleanClaw ${{ github.ref_name }}
+
+            Install:
+            ```
+            curl -fsSL https://raw.githubusercontent.com/cleanroom-studio/cleanclaw/main/install.sh | sh
+            ```
+          files: |
+            cleanclaw_*.tar.gz
+            cleanclaw_*.tar.gz.sha256
+          fail_on_unmatched_files: true
+          generate_release_notes: true

@@ -1,0 +1,72 @@
+# PostgreSQL for self-hosted single-pod development.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cleanclaw-postgres
+  namespace: cleanclaw
+type: Opaque
+stringData:
+  POSTGRES_USER: cleanclaw
+  POSTGRES_PASSWORD: cleanclaw
+  POSTGRES_DB: cleanclaw
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cleanclaw-postgres-data
+  namespace: cleanclaw
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cleanclaw-postgres
+  namespace: cleanclaw
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cleanclaw-postgres
+  template:
+    metadata:
+      labels:
+        app: cleanclaw-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: cleanclaw-postgres
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "cleanclaw", "-d", "cleanclaw"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: cleanclaw-postgres-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cleanclaw-postgres
+  namespace: cleanclaw
+spec:
+  type: ClusterIP
+  selector:
+    app: cleanclaw-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

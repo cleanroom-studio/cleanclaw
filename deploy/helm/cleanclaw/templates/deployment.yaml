@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cleanclaw.fullname" . }}
+  labels:
+    {{- include "cleanclaw.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.podDisruptionBudget.enabled }}
+  replicas: {{ .Values.gateway.replicas }}
+  {{- else }}
+  replicas: {{ .Values.gateway.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "cleanclaw.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cleanclaw.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: cleanclaw
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.gateway.port }}
+            - name: hooks
+              containerPort: {{ .Values.hooks.port }}
+          env:
+            - name: CLEANCLAW_HOME
+              value: /data
+            - name: CLEANCLAW_PORT
+              value: "{{ .Values.gateway.port }}"
+            - name: CLEANCLAW_LOG
+              value: "{{ .Values.log.rustLog }}"
+            - name: CLEANCLAW_STORAGE_TYPE
+              value: "{{ .Values.storage.type }}"
+            - name: CLEANCLAW_STORAGE_DSN
+              value: "{{ .Values.storage.dsn }}"
+            - name: CLEANCLAW_SANDBOX_ENABLED
+              value: "{{ .Values.sandbox.enabled }}"
+            - name: CLEANCLAW_SANDBOX_BACKEND
+              value: "{{ .Values.sandbox.backend }}"
+            - name: CLEANCLAW_SANDBOX_IMAGE
+              value: "{{ .Values.sandbox.image }}"
+            - name: CLEANCLAW_HOOKS_ENABLED
+              value: "{{ .Values.hooks.enabled }}"
+            - name: CLEANCLAW_HOOKS_PATH
+              value: "{{ .Values.hooks.path }}"
+            - name: CLEANCLAW_HOOKS_PORT
+              value: "{{ .Values.hooks.port }}"
+          envFrom:
+            - secretRef:
+                name: {{ .Values.objectStore.existingSecret }}
+                optional: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep {{ .Values.gateway.preStopSleepSeconds }}"]
+          resources:
+            {{- toYaml .Values.gateway.resources | nindent 12 }}
+      terminationGracePeriodSeconds: {{ .Values.gateway.terminationGracePeriodSeconds }}
