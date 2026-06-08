@@ -600,13 +600,20 @@ fn provider_static(p: &str) -> &'static str {
 }
 
 // =====================================================================
+// Type aliases
+// =====================================================================
+
+/// Meter callback type: (agent_id, byte_count) -> ()
+type MeterFn = Arc<dyn Fn(&str, i64) + Send + Sync + 'static>;
+
+// =====================================================================
 // Metered — wraps a Store to count Put bytes per agent.
 // =====================================================================
 
 #[derive(Clone)]
 pub struct Metered {
     inner: Arc<dyn Store>,
-    meter: Arc<dyn Fn(&str, i64) + Send + Sync + 'static>,
+    meter: MeterFn,
 }
 
 impl Metered {

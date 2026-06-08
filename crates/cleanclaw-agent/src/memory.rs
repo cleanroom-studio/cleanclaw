@@ -5,10 +5,8 @@
 //! summarizes (on cadence). It uses a simple `## <ISO timestamp>`
 //! section structure so the agent can read it back as a timeline.
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use cleanclaw_core::Result;
-use std::path::Path;
-use tracing::warn;
 
 const MEMORY_FILE: &str = "MEMORY.md";
 
@@ -234,9 +232,4 @@ mod tests {
         assert!(summary.contains("follow-up answer"));
         assert!(!summary.contains("earlier question"));
     }
-}
-
-#[allow(dead_code)]
-fn _unused_paths(p: &Path) -> std::path::PathBuf {
-    p.to_path_buf()
 }

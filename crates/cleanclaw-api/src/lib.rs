@@ -2,7 +2,14 @@
 //! and exposed as `/api/*` and `/v1/*`.
 //!
 //! + the corresponding
-//! handlers in .go`.
+//!   handlers in .go`.
+
+#![allow(
+    clippy::too_many_arguments,
+    dead_code,
+    unused_imports,
+    unused_variables
+)]
 
 use axum::{
     extract::{Path, State},

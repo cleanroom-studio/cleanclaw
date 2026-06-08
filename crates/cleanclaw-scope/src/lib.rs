@@ -346,10 +346,12 @@ mod tests {
 
     #[test]
     fn channel_config_round_trip() {
-        let mut c = ChannelConfig::default();
-        c.enabled = true;
-        c.bot_token = "abc".into();
-        c.app_token = "def".into();
+        let c = ChannelConfig {
+            enabled: true,
+            bot_token: "abc".into(),
+            app_token: "def".into(),
+            ..Default::default()
+        };
         let v = serde_json::to_value(&c).unwrap();
         let rec = ConfigRecord {
             id: "x".into(),

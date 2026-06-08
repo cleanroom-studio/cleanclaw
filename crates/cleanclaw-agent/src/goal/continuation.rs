@@ -158,7 +158,6 @@ mod tests {
     #[tokio::test]
     async fn try_fire_skips_paused_goals() {
         use cleanclaw_bus::MessageBus;
-        use cleanclaw_store::Store;
         let st = store().await;
         st.save_goal(&g("paused", true)).await.unwrap();
         let bus = MessageBus::new(4);
@@ -171,7 +170,6 @@ mod tests {
     #[tokio::test]
     async fn try_fire_skips_goals_without_routing() {
         use cleanclaw_bus::MessageBus;
-        use cleanclaw_store::Store;
         let st = store().await;
         st.save_goal(&g("active", false)).await.unwrap();
         let bus = MessageBus::new(4);

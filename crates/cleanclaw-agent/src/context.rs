@@ -7,7 +7,6 @@ use cleanclaw_core::Result;
 use cleanclaw_skills::{render_always_loaded, render_prompt, Skill};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct IdentityFiles {

@@ -13,6 +13,7 @@ use serde_json::{json, Value};
 
 pub struct ImageGenTool;
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 struct ImageArgs {
     prompt: String,
@@ -53,6 +54,7 @@ impl Tool for ImageGenTool {
 
 pub struct TtsTool;
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 struct TtsArgs {
     text: String,

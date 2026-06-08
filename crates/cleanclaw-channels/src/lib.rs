@@ -1044,6 +1044,7 @@ impl Channel for TelegramChannel {
 pub struct DiscordChannel {
     inner: WebhookChannel,
     bot_token: String,
+    #[allow(dead_code)]
     bot_user_id: String,
     bus: Mutex<Option<Arc<MessageBus>>>,
     poll: LongPollTask,
@@ -1086,6 +1087,7 @@ impl DiscordChannel {
 struct DiscordPoll {
     client: reqwest::Client,
     bot_token: String,
+    #[allow(dead_code)]
     account_id: String,
 }
 
@@ -1182,6 +1184,7 @@ impl Channel for DiscordChannel {
 pub struct SlackChannel {
     inner: WebhookChannel,
     bot_token: String,
+    #[allow(dead_code)]
     bot_user_id: String,
     bus: Mutex<Option<Arc<MessageBus>>>,
     poll: LongPollTask,
@@ -1221,6 +1224,7 @@ impl SlackChannel {
 struct SlackPoll {
     client: reqwest::Client,
     bot_token: String,
+    #[allow(dead_code)]
     account_id: String,
 }
 
@@ -1348,6 +1352,7 @@ struct FeishuPoll {
     client: reqwest::Client,
     app_id: String,
     app_secret: String,
+    #[allow(dead_code)]
     account_id: String,
 }
 
@@ -1490,6 +1495,7 @@ struct WeChatPoll {
     client: reqwest::Client,
     corp_id: String,
     corp_secret: String,
+    #[allow(dead_code)]
     account_id: String,
 }
 
@@ -1665,6 +1671,7 @@ impl LineChannel {
 struct LinePoll {
     client: reqwest::Client,
     channel_access_token: String,
+    #[allow(dead_code)]
     account_id: String,
 }
 

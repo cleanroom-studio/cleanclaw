@@ -238,16 +238,18 @@ mod tests {
 
     #[test]
     fn outbound_message_roundtrips_buttons() {
-        let mut msg = OutboundMessage::default();
-        msg.channel = "telegram".into();
-        msg.chat_id = "42".into();
-        msg.text = "Pick one".into();
-        msg.buttons = vec![vec![
-            OutboundButton::new("Yes").with_callback("y"),
-            OutboundButton::new("No").with_callback("n"),
-        ]];
-        msg.edit_msg_id = "99".into();
-        msg.media_paths = vec!["/tmp/out.png".into()];
+        let msg = OutboundMessage {
+            channel: "telegram".into(),
+            chat_id: "42".into(),
+            text: "Pick one".into(),
+            buttons: vec![vec![
+                OutboundButton::new("Yes").with_callback("y"),
+                OutboundButton::new("No").with_callback("n"),
+            ]],
+            edit_msg_id: "99".into(),
+            media_paths: vec!["/tmp/out.png".into()],
+            ..Default::default()
+        };
 
         let json = serde_json::to_string(&msg).expect("serialize");
         let back: OutboundMessage = serde_json::from_str(&json).expect("deserialize");
@@ -260,12 +262,14 @@ mod tests {
 
     #[test]
     fn inbound_message_carries_photo_legacy_and_modern_fields() {
-        let mut m = InboundMessage::default();
-        m.channel = "telegram".into();
-        m.photo_url = "https://x/a.jpg".into();
-        m.photo_urls = vec!["https://x/b.jpg".into(), "https://x/c.jpg".into()];
-        m.sender_avatar_url = "https://cdn/avatar.png".into();
-        m.reply_to_msg_id = "123".into();
+        let m = InboundMessage {
+            channel: "telegram".into(),
+            photo_url: "https://x/a.jpg".into(),
+            photo_urls: vec!["https://x/b.jpg".into(), "https://x/c.jpg".into()],
+            sender_avatar_url: "https://cdn/avatar.png".into(),
+            reply_to_msg_id: "123".into(),
+            ..Default::default()
+        };
 
         let json = serde_json::to_string(&m).unwrap();
         let back: InboundMessage = serde_json::from_str(&json).unwrap();

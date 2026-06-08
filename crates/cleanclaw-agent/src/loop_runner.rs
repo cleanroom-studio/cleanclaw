@@ -5,15 +5,13 @@
 //! when one is wired.
 
 use super::compact::{compact_in_place, save_compacted, should_compact, DEFAULT_TRIGGER_TOKENS};
-use super::context::{ContextBuilder, IdentityFileStore, IdentityFiles};
+use super::context::{ContextBuilder, IdentityFiles};
 use super::event_hub::{AgentEvent, EventEnvelope, SharedEventHub, Usage};
-use super::hooks::{Hook, HookPhase, HookRegistry};
+use super::hooks::{HookPhase, HookRegistry};
 use super::tool_recovery::TurnFailures;
 use super::tools::{tool_definitions_message, ToolContext, ToolRegistry};
 use cleanclaw_core::{CleanClawError, Result};
-use cleanclaw_provider::{
-    ChatRequest, ChatResponse, Message, Provider, ProviderStream, StreamEvent, ToolCall,
-};
+use cleanclaw_provider::{ChatRequest, Message, Provider, ToolCall};
 use cleanclaw_skills::Skill;
 use cleanclaw_store::Store;
 use futures_util::StreamExt;
@@ -111,9 +109,11 @@ impl Agent {
 
         let mut iterations: u32 = 0;
         let mut total_usage = Usage::default();
-        let mut last_reply = String::new();
-        let mut last_finish = String::new();
         let mut all_tool_calls: Vec<ToolCall> = Vec::new();
+        #[allow(unused_assignments)]
+        let mut last_reply = String::new();
+        #[allow(unused_assignments)]
+        let mut last_finish = String::new();
 
         let tool_defs = self.tools.as_definitions();
         let _tools_section = tool_definitions_message(&tool_defs);
@@ -388,9 +388,11 @@ impl Agent {
 
         let mut iterations: u32 = 0;
         let mut total_usage = Usage::default();
-        let mut last_reply = String::new();
-        let mut last_finish = String::new();
         let mut all_tool_calls: Vec<ToolCall> = Vec::new();
+        #[allow(unused_assignments)]
+        let mut last_reply = String::new();
+        #[allow(unused_assignments)]
+        let mut last_finish = String::new();
         let tool_defs = self.tools.as_definitions();
 
         loop {
@@ -882,9 +884,7 @@ mod loop_tests {
         ChatRequest, ChatResponse, Provider, ProviderError, ProviderStream, StreamEvent, Usage,
     };
     use cleanclaw_store::Store;
-    use futures_util::stream::StreamExt;
     use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
 
     /// A canned provider that returns a fresh response on each
     /// `chat` call. The chat history is captured so tests can

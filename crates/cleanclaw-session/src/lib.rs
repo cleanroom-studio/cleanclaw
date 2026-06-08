@@ -51,6 +51,7 @@ pub trait SessionBackend: Send + Sync + 'static {
     ) -> Result<Vec<ProviderMessage>, SessionError>;
     /// Overwrite the working-set messages. Channel/triple/project are
     /// upserted alongside.
+    #[allow(clippy::too_many_arguments)]
     async fn save_session(
         &self,
         agent_id: &str,
@@ -157,8 +158,10 @@ pub struct WebSession {
 // =====================================================================
 
 pub struct Session {
+    #[allow(dead_code)]
     file_path: PathBuf,
     backend: Arc<dyn SessionBackend>,
+    #[allow(dead_code)]
     user_id: String,
     agent_id: String,
     session_key: String,
@@ -608,7 +611,7 @@ impl Manager {
         self.backend
             .get_session(&self.agent_id, session_key)
             .await
-            .map(|v| !v.is_empty() || true)
+            .map(|v| !v.is_empty())
             .unwrap_or(false)
     }
 
@@ -796,6 +799,7 @@ impl FileBackend {
         out
     }
 
+    #[allow(dead_code)]
     fn append_to_file(path: &Path, msg: &ProviderMessage) -> std::io::Result<()> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
@@ -1043,7 +1047,7 @@ impl SessionBackend for FileBackend {
                 thumbnail_url: thumbnail,
             });
         }
-        out.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        out.sort_by_key(|s| std::cmp::Reverse(s.updated_at));
         Ok(out)
     }
 }

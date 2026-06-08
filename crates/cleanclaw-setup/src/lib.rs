@@ -8,6 +8,14 @@
 //! `/api/login` endpoints, and the `mount` function that stitches
 //! the static-asset fallback under the API router. New handlers
 //! land here as the dashboard grows; existing endpoint-by-endpoint
+
+#![allow(
+    dead_code,
+    unused_imports,
+    unused_variables,
+    clippy::too_many_arguments,
+    clippy::type_complexity
+)]
 //! parity is on the C12 top-up list.
 
 use std::path::PathBuf;

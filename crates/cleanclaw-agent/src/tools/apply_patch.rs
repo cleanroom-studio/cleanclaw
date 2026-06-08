@@ -34,7 +34,7 @@
 use super::{Tool, ToolContext};
 use async_trait::async_trait;
 use cleanclaw_core::{CleanClawError, Result};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Value};
 use std::path::{Component, Path, PathBuf};
 
@@ -145,7 +145,7 @@ pub fn parse(patch: &str) -> std::result::Result<Vec<PatchOp>, String> {
             if let Some(h) = current_hunk.as_mut() {
                 h.is_eof = true;
             } else if let Some(c) = current.as_mut() {
-                c.add_body.push_str("\n");
+                c.add_body.push('\n');
                 continue;
             } else {
                 return Err("*** End of File outside of hunk".into());

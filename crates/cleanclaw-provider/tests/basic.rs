@@ -44,25 +44,31 @@ fn chat_request_serialization_round_trip() {
 
 #[test]
 fn factory_builds_openai_for_unknown_type() {
-    let mut cfg = cleanclaw_config::ProviderConfig::default();
-    cfg.api_key = "sk-test".into();
-    cfg.api_base = "https://api.openai.com/v1".into();
+    let cfg = cleanclaw_config::ProviderConfig {
+        api_key: "sk-test".into(),
+        api_base: "https://api.openai.com/v1".into(),
+        ..Default::default()
+    };
     let p = cleanclaw_provider::build_provider("openai", &cfg).unwrap();
     assert_eq!(p.name(), "openai");
 
-    let mut cfg2 = cleanclaw_config::ProviderConfig::default();
-    cfg2.api_key = "sk-test".into();
-    cfg2.api_base = "https://api.example.com/v1".into();
-    cfg2.api_type = "openai".into();
+    let cfg2 = cleanclaw_config::ProviderConfig {
+        api_key: "sk-test".into(),
+        api_base: "https://api.example.com/v1".into(),
+        api_type: "openai".into(),
+        ..Default::default()
+    };
     let p2 = cleanclaw_provider::build_provider("whatever", &cfg2).unwrap();
     assert_eq!(p2.name(), "openai");
 }
 
 #[test]
 fn factory_builds_anthropic() {
-    let mut cfg = cleanclaw_config::ProviderConfig::default();
-    cfg.api_key = "sk-test".into();
-    cfg.api_type = "anthropic".into();
+    let cfg = cleanclaw_config::ProviderConfig {
+        api_key: "sk-test".into(),
+        api_type: "anthropic".into(),
+        ..Default::default()
+    };
     let p = cleanclaw_provider::build_provider("anthropic", &cfg).unwrap();
     assert_eq!(p.name(), "anthropic");
 }
@@ -70,8 +76,10 @@ fn factory_builds_anthropic() {
 #[test]
 fn factory_resolves_env_var_api_key() {
     std::env::set_var("CLEANCLAW_TEST_KEY", "from-env");
-    let mut cfg = cleanclaw_config::ProviderConfig::default();
-    cfg.api_key = "$CLEANCLAW_TEST_KEY".into();
+    let cfg = cleanclaw_config::ProviderConfig {
+        api_key: "$CLEANCLAW_TEST_KEY".into(),
+        ..Default::default()
+    };
     let p = cleanclaw_provider::build_provider("openai", &cfg).unwrap();
     assert_eq!(p.name(), "openai");
     std::env::remove_var("CLEANCLAW_TEST_KEY");

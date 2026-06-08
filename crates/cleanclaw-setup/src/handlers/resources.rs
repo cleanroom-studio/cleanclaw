@@ -233,11 +233,11 @@ async fn usage_totals(State(state): State<Arc<ServerState>>) -> impl IntoRespons
                 requests: 0,
             },
             |mut acc, r| {
-                acc.input_tokens += r.input_tokens as i64;
-                acc.output_tokens += r.output_tokens as i64;
-                acc.cache_read_tokens += r.cache_read_tokens as i64;
-                acc.cache_create_tokens += r.cache_create_tokens as i64;
-                acc.requests += r.request_count as i64;
+                acc.input_tokens += r.input_tokens;
+                acc.output_tokens += r.output_tokens;
+                acc.cache_read_tokens += r.cache_read_tokens;
+                acc.cache_create_tokens += r.cache_create_tokens;
+                acc.requests += r.request_count;
                 acc
             },
         ),
@@ -280,11 +280,11 @@ async fn usage_top_agents(State(state): State<Arc<ServerState>>) -> impl IntoRes
                 requests: 0,
             });
         entry.tokens +=
-            (r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_create_tokens) as i64;
-        entry.requests += r.request_count as i64;
+            r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_create_tokens;
+        entry.requests += r.request_count;
     }
     let mut v: Vec<TopAgentDto> = by_agent.into_values().collect();
-    v.sort_by(|a, b| b.tokens.cmp(&a.tokens));
+    v.sort_by_key(|a| std::cmp::Reverse(a.tokens));
     v.truncate(10);
     (StatusCode::OK, Json(v)).into_response()
 }

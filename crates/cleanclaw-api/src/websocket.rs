@@ -210,7 +210,7 @@ pub(crate) async fn send_frame(
     tx: &mut futures_util::stream::SplitSink<WebSocket, Message>,
     frame: &WsFrame,
 ) -> Result<(), axum::Error> {
-    let s = serde_json::to_string(frame).map_err(|e| axum::Error::new(e))?;
+    let s = serde_json::to_string(frame).map_err(axum::Error::new)?;
     tx.send(Message::Text(s)).await
 }
 

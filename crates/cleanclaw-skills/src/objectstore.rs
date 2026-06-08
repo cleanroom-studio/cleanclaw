@@ -13,7 +13,7 @@
 //! project_id, session_id)`. We map:
 //!   - agent_id    → owner (agent ID, `_global`, or `_user_<uid>`)
 //!   - project_id  → "skills" (so skills don't collide with
-//!                   workspaces / attachments / session data)
+//!     workspaces / attachments / session data)
 //!   - session_id  → "" (skills are session-independent)
 //!   - key         → "<skillName>/<relFile>"
 //!

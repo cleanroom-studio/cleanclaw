@@ -3,10 +3,10 @@
 //! `scoped-channels` family from `handlers_scoped.go`.
 //!
 //! Routes:
-//!   * GET    /api/channels            - per-user channels (returns the
-//!                                       static channel type list — the
-//!                                       dashboard's resources tab
-//!                                       doesn't filter by config yet)
+//!   * GET    /api/channels          - per-user channels (returns the
+//!     static channel type list — the
+//!     dashboard's resources tab
+//!     doesn't filter by config yet)
 //!   * GET    /api/scoped-channels     - per-(scope,scopeId) channel rows
 //!   * POST   /api/scoped-channels     - create a scoped channel
 //!   * PUT    /api/scoped-channels/:id

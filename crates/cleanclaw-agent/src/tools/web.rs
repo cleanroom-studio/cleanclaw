@@ -13,7 +13,6 @@ use cleanclaw_core::{CleanClawError, Result};
 use cleanclaw_toolprov::{websearch, ProviderConfig, Registry as ToolprovRegistry};
 use serde::Deserialize;
 use serde_json::{json, Value};
-use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct WebFetchTool;
@@ -97,6 +96,7 @@ impl WebSearchTool {
 
 #[derive(Deserialize)]
 struct SearchArgs {
+    #[allow(dead_code)]
     query: String,
     #[serde(default)]
     limit: Option<usize>,
@@ -150,7 +150,7 @@ impl Tool for WebSearchTool {
             let cfg = configs
                 .get(p.name())
                 .cloned()
-                .unwrap_or_else(|| ProviderConfig::default());
+                .unwrap_or_default();
             cleanclaw_toolprov::Request {
                 args: args.clone(),
                 config: cfg,
@@ -192,7 +192,7 @@ mod tests {
             if query.is_empty() {
                 return Err(ProviderError::InvalidArgs("query required".into()));
             }
-            Ok(Response::from_text(&format!(
+            Ok(Response::from_text(format!(
                 "Search results for: {query}\n\n1. Mock Result\n   https://example.com\n   A fake result for testing.\n"
             )))
         }
@@ -236,6 +236,7 @@ mod tests {
 
     #[tokio::test]
     async fn web_search_tool_passes_configs_from_context() {
+        use std::collections::HashMap;
         let registry = Arc::new(ToolprovRegistry::new());
         registry.register(Arc::new(MockSearch));
         let tool = WebSearchTool::new(registry);

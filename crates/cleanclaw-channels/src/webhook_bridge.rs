@@ -3,10 +3,10 @@
 //! `MessageBus`. Mirrors the dispatcher logic in
 //!
 //! + `DispatchLINEWebhook` — the Go gateway directly calls the
-//! channel adapter's webhook handler, while the Rust port routes
-//! the HTTP handlers (`/api/line/webhook`, `/api/feishu/webhook/:id`,
-//! `/api/telegram/webhook/:id`) through this bridge so a single
-//! `Arc<MessageBus>` instance receives every inbound.
+//!   channel adapter's webhook handler, while the Rust port routes
+//!   the HTTP handlers (`/api/line/webhook`, `/api/feishu/webhook/:id`,
+//!   `/api/telegram/webhook/:id`) through this bridge so a single
+//!   `Arc<MessageBus>` instance receives every inbound.
 //!
 //! Why a bridge instead of per-channel handlers: the platform
 //! payload formats are radically different (LINE events vs.

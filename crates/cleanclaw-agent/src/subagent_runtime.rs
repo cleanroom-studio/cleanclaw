@@ -152,6 +152,7 @@ mod tests {
                 stream_calls: AtomicUsize::new(0),
             }
         }
+        #[allow(dead_code)]
         fn stream_call_count(&self) -> usize {
             self.stream_calls.load(Ordering::SeqCst)
         }

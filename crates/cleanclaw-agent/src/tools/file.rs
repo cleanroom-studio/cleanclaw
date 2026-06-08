@@ -12,7 +12,7 @@
 use super::{Tool, ToolContext};
 use async_trait::async_trait;
 use cleanclaw_core::{CleanClawError, Result};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Value};
 use std::path::{Component, Path, PathBuf};
 

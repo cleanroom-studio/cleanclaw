@@ -145,7 +145,6 @@ mod tests {
         let mut msgs: Vec<Message> = (0..30)
             .map(|i| Message::user(format!("turn {i}")))
             .collect();
-        let original_len = msgs.len();
         let compacted = compact_in_place(msgs.clone(), 5);
         assert_eq!(compacted.len(), 6); // 1 summary + 5 recent
         msgs = compacted;

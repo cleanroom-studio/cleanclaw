@@ -2,7 +2,7 @@
 //!
 //! Routes:
 //!   * GET  /api/usage            - admin aggregate (sums over all
-//!                                   agents in the requested window)
+//!     agents in the requested window)
 //!   * GET  /api/agents/:id/usage - per-agent usage
 //!   * GET  /api/tasks            - admin task list (currently empty)
 //!

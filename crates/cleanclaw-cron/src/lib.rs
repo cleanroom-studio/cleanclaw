@@ -271,6 +271,7 @@ pub fn validate_once(s: &str) -> Result<DateTime<Utc>> {
 }
 
 /// Create a fresh cron job. Convenience used by the create_cron_job tool.
+#[allow(clippy::too_many_arguments)]
 pub fn new_job(
     agent_id: impl Into<String>,
     name: impl Into<String>,
@@ -304,6 +305,7 @@ pub fn new_job(
     }
 }
 
+#[allow(dead_code)]
 fn compute_next_run_with_schedule(
     schedule: &str,
     now: DateTime<Utc>,

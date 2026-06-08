@@ -81,6 +81,7 @@ impl NonceSequence for OneNonce {
 
 /// AES-256-GCM encrypted credential store, scoped to one user.
 pub struct CredentialManager {
+    #[allow(dead_code)]
     user_id: String,
     master_key: [u8; 32],
     store_path: PathBuf,

@@ -479,8 +479,14 @@ mod tests {
         req.messages.push(Message {
             role: Role::Assistant,
             content: "answer".into(),
+            content_parts: vec![],
+            tool_calls: vec![],
+            tool_call_id: None,
+            name: None,
+            cache_control: None,
+            raw: None,
             thinking: Some("because".into()),
-            ..Message::assistant("answer")
+            timestamp: None,
         });
         let body = build_openai_body(&req, false);
         let last = body["messages"].as_array().unwrap().last().unwrap();

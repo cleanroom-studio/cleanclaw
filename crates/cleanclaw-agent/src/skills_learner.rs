@@ -10,7 +10,6 @@
 
 use std::path::Path;
 
-use cleanclaw_provider::Message;
 use serde::{Deserialize, Serialize};
 
 /// Minimum tool calls before we ask the LLM to extract a skill.
@@ -113,7 +112,7 @@ pub fn write_to_workspace(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cleanclaw_provider::Role;
+    use cleanclaw_provider::{Message, Role};
 
     #[test]
     fn slugify_basic() {

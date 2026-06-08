@@ -3,6 +3,8 @@
 //! Subcommands are split into modules; the top-level `Cli` enum wires
 //! them together.
 
+#![allow(clippy::print_literal)]
+
 use clap::{Parser, Subcommand};
 use tracing_subscriber::EnvFilter;
 

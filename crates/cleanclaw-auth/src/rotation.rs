@@ -129,6 +129,7 @@ impl ApikeyRotator {
 mod tests {
     use super::*;
     use crate::apikey::generate;
+    use cleanclaw_store::models::ApiKeyRecord;
 
     fn make_record(id: &str, user_id: &str, hash: &str) -> ApiKeyRecord {
         ApiKeyRecord {

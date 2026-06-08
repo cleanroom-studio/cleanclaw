@@ -73,6 +73,6 @@ mod tests {
     fn install_creates_dirs() {
         let dir = tempfile::tempdir().unwrap();
         let n = install_bundled(dir.path()).unwrap();
-        assert!(n >= 0);
+        let _ = n;
     }
 }

@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, PartialEq, thiserror::Error)]
 pub enum CleanClawError {
     #[error("not found: {0}")]
     NotFound(String),
@@ -143,6 +143,6 @@ mod tests {
         // error type. Smoke-test the alias so downstream code can
         // rely on it.
         let ok: Result<i32> = Ok(42);
-        assert_eq!(ok.unwrap(), 42);
+        assert_eq!(ok, Ok(42));
     }
 }

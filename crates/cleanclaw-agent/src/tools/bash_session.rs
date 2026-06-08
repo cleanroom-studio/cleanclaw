@@ -263,7 +263,7 @@ fn _silence_unused_warning(_m: OutboundMessage) {}
 pub fn render_output(new_bytes: &[u8], dropped: bool, status: Option<i32>) -> serde_json::Value {
     let text = String::from_utf8_lossy(new_bytes).to_string();
     let status_line = match status {
-        Some(code) if code == 0 => "[status] exited (code=0)".to_string(),
+        Some(0) => "[status] exited (code=0)".to_string(),
         Some(code) => format!("[status] exited (code={code})"),
         None => "[status] running".to_string(),
     };

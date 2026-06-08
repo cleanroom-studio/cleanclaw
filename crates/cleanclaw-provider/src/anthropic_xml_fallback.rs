@@ -327,6 +327,7 @@ pub fn strip_into(text: &str, sink: &mut Vec<ToolCall>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn no_xml_returns_input_unchanged() {

@@ -145,6 +145,16 @@ pub const METHOD_HOOK_FIRE: &str = "hook.fire";
 pub const NOTIF_READY: &str = "ready";
 
 // =====================================================================
+// Type aliases for complex types
+// =====================================================================
+
+/// Pending requests map: JSON-RPC id -> oneshot sender for response.
+type PendingMap = Arc<Mutex<HashMap<i64, tokio::sync::oneshot::Sender<Response>>>>;
+
+/// Notification handler for plugin subprocess.
+type NotifyHandler = Arc<Mutex<Option<Box<dyn Fn(Notification) + Send + Sync>>>>;
+
+// =====================================================================
 // Process — one plugin subprocess.
 // =====================================================================
 
@@ -165,11 +175,11 @@ pub struct Subprocess {
     /// the JSON-RPC `id` the subprocess will echo back. Wrapped
     /// in `Arc` so the read-loop task spawned in `start()` can
     /// share the same map.
-    pending: Arc<Mutex<HashMap<i64, tokio::sync::oneshot::Sender<Response>>>>,
+    pending: PendingMap,
     /// Optional callback for unsolicited `Notification` messages
     /// (no `id`, just `method` + optional `params`). Plugins use
     /// these for streamed events (chat.send, status, …).
-    on_notify: Arc<Mutex<Option<Box<dyn Fn(Notification) + Send + Sync>>>>,
+    on_notify: NotifyHandler,
 }
 
 struct SubprocessState {
@@ -194,6 +204,7 @@ impl Subprocess {
         }
     }
 
+    #[allow(dead_code)]
     fn manifest(&self) -> &Manifest {
         &self.manifest
     }
@@ -217,8 +228,8 @@ impl Subprocess {
     fn spawn_read_loop(
         manifest_id: String,
         stdout: tokio::process::ChildStdout,
-        pending: Arc<Mutex<HashMap<i64, tokio::sync::oneshot::Sender<Response>>>>,
-        on_notify: Arc<Mutex<Option<Box<dyn Fn(Notification) + Send + Sync>>>>,
+        pending: PendingMap,
+        on_notify: NotifyHandler,
     ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             let mut reader = BufReader::new(stdout);

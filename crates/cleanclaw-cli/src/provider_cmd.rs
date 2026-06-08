@@ -1,11 +1,9 @@
 //! `cleanclaw provider …` — list / add / remove LLM providers.
 
 use clap::Subcommand;
-use cleanclaw_config::ProviderConfig;
 use cleanclaw_core::{Result, UserId};
-use cleanclaw_store::models::{ConfigRecord, UserRecord};
+use cleanclaw_store::models::ConfigRecord;
 use cleanclaw_store::store::Store;
-use std::collections::HashMap;
 
 use crate::agents_cmd::open_store;
 

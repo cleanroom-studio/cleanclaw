@@ -119,7 +119,7 @@ impl Queue {
         task_timeout: Duration,
         handler: BoxedTaskHandler,
     ) -> Arc<Self> {
-        let mc = if max_concurrent <= 0 {
+        let mc = if max_concurrent == 0 {
             10
         } else {
             max_concurrent
@@ -253,7 +253,7 @@ impl Queue {
             let st = self.inner.state.lock().await;
             st.tasks.values().cloned().collect()
         };
-        all.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        all.sort_by_key(|b| std::cmp::Reverse(b.created_at));
         if limit > 0 && all.len() > limit {
             all.truncate(limit);
         }
@@ -423,13 +423,14 @@ mod tests {
     use std::sync::atomic::AtomicUsize;
 
     fn inbound(text: &str) -> InboundMessage {
-        let mut m = InboundMessage::default();
-        m.channel = "test".into();
-        m.chat_id = "c1".into();
-        m.text = text.into();
-        m.user_id = "u1".into();
-        m.owner_user_id = "u1".into();
-        m
+        InboundMessage {
+            channel: "test".into(),
+            chat_id: "c1".into(),
+            text: text.into(),
+            user_id: "u1".into(),
+            owner_user_id: "u1".into(),
+            ..Default::default()
+        }
     }
 
     #[tokio::test]

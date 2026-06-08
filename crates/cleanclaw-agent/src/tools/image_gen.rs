@@ -48,7 +48,7 @@ impl Tool for ImageGenTool {
         _ctx: &ToolContext,
         args: Value,
     ) -> std::result::Result<Value, CleanClawError> {
-        let prompt = match args.get("prompt").and_then(|v| v.as_str()) {
+        let _prompt = match args.get("prompt").and_then(|v| v.as_str()) {
             Some(s) if !s.trim().is_empty() => s,
             _ => return Ok(Value::String("image_gen: prompt is required".into())),
         };

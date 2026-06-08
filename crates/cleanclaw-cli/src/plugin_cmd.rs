@@ -234,6 +234,7 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
 
 /// `HubRepo` is the GitHub repo `cleanclaw plugin install <name>`
 /// defaults to when the path is omitted.
+#[allow(dead_code)]
 pub fn hub_repo() -> &'static str {
     HUB_REPO
 }

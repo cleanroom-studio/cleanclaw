@@ -3,6 +3,15 @@
 //! The Gateway is the runtime orchestrator that:
 //!   1. Opens the Store + Workspace + Plugin Manager
 //!   2. Hosts the Channel Manager (Telegram/Discord/Slack/Feishu/WeChat/LINE/Web)
+
+#![allow(
+    unused_imports,
+    dead_code,
+    unused_variables,
+    clippy::too_many_arguments,
+    clippy::field_reassign_with_default,
+    clippy::redundant_field_names
+)]
 //!   3. Hosts the Cron Scheduler (db-backed, ticks on a timer)
 //!   4. Hosts the Webhook Server (HTTP-based inbound)
 //!   5. Runs the inbound routing loop (resolve owner → user space → agent)

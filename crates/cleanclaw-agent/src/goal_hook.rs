@@ -42,6 +42,7 @@ pub struct GoalHook {
 }
 
 struct GoalHookInner {
+    #[allow(clippy::type_complexity)]
     callback: Arc<
         dyn Fn(GoalRecord, Arc<dyn GoalSessionLike>) -> tokio::task::JoinHandle<()> + Send + Sync,
     >,
@@ -74,7 +75,7 @@ impl GoalHook {
 
     pub async fn fire(&self, goal: GoalRecord, session: Arc<dyn GoalSessionLike>) {
         let cb = self.inner.callback.clone();
-        cb(goal, session).await;
+        let _ = cb(goal, session).await;
     }
 }
 
@@ -86,6 +87,7 @@ impl Default for GoalHook {
 
 pub struct GoalHookSubscription {
     hook: GoalHook,
+    #[allow(clippy::type_complexity)]
     session_resolver: Arc<dyn Fn(&str, &str) -> Option<Arc<dyn GoalSessionLike>> + Send + Sync>,
     last_status: Mutex<std::collections::HashMap<String, GoalStatus>>,
 }
@@ -99,6 +101,7 @@ impl std::fmt::Debug for GoalHookSubscription {
 }
 
 impl GoalHookSubscription {
+    #[allow(clippy::type_complexity)]
     pub fn new(
         hook: GoalHook,
         session_resolver: Arc<dyn Fn(&str, &str) -> Option<Arc<dyn GoalSessionLike>> + Send + Sync>,
@@ -150,19 +153,20 @@ fn build_continuation_inbound(g: &GoalRecord) -> cleanclaw_bus::InboundMessage {
         "[goal continuation] objective is still active\n\nObjective: {}\n\nStatus: {}\n\nContinue working on the objective.",
         g.objective, g.status
     );
-    let mut m = cleanclaw_bus::InboundMessage::default();
-    m.channel = g.channel.clone();
-    m.account_id = g.account_id.clone();
-    m.chat_id = g.chat_id.clone();
-    m.user_id = g.owner_user_id.clone();
-    m.owner_user_id = g.owner_user_id.clone();
-    m.agent_id = g.agent_id.clone();
-    m.message_id = format!("goal-cont:{}", g.id);
-    m.text = text;
-    m.peer_kind = "system".into();
-    m.sender_name = "goal".into();
-    m.source = cleanclaw_bus::SOURCE_GOAL_CONTEXT.to_string();
-    m
+    cleanclaw_bus::InboundMessage {
+        channel: g.channel.clone(),
+        account_id: g.account_id.clone(),
+        chat_id: g.chat_id.clone(),
+        user_id: g.owner_user_id.clone(),
+        owner_user_id: g.owner_user_id.clone(),
+        agent_id: g.agent_id.clone(),
+        message_id: format!("goal-cont:{}", g.id),
+        text,
+        peer_kind: "system".into(),
+        sender_name: "goal".into(),
+        source: cleanclaw_bus::SOURCE_GOAL_CONTEXT.to_string(),
+        ..Default::default()
+    }
 }
 
 #[cfg(test)]

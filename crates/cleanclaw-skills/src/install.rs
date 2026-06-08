@@ -44,6 +44,7 @@ pub struct InstallResult {
 
 const CLAWHUB_BASE_URL: &str = "https://clawhub.ai";
 
+#[allow(dead_code)]
 fn default_http_client() -> reqwest::Client {
     reqwest::Client::builder()
         .user_agent("cleanclaw/1.0")
@@ -316,6 +317,7 @@ fn extract_tar_gz(data: &[u8], subpath: &str, dest: &Path) -> Result<usize, Inst
     Ok(count)
 }
 
+#[allow(dead_code)]
 fn strip_first_component(p: &std::path::Path) -> std::path::PathBuf {
     p.components().skip(1).collect()
 }

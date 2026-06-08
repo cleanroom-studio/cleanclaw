@@ -556,7 +556,6 @@ pub async fn start(port: u16, log_file: &Path) -> Result<DaemonHandle, DaemonErr
         .kill_on_drop(true);
     #[cfg(unix)]
     {
-        use std::os::unix::process::CommandExt;
         unsafe {
             cmd.pre_exec(|| {
                 // Detach into a new session.

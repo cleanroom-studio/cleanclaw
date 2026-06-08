@@ -5,10 +5,10 @@
 use async_trait::async_trait;
 use cleanclaw_agent::{Agent, AgentBuilder, Hook, HookPhase, HookRegistry, TurnInput};
 use cleanclaw_provider::{
-    ChatRequest, ChatResponse, Provider, ProviderError, ProviderStream, StreamEvent, ToolCall,
+    ChatRequest, ChatResponse, Message, Provider, ProviderError, ProviderStream, Role, ToolCall,
+    Usage,
 };
-use cleanclaw_provider::{Message, Role, Usage};
-use cleanclaw_store::models::{AgentRecord, SessionRecord, UserRecord};
+use cleanclaw_store::models::UserRecord;
 use cleanclaw_store::sqlite::SqliteStore;
 use cleanclaw_store::Store;
 use serde_json::json;

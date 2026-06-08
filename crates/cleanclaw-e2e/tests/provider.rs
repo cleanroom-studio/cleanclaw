@@ -1,3 +1,5 @@
+#![allow(clippy::useless_conversion)]
+
 //! Real-provider end-to-end tests.
 //!
 //! These tests hit a live LLM provider over HTTPS to exercise

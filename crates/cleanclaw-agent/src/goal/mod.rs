@@ -233,7 +233,6 @@ mod tests {
 
     #[tokio::test]
     async fn tick_fires_active_goals_past_interval() {
-        use cleanclaw_store::Store;
         let st = store().await;
         // Direct in-memory construction + manual list rather than
         // the save→read round-trip, so the test isn't subject to
@@ -257,7 +256,6 @@ mod tests {
 
     #[tokio::test]
     async fn tick_skips_recently_updated_goals() {
-        use cleanclaw_store::Store;
         let st = store().await;
         // Fixed `now` reference shared by save and tick. The
         // 10-minute continuation window means the goal at
@@ -283,7 +281,6 @@ mod tests {
 
     #[tokio::test]
     async fn store_persists_updated_at_round_trip_basic() {
-        use cleanclaw_store::Store;
         let st = store().await;
         let mut g = make_goal("g1", "a1", "active", None, 0, 0);
         g.updated_at = chrono::Utc::now() - chrono::Duration::seconds(7200);
@@ -299,7 +296,6 @@ mod tests {
 
     #[tokio::test]
     async fn tick_skips_complete_goals() {
-        use cleanclaw_store::Store;
         let st = store().await;
         let g = make_goal("g1", "a1", "complete", None, 0, 1000);
         st.save_goal(&g).await.unwrap();
@@ -311,7 +307,6 @@ mod tests {
 
     #[tokio::test]
     async fn tick_skips_paused_goals() {
-        use cleanclaw_store::Store;
         let st = store().await;
         let g = make_goal("g1", "a1", "paused", None, 0, 1000);
         st.save_goal(&g).await.unwrap();
@@ -323,7 +318,6 @@ mod tests {
 
     #[tokio::test]
     async fn tick_skips_budget_limited_goals() {
-        use cleanclaw_store::Store;
         let st = store().await;
         // Budget 100 tokens, used 100 = exhausted.
         let g = make_goal("g1", "a1", "active", Some(100), 100, 1000);
@@ -336,7 +330,6 @@ mod tests {
 
     #[tokio::test]
     async fn tick_fires_budget_unfinished_goals() {
-        use cleanclaw_store::Store;
         let st = store().await;
         let g = make_goal("g1", "a1", "active", Some(100), 50, 86_400);
         st.save_goal(&g).await.unwrap();
@@ -351,7 +344,6 @@ mod tests {
 
     #[tokio::test]
     async fn tick_continues_multiple_goals_independently() {
-        use cleanclaw_store::Store;
         let st = store().await;
         st.save_goal(&make_goal("g1", "a1", "active", None, 0, 86_400))
             .await
@@ -368,7 +360,6 @@ mod tests {
 
     #[tokio::test]
     async fn tick_fires_when_interval_overridden_lower() {
-        use cleanclaw_store::Store;
         let st = store().await;
         let g = make_goal("g1", "a1", "active", None, 0, 86_400);
         st.save_goal(&g).await.unwrap();

@@ -241,7 +241,7 @@ impl Meter for MemMeter {
             row.requests += c.requests;
         }
         let mut out: Vec<Rank> = agg.into_values().collect();
-        out.sort_by(|a, b| b.tokens.cmp(&a.tokens));
+        out.sort_by_key(|b| std::cmp::Reverse(b.tokens));
         if limit > 0 && out.len() > limit {
             out.truncate(limit);
         }
@@ -275,7 +275,7 @@ impl MemMeter {
             row.requests += c.requests;
         }
         let mut out: Vec<Rank> = agg.into_values().collect();
-        out.sort_by(|a, b| b.tokens.cmp(&a.tokens));
+        out.sort_by_key(|b| std::cmp::Reverse(b.tokens));
         if limit > 0 && out.len() > limit {
             out.truncate(limit);
         }

@@ -117,13 +117,11 @@ pub async fn init(
     let mut save_provider = false;
     let mut provider_short = String::new();
     let mut model_id = String::new();
-    let mut full_ref = String::new();
 
     if !opts.provider.is_empty() || !opts.model.is_empty() {
-        let (p, m, f) = normalize_provider_model(&opts.provider, &opts.model)?;
+        let (p, m, _f) = normalize_provider_model(&opts.provider, &opts.model)?;
         provider_short = p;
         model_id = m;
-        full_ref = f;
         save_provider = true;
     }
 
@@ -441,9 +439,11 @@ mod tests {
         };
         store.create_user(&user).await.unwrap();
         // Create two agents under alice.
-        let mut opts = InitOptions::default();
-        opts.username = "alice".into();
-        opts.password = "p".into();
+        let mut opts = InitOptions {
+            username: "alice".into(),
+            password: "p".into(),
+            ..Default::default()
+        };
         let _ = init(store.clone(), "Alpha", opts.clone()).await.unwrap();
         opts.email = "a2@x.com".into();
         let _ = init(store.clone(), "Beta", opts).await.unwrap();
@@ -490,9 +490,11 @@ mod tests {
                 .await
                 .unwrap();
         }
-        let mut opts = InitOptions::default();
-        opts.username = "alice".into();
-        opts.password = "p".into();
+        let opts = InitOptions {
+            username: "alice".into(),
+            password: "p".into(),
+            ..Default::default()
+        };
         let created = init(store.clone(), "MyAgent", opts).await.unwrap();
         assert_eq!(created.agent.user_id, "u1");
         // Transfer to bob.
@@ -532,12 +534,14 @@ mod tests {
             .await
             .unwrap();
         // Create an agent with a provider config.
-        let mut opts = InitOptions::default();
-        opts.username = "alice".into();
-        opts.password = "p".into();
-        opts.provider = "openai".into();
-        opts.model = "gpt-4o-mini".into();
-        opts.api_key_env = "OPENAI_API_KEY".into();
+        let opts = InitOptions {
+            username: "alice".into(),
+            password: "p".into(),
+            provider: "openai".into(),
+            model: "gpt-4o-mini".into(),
+            api_key_env: "OPENAI_API_KEY".into(),
+            ..Default::default()
+        };
         let created = init(store.clone(), "ProviderAgent", opts).await.unwrap();
         // Confirm the config row is there.
         let configs_before = store.list_configs_all_kinds().await.unwrap();

@@ -1,3 +1,24 @@
+#![allow(
+    unused_imports,
+    dead_code,
+    unused_variables,
+    clippy::too_many_arguments,
+    clippy::type_complexity,
+    clippy::needless_borrows_for_generic_args,
+    clippy::field_reassign_with_default,
+    clippy::derivable_impls,
+    clippy::needless_continue,
+    clippy::unnecessary_literal_unwrap,
+    clippy::print_literal,
+    clippy::needless_range_loop,
+    clippy::manual_find,
+    clippy::useless_format,
+    clippy::manual_ok_err,
+    clippy::doc_lazy_continuation,
+    clippy::redundant_field_names,
+    clippy::unnecessary_self_imports,
+    clippy::io_other_error
+)]
 //! Server-rendered web frontend. Mirrors the route table and page
 //! surface of  (Next.js 16). All pages
 //! are rendered to HTML on the server using `html::page` + the

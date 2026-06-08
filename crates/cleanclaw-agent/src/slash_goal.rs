@@ -28,6 +28,7 @@ use super::{SlashOutcome, SlashResult};
 /// Async entry point. Mirrors the Go `slashGoal` shape but
 /// returns a `SlashResult` (the slash framework applies the
 /// outcome) instead of a raw `slashResult`.
+#[allow(clippy::too_many_arguments)]
 pub async fn dispatch_goal(
     store: &Arc<dyn Store>,
     agent_id: &str,
@@ -149,6 +150,7 @@ async fn clear(store: &Arc<dyn Store>, agent_id: &str, session_key: &str) -> Sla
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn create(
     store: &Arc<dyn Store>,
     agent_id: &str,

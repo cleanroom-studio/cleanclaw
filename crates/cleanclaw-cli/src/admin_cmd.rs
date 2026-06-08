@@ -7,7 +7,7 @@
 
 use clap::Subcommand;
 use cleanclaw_auth::users::{
-    Accounts, CreateInput, ROLE_APP_USER, ROLE_SUPER_ADMIN, ROLE_USER, STATUS_ACTIVE,
+    Accounts, CreateInput, ROLE_APP_USER, ROLE_SUPER_ADMIN, ROLE_USER,
 };
 use cleanclaw_auth::UserError;
 use cleanclaw_core::{CleanClawError, Result};
