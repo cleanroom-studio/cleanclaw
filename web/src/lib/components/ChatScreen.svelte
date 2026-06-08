@@ -241,14 +241,31 @@
         break;
       }
       case 'thinking_delta': {
-        // Rendered as a separate bubble (muted style). Append-only.
+        // Some providers stream thinking on a separate channel
+        // (Anthropic extended thinking, OpenAI o-series). When
+        // the hub emits these, fold them into the in-flight
+        // assistant bubble as a `<think>` block so the render
+        // path can parse + collapse them like any other think
+        // tag. Markers are inserted at the start so deltas land
+        // inside even before any regular content has streamed.
         const delta = evt.data.delta || '';
-        const idx = messages.findIndex((m) => (m as any).__thinking_marker);
+        if (delta && !liveAssistant.content.includes('<think>')) {
+          liveAssistant.content = `<think>${delta}</think>\n` + liveAssistant.content;
+        } else if (delta) {
+          // Already has an opening tag — splice before the
+          // closing `</think>` (or at end if the tag is still
+          // open mid-stream).
+          const close = liveAssistant.content.indexOf('</think>');
+          if (close >= 0) {
+            liveAssistant.content =
+              liveAssistant.content.slice(0, close) + delta + liveAssistant.content.slice(close);
+          } else {
+            liveAssistant.content += delta;
+          }
+        }
+        const idx = messages.findIndex((m) => m === liveMarker.current);
         if (idx >= 0) {
-          messages = messages.map((m, i) => i === idx ? { ...m, content: m.content + delta } : m);
-        } else {
-          messages = [...messages, { role: 'assistant', content: delta, created_at: new Date().toISOString() } as any];
-          (messages[messages.length - 1] as any).__thinking_marker = true;
+          messages = messages.map((m, i) => i === idx ? { ...m, content: liveAssistant.content } : m);
         }
         break;
       }
@@ -389,6 +406,39 @@
   function toolCalls(m: ChatHistoryMessage): Array<{ id?: string; name?: string; arguments?: any }> {
     return ((m as any).tool_calls as any[]) || [];
   }
+
+  /**
+   * Split an assistant bubble's raw content into:
+   *   • thinking: every `<think>…</think>` block (or an unclosed
+   *     `<think>…` if the stream was cut off mid-thought)
+   *   • body:    the rest of the content, with the think blocks
+   *     stripped, trimmed of leading/trailing whitespace
+   *
+   * Most providers (DeepSeek / MiniMax-M3 / Qwen) emit
+   * `<think>` inline in the regular content_delta. Anthropic /
+   * OpenAI o-series emit them on a separate `thinking_delta`
+   * channel, which the SSE handler above folds back in by
+   * wrapping the deltas in `<think>` markers. Either path ends
+   * up here with the same shape, so the render code can stay
+   * branch-free.
+   */
+  function parseAssistantContent(content: string): { thinking: string[]; body: string } {
+    if (!content) return { thinking: [], body: '' };
+    const thinking: string[] = [];
+    const re = /<think>([\s\S]*?)(?:<\/think>|$)/g;
+    let body = content;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(content)) !== null) {
+      const t = m[1].trim();
+      if (t.length > 0) thinking.push(t);
+    }
+    // Strip ALL `<think>…</think>` and any unterminated
+    // `<think>…` tail from the body before markdown rendering,
+    // so the user never sees the raw tags.
+    body = body.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '');
+    body = body.replace(/\n{3,}/g, '\n\n').trim();
+    return { thinking, body };
+  }
 </script>
 
 <div class="flex flex-col h-full">
@@ -482,17 +532,10 @@
             </details>
           </div>
         </div>
-      {:else if (m as any).__thinking_marker}
-        <div class="flex justify-start">
-          <details class="max-w-[80%] text-xs text-zinc-500 italic">
-            <summary class="cursor-pointer">thinking…</summary>
-            <pre class="whitespace-pre-wrap mt-1 text-[11px]">{m.content}</pre>
-          </details>
-        </div>
       {:else}
         <div class="flex justify-start">
-          <div class="max-w-[80%] rounded-lg px-3 py-2 text-sm bg-zinc-900 border border-zinc-800 prose prose-invert prose-sm max-w-none">
-            <MarkdownLink content={m.content} />
+          <div class="max-w-[80%] rounded-lg bg-zinc-900 border border-zinc-800 overflow-hidden">
+            {@render AssistantBubble({ content: m.content })}
           </div>
         </div>
       {/if}
@@ -520,6 +563,14 @@
         </div>
       </div>
     {/if}
+
+    {#if liveAssistant.content && liveMarker.current && !messages.find((x) => x === liveMarker.current && (x as any).__settled)}
+      <div class="flex justify-start">
+        <div class="max-w-[80%] rounded-lg bg-zinc-900 border border-zinc-800 overflow-hidden">
+          {@render AssistantBubble({ content: liveAssistant.content, streaming: true })}
+        </div>
+      </div>
+    {/if}
   </div>
 
   <!-- Composer -->
@@ -544,3 +595,31 @@
     <p class="px-3 pb-2 text-xs text-red-400">{error}</p>
   {/if}
 </div>
+
+{#snippet AssistantBubble(args: { content: string; streaming?: boolean })}
+  {@const content = args.content}
+  {@const streaming = args.streaming ?? false}
+  {@const parsed = parseAssistantContent(content)}
+  {#if parsed.thinking.length > 0}
+    <details class="border-b border-zinc-800 bg-zinc-950/60 group" open={streaming}>
+      <summary class="px-3 py-1.5 text-[11px] uppercase tracking-wider text-zinc-500 cursor-pointer flex items-center gap-2 hover:text-zinc-300 select-none">
+        <span class="text-zinc-400 group-open:rotate-90 transition-transform inline-block">▸</span>
+        <span>💭</span>
+        <span>{parsed.thinking.length === 1 ? 'Thought' : `Thoughts (${parsed.thinking.length})`}</span>
+        {#if streaming}<span class="text-violet-400 normal-case tracking-normal">streaming…</span>{/if}
+      </summary>
+      <div class="px-3 py-2 space-y-2 border-t border-zinc-800/60">
+        {#each parsed.thinking as t, i (i)}
+          <pre class="text-[11px] text-zinc-400 italic whitespace-pre-wrap break-words font-sans">{t}</pre>
+        {/each}
+      </div>
+    </details>
+  {/if}
+  {#if parsed.body}
+    <div class="px-3 py-2 text-sm prose prose-invert prose-sm max-w-none">
+      <MarkdownLink content={parsed.body} />
+    </div>
+  {:else if streaming}
+    <div class="px-3 py-2 text-xs text-zinc-500 italic">…</div>
+  {/if}
+{/snippet}
