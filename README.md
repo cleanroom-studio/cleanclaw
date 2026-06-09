@@ -8,6 +8,7 @@ CleanClaw lets you deploy, manage, and chat with AI agents at scale. Agents can 
 
 - **Multi-tenant** — users, agents, channels, projects, all with scoped permissions
 - **Agent runtime** — tool-calling loop with dynamic skill loading, context compaction, and session management
+- **Compact footprint** — Release binary is **15 MB** (stripped), idle RSS **~14 MB**, threads **34**, handles sub-millisecond health checks with < 1 s total CPU time under light load
 - **Sandbox execution** — Docker, E2B, or local executor for safe code execution
 - **Skill system** — discover and install skills from the open [skills.sh](https://skills.sh) registry, or author your own in SKILL.md format
 - **Web UI** — SvelteKit dashboard for managing agents, sessions, and configuration
