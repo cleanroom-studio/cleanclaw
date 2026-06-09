@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { listTools, saveTools, type ToolsConfig } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Switch from "$lib/components/ui/Switch.svelte";
-  import Input from "$lib/components/ui/Input.svelte";
-  import Label from "$lib/components/ui/Label.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Switch } from "$lib/components/ui/switch/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Label } from "$lib/components/ui/label/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
 
   // Per-provider metadata. `credential_free` providers don't need
   // an API key; `endpoint_required` providers need an extra

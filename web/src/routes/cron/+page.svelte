@@ -8,8 +8,8 @@
     type AgentInfo,
     type CronJobInfo,
   } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
 
   let agents = $state<AgentInfo[]>([]);
   let selected = $state("");

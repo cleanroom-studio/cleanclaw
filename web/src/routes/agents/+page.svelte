@@ -2,9 +2,9 @@
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { listAgents, createAgent, type AgentInfo } from "$lib/api";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Input from "$lib/components/ui/Input.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
 
   let agents = $state<AgentInfo[]>([]);
   let name = $state("");

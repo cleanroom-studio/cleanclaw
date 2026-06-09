@@ -1,14 +1,38 @@
 <script lang="ts">
-  // NavMain — labeled nav group with iconography. Used twice in
-  // the sidebar: once for the agent-scoped nav (just "New chat")
-  // and once for the platform nav (Overview / Agent / User).
+  // NavMain — labeled nav group rendered with the shadcn-svelte
+  // `Sidebar.*` primitives so it picks up the icon-only collapsed
+  // state automatically (icons stay visible, labels hide).
 
   import { page } from "$app/state";
+  import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+  import Plus from "@lucide/svelte/icons/plus";
+  import Bot from "@lucide/svelte/icons/bot";
+  import Brain from "@lucide/svelte/icons/brain";
+  import Sparkles from "@lucide/svelte/icons/sparkles";
+  import Wrench from "@lucide/svelte/icons/wrench";
+  import KeyRound from "@lucide/svelte/icons/key-round";
+  import Users from "@lucide/svelte/icons/users";
+  import MessagesSquare from "@lucide/svelte/icons/messages-square";
+  import Coins from "@lucide/svelte/icons/coins";
+  import LayoutDashboard from "@lucide/svelte/icons/layout-dashboard";
+  import type { Component } from "svelte";
+
+  type IconName =
+    | "Bot"
+    | "Brain"
+    | "Sparkles"
+    | "Wrench"
+    | "KeyRound"
+    | "Users"
+    | "MessagesSquare"
+    | "Coins"
+    | "LayoutDashboard"
+    | "Plus";
 
   type NavItem = {
     title: string;
     url: string;
-    icon?: string;
+    icon?: IconName;
     active?: boolean;
     onclick?: () => void;
   };
@@ -23,60 +47,52 @@
     return pathname === item.url || pathname.startsWith(item.url);
   }
 
-  function iconToEmoji(icon: string | undefined): string {
-    switch (icon) {
-      case "Bot": return "🤖";
-      case "Brain": return "🧠";
-      case "Sparkles": return "✨";
-      case "Wrench": return "🔧";
-      case "KeyRound": return "🔑";
-      case "Users": return "👥";
-      case "MessagesSquare": return "💬";
-      case "Coins": return "🪙";
-      case "LayoutDashboard": return "📊";
-      case "Plus": return "＋";
-      default: return "·";
-    }
-  }
+  const ICONS: Record<IconName, Component> = {
+    Bot,
+    Brain,
+    Sparkles,
+    Wrench,
+    KeyRound,
+    Users,
+    MessagesSquare,
+    Coins,
+    LayoutDashboard,
+    Plus,
+  };
 </script>
 
 {#if items.length > 0}
-  <div>
+  <Sidebar.Group>
     {#if label}
-      <div class="px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-500">
-        {label}
-      </div>
+      <Sidebar.GroupLabel>{label}</Sidebar.GroupLabel>
     {/if}
-    <ul class="space-y-0.5">
-      {#each items as it (it.url)}
-        <li>
-          {#if it.onclick}
-            <button
-              onclick={it.onclick}
-              class:font-semibold={isActive(it, pathname)}
-              class:bg-zinc-800={isActive(it, pathname)}
-              class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-zinc-200 hover:bg-zinc-800/60"
-            >
-              <span class="w-4 h-4 inline-block text-center text-xs">
-                {iconToEmoji(it.icon)}
-              </span>
-              <span>{it.title}</span>
-            </button>
-          {:else}
-            <a
-              href={it.url}
-              class:font-semibold={isActive(it, pathname)}
-              class:bg-zinc-800={isActive(it, pathname)}
-              class="flex items-center gap-2 px-2 py-1.5 rounded text-zinc-200 hover:bg-zinc-800/60"
-            >
-              <span class="w-4 h-4 inline-block text-center text-xs">
-                {iconToEmoji(it.icon)}
-              </span>
-              <span>{it.title}</span>
-            </a>
-          {/if}
-        </li>
-      {/each}
-    </ul>
-  </div>
+    <Sidebar.GroupContent>
+      <Sidebar.Menu>
+        {#each items as it (it.url)}
+          <Sidebar.MenuItem>
+            <Sidebar.MenuButton isActive={isActive(it, pathname)}>
+              {#snippet child({ props })}
+                {@const Icon = ICONS[it.icon ?? "Bot"]}
+                {#if it.onclick}
+                  <button
+                    type="button"
+                    onclick={it.onclick}
+                    {...props}
+                  >
+                    <Icon />
+                    <span>{it.title}</span>
+                  </button>
+                {:else}
+                  <a href={it.url} {...props}>
+                    <Icon />
+                    <span>{it.title}</span>
+                  </a>
+                {/if}
+              {/snippet}
+            </Sidebar.MenuButton>
+          </Sidebar.MenuItem>
+        {/each}
+      </Sidebar.Menu>
+    </Sidebar.GroupContent>
+  </Sidebar.Group>
 {/if}

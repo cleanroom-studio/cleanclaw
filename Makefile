@@ -98,9 +98,22 @@ test-e2e:
 ci: lint test test-scripts
 	@echo "ci: all green"
 
-# `dev` is the dev loop.
+# `dev` is the dev loop. Starts the Rust gateway on 18953 and the
+# SvelteKit dev server (via bun) on 5173 — HMR works for everything
+# under web/. Open http://localhost:5173 in your browser; the
+# dev server proxies API calls to the gateway.
+#
+# Ctrl-C kills both processes (INT trap cleans up the background
+# gateway process so it doesn't leak).
 dev:
-	$(CARGO) run -p cleanclaw-cli -- gateway --port 18953
+	cd web && bun install --frozen-lockfile
+	@bash -c ' \
+		$(CARGO) run -p cleanclaw-cli -- gateway --port 18953 & \
+		PID=$$!; \
+		trap "kill $$PID 2>/dev/null; exit 0" INT TERM EXIT; \
+		cd web && bun run dev -- --port 5173 --host; \
+		kill $$PID 2>/dev/null \
+	'
 
 # `lint` and `fmt` are the Rust equivalents of the Go pipeline's
 # `go vet` / `gofmt`.

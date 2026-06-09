@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { listPlugins, togglePlugin, type PluginInfo } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Switch from "$lib/components/ui/Switch.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Switch } from "$lib/components/ui/switch/index.js";
 
   let plugins = $state<PluginInfo[]>([]);
   let loading = $state(true);

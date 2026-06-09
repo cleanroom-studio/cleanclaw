@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import AppShell from "$lib/components/AppShell.svelte";
-  import Card from "$lib/components/ui/Card.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
   import { agentUsage, type UsageInfo } from "$lib/api";
 
   let { params }: { params: { id: string } } = $props();

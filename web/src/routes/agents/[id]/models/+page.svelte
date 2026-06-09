@@ -18,10 +18,10 @@
     type AgentDetail,
     type ProviderInfo,
   } from "$lib/api";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Input from "$lib/components/ui/Input.svelte";
-  import Badge from "$lib/components/ui/Badge.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Badge } from "$lib/components/ui/badge/index.js";
 
   let { params }: { params: { id: string } } = $props();
 

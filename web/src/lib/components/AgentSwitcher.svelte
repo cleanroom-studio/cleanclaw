@@ -1,10 +1,16 @@
 <script lang="ts">
-  // AgentSwitcher — dropdown in the sidebar header. Mirrors
-  // . Lists
-  // every agent the caller can see, allows selecting a different
-  // one, and surfaces "Manage agents" when admin / quota permits.
+  // AgentSwitcher — `Sidebar.Header` dropdown that lists every
+  // agent the caller can see and routes to the chosen agent's
+  // chat. Uses shadcn-svelte DropdownMenu wrapped in a
+  // `Sidebar.MenuButton` so it collapses to a single icon in
+  // icon-only mode.
 
   import { goto } from "$app/navigation";
+  import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
+  import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
+  import Check from "@lucide/svelte/icons/check";
+  import Plus from "@lucide/svelte/icons/plus";
   import type { AgentInfo } from "$lib/api";
 
   let {
@@ -17,88 +23,90 @@
     locked?: boolean;
   } = $props();
 
-  let open = $state(false);
-
   const active = $derived(agents.find((a) => a.id === activeAgentId) || null);
   const label = $derived(active?.name || activeAgentId || "Select agent");
+  const subtitle = $derived(active?.model || "—");
 
   function selectAgent(id: string) {
-    open = false;
     void goto(`/agents/${id}/chat/`);
   }
 
   function manage() {
-    open = false;
     void goto("/agents/");
   }
 </script>
 
-<div class="relative">
-  <button
-    type="button"
-    onclick={() => (open = !open)}
-    class="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-800/60 text-left"
-  >
-    <div
-      class="h-7 w-7 rounded-md bg-violet-600/30 flex items-center justify-center text-xs font-semibold"
-    >
-      {(label || "?").slice(0, 1).toUpperCase()}
-    </div>
-    <div class="flex-1 min-w-0">
-      <div class="text-sm font-medium truncate">{label}</div>
-      {#if active}
-        <div class="text-[10px] text-zinc-500 truncate">{active.model}</div>
-      {/if}
-    </div>
-    <span class="text-zinc-500 text-xs">{open ? "▴" : "▾"}</span>
-  </button>
-
-  {#if open}
-    <div
-      class="absolute z-30 left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-md shadow-lg max-h-80 overflow-y-auto"
-    >
-      <ul class="py-1">
-        {#each agents as a (a.id)}
-          <li>
-            <button
-              type="button"
-              class="w-full text-left px-3 py-1.5 text-sm hover:bg-zinc-800/60 flex items-center gap-2"
-              class:bg-violet-600={a.id === activeAgentId}
-              class:text-white={a.id === activeAgentId}
-              onclick={() => selectAgent(a.id)}
+<Sidebar.Menu>
+  <Sidebar.MenuItem>
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger>
+        {#snippet child({ props })}
+          <Sidebar.MenuButton
+            {...props}
+            size="lg"
+            class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+          >
+            <div
+              class="flex size-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold"
             >
-              <div
-                class="h-5 w-5 rounded bg-zinc-700 flex items-center justify-center text-[10px]"
-              >
-                {(a.name || a.id).slice(0, 1).toUpperCase()}
+              {(label || "?").slice(0, 1).toUpperCase()}
+            </div>
+            <div class="grid flex-1 text-left text-sm leading-tight">
+              <span class="truncate font-medium">{label}</span>
+              <span class="truncate text-[10px] text-muted-foreground">
+                {subtitle}
+              </span>
+            </div>
+            <ChevronsUpDown class="ms-auto size-4" />
+          </Sidebar.MenuButton>
+        {/snippet}
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content
+        class="min-w-56 rounded-lg"
+        side="right"
+        align="start"
+        sideOffset={4}
+      >
+        <DropdownMenu.Label class="text-xs text-muted-foreground">
+          Agents
+        </DropdownMenu.Label>
+        {#each agents as a (a.id)}
+          <DropdownMenu.Item
+            onSelect={() => selectAgent(a.id)}
+            class="gap-2 p-2"
+          >
+            <div
+              class="flex size-6 items-center justify-center rounded-sm border bg-background"
+            >
+              {(a.name || a.id).slice(0, 1).toUpperCase()}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="truncate font-medium">{a.name || a.id}</div>
+              <div class="truncate text-[10px] text-muted-foreground font-mono">
+                {a.model}
               </div>
-              <div class="flex-1 min-w-0">
-                <div class="truncate">{a.name || a.id}</div>
-                <div class="text-[10px] text-zinc-400 truncate font-mono">
-                  {a.model}
-                </div>
-              </div>
-              {#if a.role === "viewer"}
-                <span class="text-[10px] text-amber-400">viewer</span>
-              {/if}
-            </button>
-          </li>
+            </div>
+            {#if a.id === activeAgentId}
+              <Check class="size-4" />
+            {/if}
+          </DropdownMenu.Item>
         {/each}
         {#if agents.length === 0}
-          <li class="px-3 py-2 text-sm text-zinc-500">No agents yet.</li>
+          <DropdownMenu.Separator />
+          <DropdownMenu.Item disabled>No agents yet.</DropdownMenu.Item>
         {/if}
         {#if !locked}
-          <li class="border-t border-zinc-800 mt-1">
-            <button
-              type="button"
-              class="w-full text-left px-3 py-1.5 text-sm text-violet-300 hover:bg-zinc-800/60"
-              onclick={manage}
+          <DropdownMenu.Separator />
+          <DropdownMenu.Item onSelect={manage} class="gap-2 p-2">
+            <div
+              class="flex size-6 items-center justify-center rounded-md border bg-background"
             >
-              Manage agents →
-            </button>
-          </li>
+              <Plus class="size-4" />
+            </div>
+            <div class="font-medium text-muted-foreground">Manage agents</div>
+          </DropdownMenu.Item>
         {/if}
-      </ul>
-    </div>
-  {/if}
-</div>
+      </DropdownMenu.Content>
+    </DropdownMenu.Root>
+  </Sidebar.MenuItem>
+</Sidebar.Menu>

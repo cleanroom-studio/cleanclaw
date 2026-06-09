@@ -12,8 +12,8 @@
     deleteAgentFile,
     type AgentFileEntry,
   } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
 
   let { params }: { params: { id: string } } = $props();
 

@@ -1,13 +1,24 @@
 <script lang="ts">
-  // NavProjectsList — collapsible list of projects (per-user, per-
-  // agent) with the sessions that belong to each project nested
-  // underneath.
-  // Clicking a project title navigates to the project's chat
-  // view; sessions inside expand/collapse on click.
+  // NavProjectsList — collapsible per-agent projects with their
+  // sessions nested underneath. Each project is rendered as a
+  // shadcn `Collapsible` so the chevron rotates with state, and
+  // sessions use the `Sidebar.MenuSub` style.
 
   import { goto } from "$app/navigation";
+  import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+  import * as Collapsible from "$lib/components/ui/collapsible/index.js";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
   import { createProject, deleteProject } from "$lib/api";
   import type { SessionInfo, ProjectInfo } from "$lib/api";
+  import Folder from "@lucide/svelte/icons/folder";
+  import FolderOpen from "@lucide/svelte/icons/folder-open";
+  import ChevronRight from "@lucide/svelte/icons/chevron-right";
+  import MoreHorizontal from "@lucide/svelte/icons/more-horizontal";
+  import Trash2 from "@lucide/svelte/icons/trash-2";
+  import Plus from "@lucide/svelte/icons/plus";
+  import Check from "@lucide/svelte/icons/check";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
 
   let {
     agentId,
@@ -21,12 +32,12 @@
     onChanged?: () => void;
   } = $props();
 
-  let expanded = $state<Record<string, boolean>>({});
+  let open: Record<string, boolean> = $state({});
   let creating = $state(false);
   let newName = $state("");
 
   function toggle(id: string) {
-    expanded[id] = !expanded[id];
+    open[id] = !open[id];
   }
 
   function projectSessions(p: ProjectInfo): SessionInfo[] {
@@ -38,14 +49,16 @@
   }
 
   function openSession(s: SessionInfo) {
-    void goto(`/agents/${agentId}/chat/?session=${encodeURIComponent(s.key)}`);
+    void goto(
+      `/agents/${agentId}/chat/?session=${encodeURIComponent(s.key)}`,
+    );
   }
 
   async function create(e: Event) {
     e.preventDefault();
     if (!newName.trim()) return;
     try {
-      const r = await createProject(agentId, { name: newName.trim() });
+      await createProject(agentId, { name: newName.trim() });
       newName = "";
       creating = false;
       onChanged?.();
@@ -54,8 +67,7 @@
     }
   }
 
-  async function removeProject(p: ProjectInfo, e: Event) {
-    e.stopPropagation();
+  async function removeProject(p: ProjectInfo) {
     if (!confirm(`Delete project ${p.name}?`)) return;
     try {
       await deleteProject(agentId, p.id);
@@ -66,82 +78,121 @@
   }
 </script>
 
-<div>
-  <div
-    class="px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-500 flex items-center justify-between"
-  >
-    <span>Projects</span>
-    <button
-      type="button"
-      class="text-zinc-500 hover:text-zinc-300 normal-case tracking-normal"
-      title="New project"
-      onclick={() => (creating = true)}>+</button
-    >
-  </div>
-  {#if creating}
-    <form onsubmit={create} class="px-2 mb-1 flex gap-1">
-      <input
-        type="text"
-        bind:value={newName}
-        placeholder="project name"
-        class="flex-1 h-7 bg-zinc-900 border border-zinc-700 rounded px-2 text-xs"
-      />
-      <button type="submit" class="text-xs text-violet-300">Save</button>
-      <button
-        type="button"
-        class="text-xs text-zinc-500"
-        onclick={() => (creating = false)}>×</button
+<Sidebar.Group>
+  <Sidebar.GroupLabel>
+    Projects
+    <Sidebar.GroupAction title="New project" onclick={() => (creating = true)}>
+      <Plus class="size-4" />
+      <span class="sr-only">New project</span>
+    </Sidebar.GroupAction>
+  </Sidebar.GroupLabel>
+  <Sidebar.GroupContent>
+    {#if creating}
+      <form
+        onsubmit={create}
+        class="flex items-center gap-1 px-2 pb-2 group/project"
       >
-    </form>
-  {/if}
-  <ul class="space-y-0.5">
-    {#each projects as p (p.id)}
-      {@const ps = projectSessions(p)}
-      {@const isOpen = expanded[p.id]}
-      <li>
-        <div class="group flex items-center gap-1">
-          <button
-            type="button"
-            class="px-1 text-zinc-500 hover:text-zinc-300"
-            onclick={() => toggle(p.id)}
-            title={isOpen ? "Collapse" : "Expand"}>{isOpen ? "▾" : "▸"}</button
-          >
-          <button
-            type="button"
-            class="flex-1 text-left px-2 py-1 rounded text-sm hover:bg-zinc-800/60 truncate"
-            onclick={() => openProject(p)}
-          >
-            <div class="truncate text-zinc-200">{p.name}</div>
-            <div class="truncate text-[10px] text-zinc-500 font-mono">
-              {ps.length} session{ps.length === 1 ? "" : "s"}
-            </div>
-          </button>
-          <button
-            type="button"
-            class="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 px-1"
-            title="Delete project"
-            onclick={(e) => removeProject(p, e)}>×</button
-          >
-        </div>
-        {#if isOpen && ps.length > 0}
-          <ul class="ml-4 mt-0.5 space-y-0.5 border-l border-zinc-800 pl-2">
-            {#each ps as s (s.key)}
-              <li>
-                <button
-                  type="button"
-                  class="w-full text-left px-2 py-0.5 rounded text-xs hover:bg-zinc-800/60 truncate"
-                  onclick={() => openSession(s)}
-                >
-                  <div class="truncate text-zinc-300">{s.title || s.key}</div>
-                </button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-      </li>
-    {/each}
-    {#if projects.length === 0 && !creating}
-      <li class="px-2 py-1 text-xs text-zinc-600">No projects.</li>
+        <Input
+          type="text"
+          placeholder="project name"
+          bind:value={newName}
+          class="h-7 text-xs"
+        />
+        <Button
+          type="submit"
+          size="icon-sm"
+          variant="ghost"
+          aria-label="Create"
+        >
+          <Check class="size-4" />
+        </Button>
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          aria-label="Cancel"
+          onclick={() => (creating = false)}
+        >
+          <span class="text-base leading-none">×</span>
+        </Button>
+      </form>
     {/if}
-  </ul>
-</div>
+    <Sidebar.Menu>
+      {#each projects as p (p.id)}
+        {@const ps = projectSessions(p)}
+        {@const isOpen = open[p.id]}
+        <Collapsible.Root bind:open={() => open[p.id], (v) => (open[p.id] = v)} class="group/collapsible">
+          <Sidebar.MenuItem>
+            <Collapsible.Trigger>
+              {#snippet child({ props })}
+                <Sidebar.MenuButton {...props}>
+                  {#if isOpen}
+                    <FolderOpen />
+                  {:else}
+                    <Folder />
+                  {/if}
+                  <span>{p.name}</span>
+                  {#if ps.length > 0}
+                    <ChevronRight
+                      class="ms-auto size-4 transition-transform group-data-[state=open]/collapsible:rotate-90"
+                    />
+                  {/if}
+                </Sidebar.MenuButton>
+              {/snippet}
+            </Collapsible.Trigger>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger>
+                {#snippet child({ props })}
+                  <Sidebar.MenuAction
+                    {...props}
+                    showOnHover
+                    class="peer-data-[state=open]/menu-button:opacity-100"
+                  >
+                    <MoreHorizontal />
+                    <span class="sr-only">Project actions</span>
+                  </Sidebar.MenuAction>
+                {/snippet}
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content side="right" align="start">
+                <DropdownMenu.Item
+                  variant="destructive"
+                  onSelect={() => removeProject(p)}
+                >
+                  <Trash2 class="size-4" />
+                  <span>Delete project</span>
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+            {#if ps.length > 0}
+              <Collapsible.Content>
+                <Sidebar.MenuSub>
+                  {#each ps as s (s.key)}
+                    <Sidebar.MenuSubItem>
+                      <Sidebar.MenuSubButton>
+                        {#snippet child({ props })}
+                          <a
+                            href={`/agents/${agentId}/chat/?session=${encodeURIComponent(s.key)}`}
+                            {...props}
+                          >
+                            <span>{s.title || s.key}</span>
+                          </a>
+                        {/snippet}
+                      </Sidebar.MenuSubButton>
+                    </Sidebar.MenuSubItem>
+                  {/each}
+                </Sidebar.MenuSub>
+              </Collapsible.Content>
+            {/if}
+          </Sidebar.MenuItem>
+        </Collapsible.Root>
+      {/each}
+      {#if projects.length === 0 && !creating}
+        <Sidebar.MenuItem>
+          <span class="px-2 py-1 text-xs text-muted-foreground">
+            No projects.
+          </span>
+        </Sidebar.MenuItem>
+      {/if}
+    </Sidebar.Menu>
+  </Sidebar.GroupContent>
+</Sidebar.Group>

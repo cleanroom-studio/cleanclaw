@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { listModels } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Badge from "$lib/components/ui/Badge.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Badge } from "$lib/components/ui/badge/index.js";
 
   let models = $state<Array<{ id: string; provider: string; label: string }>>(
     [],

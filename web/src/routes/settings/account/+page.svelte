@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { getMe, updateMe, changeMyPassword, type UserInfo } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Input from "$lib/components/ui/Input.svelte";
-  import Label from "$lib/components/ui/Label.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Label } from "$lib/components/ui/label/index.js";
 
   let user = $state<UserInfo | null>(null);
   let displayName = $state("");

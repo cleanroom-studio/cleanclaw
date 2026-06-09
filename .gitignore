@@ -6,7 +6,6 @@
 .vscode
 
 /node_modules
-**/bun.lock
 
 # web
 web/node_modules

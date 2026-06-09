@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import AppShell from "$lib/components/AppShell.svelte";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Textarea from "$lib/components/ui/Textarea.svelte";
-  import Label from "$lib/components/ui/Label.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Textarea } from "$lib/components/ui/textarea/index.js";
+  import { Label } from "$lib/components/ui/label/index.js";
   import { getAgent, updateAgent, type AgentDetail } from "$lib/api";
 
   let { params }: { params: { id: string } } = $props();

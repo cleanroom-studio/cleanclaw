@@ -1,9 +1,9 @@
 <script lang="ts">
   // Per-agent chats list.
   import { onMount } from "svelte";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Badge from "$lib/components/ui/Badge.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Badge } from "$lib/components/ui/badge/index.js";
   import { listChatSessions, type SessionInfo } from "$lib/api";
 
   let { params }: { params: { id: string } } = $props();

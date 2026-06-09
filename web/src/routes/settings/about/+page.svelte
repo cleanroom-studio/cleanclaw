@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { getStatus } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
 
   let version = $state("…");
   let uptime = $state("…");

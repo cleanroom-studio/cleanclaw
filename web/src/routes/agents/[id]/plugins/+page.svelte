@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import AppShell from "$lib/components/AppShell.svelte";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Switch from "$lib/components/ui/Switch.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Switch } from "$lib/components/ui/switch/index.js";
   import { listPlugins, togglePlugin, type PluginInfo } from "$lib/api";
 
   let { params }: { params: { id: string } } = $props();

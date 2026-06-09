@@ -6,8 +6,8 @@
     adminDeleteUser,
     type UserInfo,
   } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Badge from "$lib/components/ui/Badge.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Badge } from "$lib/components/ui/badge/index.js";
 
   let users = $state<UserInfo[]>([]);
   let loading = $state(true);

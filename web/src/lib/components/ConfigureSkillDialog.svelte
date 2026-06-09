@@ -4,10 +4,10 @@
   // The backend stores skill entries as part of the scoped
   // config row; we round-trip through /api/config.
 
-  import Dialog from "./ui/Dialog.svelte";
-  import Button from "./ui/Button.svelte";
-  import Input from "./ui/Input.svelte";
-  import Label from "./ui/Label.svelte";
+  import * as Dialog from "./ui/dialog/index.js";
+  import { Button } from "./ui/button/index.js";
+  import { Input } from "./ui/input/index.js";
+  import { Label } from "./ui/label/index.js";
   import { readConfig, writeConfig, type SkillInfo } from "$lib/api";
 
   export type SkillEntryView = {
@@ -74,8 +74,14 @@
   }
 </script>
 
-<Dialog bind:open title={skill ? `Configure ${skill.name}` : "Configure skill"}>
-  <div class="space-y-4 text-sm">
+<Dialog.Root bind:open>
+  <Dialog.Content class="max-w-lg">
+    <Dialog.Header>
+      <Dialog.Title>
+        {skill ? `Configure ${skill.name}` : "Configure skill"}
+      </Dialog.Title>
+    </Dialog.Header>
+    <div class="space-y-4 text-sm">
     <div class="space-y-1.5">
       <Label for="sk-key">API key</Label>
       <Input
@@ -110,10 +116,12 @@
       <p class="text-xs text-zinc-400">{message}</p>
     {/if}
   </div>
-  {#snippet footer()}
-    <Button variant="outline" onclick={() => (open = false)}>Cancel</Button>
-    <Button onclick={save} disabled={saving}
-      >{saving ? "Saving…" : "Save"}</Button
-    >
-  {/snippet}
-</Dialog>
+  </div>
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (open = false)}>Cancel</Button>
+      <Button onclick={save} disabled={saving}
+        >{saving ? "Saving…" : "Save"}</Button
+      >
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>

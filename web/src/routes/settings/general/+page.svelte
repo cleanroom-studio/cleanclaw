@@ -1,8 +1,8 @@
 <script lang="ts">
   import { adminGetRegistration, adminSetRegistration } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Switch from "$lib/components/ui/Switch.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Switch } from "$lib/components/ui/switch/index.js";
 
   let open = $state(false);
   let saving = $state(false);

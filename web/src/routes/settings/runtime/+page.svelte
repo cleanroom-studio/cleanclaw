@@ -6,9 +6,9 @@
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { getMe } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Input from "$lib/components/ui/Input.svelte";
-  import Label from "$lib/components/ui/Label.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Label } from "$lib/components/ui/label/index.js";
 
   let role = $state("");
   let sandboxBackend = $state("docker");

@@ -4,7 +4,7 @@
   // sidebar (AgentSettingsDialog); this page is a quick
   // navigation entry for power users.
 
-  import Card from "$lib/components/ui/Card.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
 </script>
 
 <div class="p-6 max-w-3xl mx-auto space-y-4">

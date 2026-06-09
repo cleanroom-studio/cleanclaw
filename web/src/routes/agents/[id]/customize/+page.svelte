@@ -4,8 +4,8 @@
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import { getAgent, updateAgent, type AgentDetail } from "$lib/api";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Card from "$lib/components/ui/Card.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Card } from "$lib/components/ui/card/index.js";
 
   let { params }: { params: { id: string } } = $props();
 

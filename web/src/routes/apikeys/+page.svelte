@@ -7,10 +7,10 @@
     rotateApikey,
     type ApiKeyInfo,
   } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Button from "$lib/components/ui/Button.svelte";
-  import Badge from "$lib/components/ui/Badge.svelte";
-  import Input from "$lib/components/ui/Input.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Badge } from "$lib/components/ui/badge/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
 
   let keys = $state<ApiKeyInfo[]>([]);
   let loading = $state(true);

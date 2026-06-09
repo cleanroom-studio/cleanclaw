@@ -74,9 +74,31 @@ scripts/             Build and release scripts
 make build          # Debug build (workspace)
 make release        # Release build with LTO
 make test           # Full test suite
-make lint           # Clippy
+make lint           # Clippy check
 make dev            # Dev mode (gateway on :18953)
 ```
+
+### Makefile targets reference
+
+| Target | Description |
+|---|---|
+| `make build` | Debug build of the entire workspace |
+| `make release` | Optimized release build with LTO, stamped with version info |
+| `make release-local` | `release` + `strip` for a smaller binary |
+| `make install` | `cargo install` the CLI to `~/.cargo/bin` |
+| `make dev` | Dev loop: starts gateway on `:18953` + SvelteKit HMR on `:5173` (Ctrl-C cleans up both) |
+| `make fmt` | Auto-format all Rust code (`cargo fmt --all`) |
+| `make lint` | Run clippy with `-D warnings` (strict, does not auto-fix) |
+| `make lint-fix` | Auto-fix clippy suggestions (`cargo clippy --fix`); run `make fmt` afterwards |
+| `make test` | Run the full Rust workspace test suite |
+| `make test-scripts` | Run shell-based script tests (arch detection, Dockerfile lint) |
+| `make test-e2e` | Run e2e tests against live LLM endpoints (requires `ANTHROPIC_API_KEY` + `OPENAI_API_KEY`) |
+| `make ci` | Lint + test + script tests, equivalent to local CI |
+
+| `make bundle-skills` | Copy bundled skills for rust-embed (run after editing any `SKILL.md`) |
+| `make docker` | Build a single-arch Docker image for the host |
+| `make docker-multi` | Build multi-arch (`linux/amd64` + `linux/arm64`) Docker images via buildx |
+| `make clean` | `cargo clean` |
 
 ## Architecture
 

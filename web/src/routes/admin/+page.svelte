@@ -4,8 +4,8 @@
 
   import { onMount } from "svelte";
   import { getMe } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Badge from "$lib/components/ui/Badge.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Badge } from "$lib/components/ui/badge/index.js";
 
   let role = $state("");
   onMount(async () => {

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { adminListChats, type SessionInfo } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
-  import Badge from "$lib/components/ui/Badge.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
+  import { Badge } from "$lib/components/ui/badge/index.js";
 
   let sessions = $state<SessionInfo[]>([]);
   let loading = $state(true);

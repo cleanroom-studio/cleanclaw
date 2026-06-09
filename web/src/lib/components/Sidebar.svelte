@@ -1,31 +1,21 @@
 <script lang="ts">
-  // Sidebar — full replacement for
-  // + `sidebar.tsx` combined into a single Svelte component.
+  // Sidebar — composed with shadcn-svelte's official Sidebar
+  // primitives:
   //
-  // Composition:
-  //   • SidebarProvider     — left rail
-  //   • AppSidebar
-  //       • SidebarHeader   — AgentSwitcher (dropdown to swap active agent)
-  //       • SidebarContent  — nav groups (Overview / Agent / User) +
-  //                           (when an agent is active) NavProjectsList +
-  //                           NavSessions
-  //       • SidebarFooter   — Settings button + NavUser
-  //   • SidebarInset        — the main content slot (passed `children`)
+  //   <Sidebar.Provider>          (collapsible state, keyboard ⌘B)
+  //     <Sidebar.Root>            (the left rail)
+  //       <Sidebar.Header>        → AgentSwitcher (DropdownMenu)
+  //       <Sidebar.Content>       → NavMain / NavProjects / NavSessions
+  //       <Sidebar.Footer>        → NavUser (DropdownMenu with logout)
+  //       <Sidebar.Rail>          (icon-only toggle rail)
+  //     <Sidebar.Inset>           → main content slot + Sidebar.Trigger
   //
-  // Polling:
-  //   • /api/status every 15s → admin flag, online dot
-  //   • /api/me once on mount → role + display name in the footer
-  //   • /api/agents once on mount → agent switcher list
-  //   • /api/chat/sessions when active agent changes → sessions list
-  //
-  // Events:
-  //   • `cleanclaw:sessions-changed` is broadcast by the chat
-  //     surface after a new chat / rename / delete so the sidebar
-  //     re-fetches without a page reload.
+  // Polling, sessions-refresh on agent change, and the
+  // settings-dialog mount all live here. Bare constants and
+  // small pure helpers stay near the top.
 
-  import { onMount, onDestroy } from "svelte";
+  import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { goto } from "$app/navigation";
   import {
     getStatus,
     getMe,
@@ -38,6 +28,7 @@
     type ProjectInfo,
     type StatusResponse,
   } from "$lib/api";
+  import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import AgentSwitcher from "./AgentSwitcher.svelte";
   import NavMain from "./NavMain.svelte";
   import NavUser from "./NavUser.svelte";
@@ -47,33 +38,14 @@
 
   let { children }: { children?: any } = $props();
 
-  // Active agent id parsed from `/agents/<id>/...` paths. The
-  // explicit allow-list of sub-routes keeps `/agents/` (the
-  // index list) on the platform nav.
   function extractAgentId(pathname: string): string | null {
     const m = pathname.match(
       /^\/agents\/([^/]+)\/(chat|customize|skills|models|sessions|channels|chats|cron|files|plugins|context|usage|project)/,
     );
     return m ? m[1] : null;
   }
-  function extractSessionKey(pathname: string, search: string): string | null {
-    // Both `?session=<id>` query on `/chat/` and the
-    // `/chat/<session>/` path segment are valid.
-    const m = pathname.match(/^\/(chat|agents\/[^/]+\/chat)\/([^/?#]+)/);
-    if (m && m[2] !== "undefined" && m[2] !== "new")
-      return decodeURIComponent(m[2]);
-    try {
-      const params = new URLSearchParams(search || "");
-      const s = params.get("session");
-      if (s) return s;
-    } catch {}
-    return null;
-  }
+
   const activeAgentId = $derived(extractAgentId(page.url?.pathname || ""));
-  const activeSessionKey = $derived(
-    extractSessionKey(page.url?.pathname || "", page.url?.search || ""),
-  );
-  const hasOpenSession = $derived(!!activeSessionKey);
 
   let status = $state<StatusResponse | null>(null);
   let user = $state<UserInfo | null>(null);
@@ -85,7 +57,6 @@
 
   let pollTimer: ReturnType<typeof setInterval> | undefined;
 
-  // Status polling — keep the online dot and admin flag fresh.
   onMount(() => {
     void getStatus()
       .then((s) => (status = s))
@@ -107,8 +78,6 @@
     };
   });
 
-  // Re-fetch sessions + projects whenever the active agent changes
-  // OR the chat surface broadcasts a sessions-changed event.
   let lastAgentId: string | null = null;
   $effect(() => {
     const a = activeAgentId;
@@ -149,21 +118,16 @@
 
   const isAdmin = $derived(status?.isAdmin ?? user?.role === "super_admin");
 
-  // Nav item helpers.
   const AGENT_NAV = $derived(
     activeAgentId
       ? [
           {
-            // The cache-busting `?_=<ts>` query is read by
-            // ChatScreen's route-effect key, so clicking the
-            // sidebar's "New chat" actually re-runs the effect
-            // even when the pathname is the same. Without it the
-            // user would land back on the previous session's
-            // bubbles.
-            title: 'New chat',
+            title: "New chat",
             url: `/agents/${activeAgentId}/chat/?_=${Date.now()}`,
-            icon: 'Plus',
-            active: page.url?.pathname === `/agents/${activeAgentId}/chat` || page.url?.pathname === `/agents/${activeAgentId}/chat/`,
+            icon: "Plus" as const,
+            active:
+              page.url?.pathname === `/agents/${activeAgentId}/chat` ||
+              page.url?.pathname === `/agents/${activeAgentId}/chat/`,
           },
         ]
       : [],
@@ -172,40 +136,48 @@
   const PLATFORM_OVERVIEW = {
     title: "Overview",
     url: "/overview/",
-    icon: "LayoutDashboard",
+    icon: "LayoutDashboard" as const,
   };
   const PLATFORM_AGENT_USER = [
-    { title: "Agents", url: "/agents/", icon: "Bot" },
-    { title: "Models", url: "/models/", icon: "Brain" },
+    { title: "Agents", url: "/agents/", icon: "Bot" as const },
+    { title: "Models", url: "/models/", icon: "Brain" as const },
   ];
   const PLATFORM_AGENT_ADMIN = [
-    { title: "Agents", url: "/agents/", icon: "Bot" },
-    { title: "Models", url: "/models/", icon: "Brain" },
-    { title: "Skills", url: "/skills/", icon: "Sparkles" },
-    { title: "Tools", url: "/tools/", icon: "Wrench" },
+    { title: "Agents", url: "/agents/", icon: "Bot" as const },
+    { title: "Models", url: "/models/", icon: "Brain" as const },
+    { title: "Skills", url: "/skills/", icon: "Sparkles" as const },
+    { title: "Tools", url: "/tools/", icon: "Wrench" as const },
   ];
   const PLATFORM_USER_USER = [
-    { title: "API Keys", url: "/apikeys/", icon: "KeyRound" },
+    { title: "API Keys", url: "/apikeys/", icon: "KeyRound" as const },
   ];
   const PLATFORM_USER_ADMIN = [
-    { title: "Users", url: "/admin/users/", icon: "Users" },
-    { title: "Chats", url: "/admin/chats/", icon: "MessagesSquare" },
-    { title: "Token Usage", url: "/admin/usage/", icon: "Coins" },
-    { title: "API Keys", url: "/apikeys/", icon: "KeyRound" },
+    { title: "Users", url: "/admin/users/", icon: "Users" as const },
+    { title: "Chats", url: "/admin/chats/", icon: "MessagesSquare" as const },
+    { title: "Token Usage", url: "/admin/usage/", icon: "Coins" as const },
+    { title: "API Keys", url: "/apikeys/", icon: "KeyRound" as const },
   ];
+
+  function openSettings() {
+    settingsUserOnly = !activeAgentId;
+    settingsOpen = true;
+  }
 </script>
 
-<div class="min-h-screen flex bg-zinc-950 text-zinc-100">
-  <aside class="w-64 shrink-0 border-r border-zinc-800 flex flex-col">
-    <div class="p-3 border-b border-zinc-800">
+<Sidebar.Provider
+  class="min-h-screen bg-background text-foreground"
+  style="--sidebar-width: 16rem; --sidebar-width-icon: 3.5rem;"
+>
+  <Sidebar.Root collapsible="icon">
+    <Sidebar.Header>
       <AgentSwitcher
         {agents}
         {activeAgentId}
         locked={!isAdmin && (user?.agent_quota ?? 1) === 0}
       />
-    </div>
+    </Sidebar.Header>
 
-    <nav class="flex-1 overflow-y-auto p-2 space-y-4 text-sm">
+    <Sidebar.Content>
       {#if activeAgentId}
         <NavMain label="Agent" items={AGENT_NAV} />
         <NavProjectsList
@@ -226,33 +198,54 @@
           items={isAdmin ? PLATFORM_USER_ADMIN : PLATFORM_USER_USER}
         />
       {/if}
-    </nav>
+    </Sidebar.Content>
 
-    <div class="p-3 border-t border-zinc-800 space-y-2">
-      <button
-        type="button"
-        class="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-zinc-800/60"
-        onclick={() => {
-          settingsUserOnly = !activeAgentId;
-          settingsOpen = true;
-        }}
-      >
-        <span>⚙</span>
-        <span>Settings</span>
-      </button>
+    <Sidebar.Footer>
+      <Sidebar.Menu>
+        <Sidebar.MenuItem>
+          <Sidebar.MenuButton
+            tooltip="Settings"
+            onclick={openSettings}
+          >
+            {#snippet child({ props })}
+              <button type="button" {...props}>
+                <span>⚙</span>
+                <span>Settings</span>
+              </button>
+            {/snippet}
+          </Sidebar.MenuButton>
+        </Sidebar.MenuItem>
+      </Sidebar.Menu>
       <NavUser
         name={user?.display_name ||
           user?.username ||
           (isAdmin ? "Admin" : "User")}
         subtitle={user?.role || (isAdmin ? "super_admin" : "user")}
+        onSettings={openSettings}
       />
-    </div>
-  </aside>
+    </Sidebar.Footer>
 
-  <main class="flex-1 overflow-y-auto">
-    {@render children?.()}
-  </main>
-</div>
+    <Sidebar.Rail />
+  </Sidebar.Root>
+
+  <Sidebar.Inset>
+    <header
+      class="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-sidebar-border bg-background/80 px-4 backdrop-blur"
+    >
+      <Sidebar.Trigger class="md:flex hidden" />
+      <span class="text-xs text-muted-foreground">
+        {#if activeAgentId}
+          Agent · {agents.find((a) => a.id === activeAgentId)?.name || activeAgentId}
+        {:else}
+          {isAdmin ? "Admin Console" : "Workspace"}
+        {/if}
+      </span>
+    </header>
+    <div class="flex-1">
+      {@render children?.()}
+    </div>
+  </Sidebar.Inset>
+</Sidebar.Provider>
 
 <AgentSettingsDialog
   bind:open={settingsOpen}

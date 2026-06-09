@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { adminListUsage, type UsageInfo } from "$lib/api";
-  import Card from "$lib/components/ui/Card.svelte";
+  import { Card } from "$lib/components/ui/card/index.js";
 
   let usage = $state<UsageInfo[]>([]);
   let loading = $state(true);

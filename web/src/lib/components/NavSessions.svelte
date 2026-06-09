@@ -1,14 +1,18 @@
 <script lang="ts">
   // NavSessions — flat list of recent chat sessions for the
-  // active agent.
-  // (`NavSessions`). The list re-sorts by `updated_at` so the
-  // most recently active session floats to the top. Clicking a
-  // row navigates into the chat with that session pre-selected;
-  // a small delete button removes the session.
+  // active agent. Sorted by `updated_at` so the most recently
+  // active session floats to the top. Each row is a shadcn
+  // `Sidebar.MenuButton` with a `MenuAction` hover-revealed
+  // dropdown for delete.
 
   import { goto } from "$app/navigation";
+  import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
   import { deleteChatSession } from "$lib/api";
   import type { SessionInfo } from "$lib/api";
+  import MessageSquare from "@lucide/svelte/icons/message-square";
+  import MoreHorizontal from "@lucide/svelte/icons/more-horizontal";
+  import Trash2 from "@lucide/svelte/icons/trash-2";
 
   let { agentId, sessions }: { agentId: string; sessions: SessionInfo[] } =
     $props();
@@ -24,13 +28,10 @@
     void goto(`/agents/${agentId}/chat/?session=${encodeURIComponent(key)}`);
   }
 
-  async function remove(key: string, e: Event) {
-    e.stopPropagation();
+  async function remove(key: string) {
     if (!confirm(`Delete session ${key}?`)) return;
     try {
       await deleteChatSession(agentId, key);
-      // Broadcast so the sidebar re-fetches and the chat surface
-      // resets if it was viewing this session.
       window.dispatchEvent(
         new CustomEvent("cleanclaw:sessions-changed", { detail: { agentId } }),
       );
@@ -46,38 +47,65 @@
   }
 </script>
 
-<div>
-  <div
-    class="px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-500 flex items-center justify-between"
-  >
-    <span>Sessions</span>
-    <span class="text-zinc-600 normal-case tracking-normal"
-      >{sorted.length}</span
-    >
-  </div>
-  <ul class="space-y-0.5">
-    {#each sorted as s (s.key)}
-      <li class="group flex items-center gap-1">
-        <button
-          type="button"
-          class="flex-1 text-left px-2 py-1 rounded text-sm hover:bg-zinc-800/60 truncate"
-          onclick={() => open(s.key)}
-        >
-          <div class="truncate text-zinc-200">{preview(s)}</div>
-          <div class="truncate text-[10px] text-zinc-500 font-mono">
-            {s.key}
-          </div>
-        </button>
-        <button
-          type="button"
-          class="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 px-1"
-          title="Delete session"
-          onclick={(e) => remove(s.key, e)}>×</button
-        >
-      </li>
-    {/each}
-    {#if sorted.length === 0}
-      <li class="px-2 py-1 text-xs text-zinc-600">No sessions yet.</li>
-    {/if}
-  </ul>
-</div>
+<Sidebar.Group>
+  <Sidebar.GroupLabel>
+    Sessions
+    <span class="ms-auto text-[10px] font-normal text-muted-foreground">
+      {sorted.length}
+    </span>
+  </Sidebar.GroupLabel>
+  <Sidebar.GroupContent>
+    <Sidebar.Menu>
+      {#each sorted as s (s.key)}
+        <Sidebar.MenuItem>
+          <Sidebar.MenuButton tooltip={preview(s)}>
+            {#snippet child({ props })}
+              <a
+                href={`/agents/${agentId}/chat/?session=${encodeURIComponent(s.key)}`}
+                {...props}
+              >
+                <MessageSquare />
+                <div class="grid flex-1 text-left text-sm leading-tight">
+                  <span class="truncate font-medium">{preview(s)}</span>
+                  <span class="truncate text-[10px] text-muted-foreground font-mono">
+                    {s.key}
+                  </span>
+                </div>
+              </a>
+            {/snippet}
+          </Sidebar.MenuButton>
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger>
+              {#snippet child({ props })}
+                <Sidebar.MenuAction
+                  {...props}
+                  showOnHover
+                  class="peer-data-[state=open]/menu-button:opacity-100"
+                >
+                  <MoreHorizontal />
+                  <span class="sr-only">Session actions</span>
+                </Sidebar.MenuAction>
+              {/snippet}
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content side="right" align="start">
+              <DropdownMenu.Item
+                variant="destructive"
+                onSelect={() => remove(s.key)}
+              >
+                <Trash2 class="size-4" />
+                <span>Delete session</span>
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
+        </Sidebar.MenuItem>
+      {/each}
+      {#if sorted.length === 0}
+        <Sidebar.MenuItem>
+          <span class="px-2 py-1 text-xs text-muted-foreground">
+            No sessions yet.
+          </span>
+        </Sidebar.MenuItem>
+      {/if}
+    </Sidebar.Menu>
+  </Sidebar.GroupContent>
+</Sidebar.Group>
