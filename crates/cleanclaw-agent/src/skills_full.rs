@@ -179,4 +179,90 @@ mod tests {
         let foo = loaded.get("foo").unwrap();
         assert_eq!(foo.description, "from a");
     }
+
+    #[test]
+    fn skills_config_for_agent_constructs_paths() {
+        let cfg = SkillsConfig::for_agent(
+            Path::new("/home/user/.cleanclaw"),
+            "agent-1",
+            "user-42",
+        );
+        assert_eq!(
+            cfg.agent_root,
+            Path::new("/home/user/.cleanclaw/agents/agent-1/skills")
+        );
+        assert_eq!(
+            cfg.user_root,
+            Path::new("/home/user/.cleanclaw/users/user-42/skills")
+        );
+        assert_eq!(
+            cfg.global_root,
+            Path::new("/home/user/.cleanclaw/skills")
+        );
+    }
+
+    #[test]
+    fn loaded_skills_names_returns_sorted_names() {
+        let mut by_name = HashMap::new();
+        by_name.insert(
+            "b".into(),
+            Skill {
+                name: "b".into(),
+                description: String::new(),
+                path: PathBuf::from("/x"),
+                content: String::new(),
+                env: vec![],
+                enabled: true,
+                always_load: false,
+            },
+        );
+        by_name.insert(
+            "a".into(),
+            Skill {
+                name: "a".into(),
+                description: String::new(),
+                path: PathBuf::from("/y"),
+                content: String::new(),
+                env: vec![],
+                enabled: true,
+                always_load: false,
+            },
+        );
+        let loaded = LoadedSkills {
+            by_name,
+            by_dir: vec![],
+        };
+        let mut names = loaded.names();
+        names.sort();
+        assert_eq!(names, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn skills_loader_reload_rescans() {
+        let dir = tempfile::tempdir().unwrap();
+        let a = dir.path().join("skills");
+        fs::create_dir_all(&a).unwrap();
+        let cfg = SkillsConfig {
+            bundled_root: dir.path().join("bundled"),
+            agent_root: a.clone(),
+            user_root: dir.path().join("u"),
+            global_root: dir.path().join("g"),
+            extra_dirs: vec![],
+        };
+        let loader = SkillsLoader::new(cfg);
+        assert!(loader.all().is_empty());
+
+        // Add a skill after loader creation.
+        let skill_dir = a.join("new-skill");
+        fs::create_dir_all(&skill_dir).unwrap();
+        fs::write(
+            skill_dir.join("SKILL.md"),
+            "---\nname: new-skill\ndescription: added later\n---\nbody",
+        )
+        .unwrap();
+
+        loader.reload();
+        assert!(loader.get("new-skill").is_some());
+        assert_eq!(loader.get("new-skill").unwrap().description, "added later");
+    }
 }

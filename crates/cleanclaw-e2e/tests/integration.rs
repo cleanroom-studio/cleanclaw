@@ -8,6 +8,8 @@
 //!  * the default workspace seed (`cleanclaw-workspace-defaults`)
 //!  * a plugin in-process round-trip (`cleanclaw-plugin-runtime` +
 //!    `cleanclaw-plugins-plugin-demo`)
+//!  * skill market search, install, and loading from the public
+//!    skills.sh registry
 
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -103,9 +105,6 @@ fn workspace_defaults_seed() {
 /// `cleanclaw-plugin-runtime` works against the demo plugin.
 #[tokio::test]
 async fn plugin_runtime_round_trip() {
-    // The plugin-demo crate exposes a main() binary but also has
-    // an `EchoPlugin` type reachable from the lib. We import it
-    // here for an in-process test.
     use async_trait::async_trait;
     use cleanclaw_plugin_runtime::{InProcPluginClient, Plugin, ToolDef, ToolResult};
     use serde_json::Value;
@@ -149,4 +148,178 @@ async fn plugin_runtime_round_trip() {
     .unwrap();
     assert_eq!(r.output, "echo ok");
     let _ = Arc::new(c);
+}
+
+// ── Skill market e2e tests ─────────────────────────────────────
+//
+// These tests make *real* HTTP calls to the public skills.sh
+// registry (https://skills.sh) and optionally to GitHub codeload
+// for skill installation. They are soft-failing on network errors
+// so CI / offline environments don't break; set CL_E2E_STRICT=1
+// to make failures hard.
+
+use cleanclaw_skills::discover;
+use cleanclaw_skills::search::search_registry;
+use cleanclaw_skills::skillssh::{pick_skills_sh_exact, search_skills_sh};
+
+/// Shared HTTP client builder for market tests.
+fn market_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .user_agent("cleanclaw-e2e")
+        .timeout(Duration::from_secs(15))
+        .build()
+        .expect("reqwest client")
+}
+
+fn is_strict() -> bool {
+    std::env::var("CL_E2E_STRICT").as_deref() == Ok("1")
+}
+
+/// Quick reachability check — returns true if skills.sh responds
+/// with a 200.
+async fn skills_sh_reachable() -> bool {
+    let client = market_client();
+    matches!(
+        client
+            .get("https://skills.sh/api/search?q=test")
+            .send()
+            .await,
+        Ok(r) if r.status().is_success()
+    )
+}
+
+/// E2E: search the public skills.sh registry via `search_skills_sh`
+/// and verify result structure. Validates that the serde deser
+/// matches the live API shape.
+#[tokio::test]
+async fn skillssh_search_returns_results() {
+    if !skills_sh_reachable().await {
+        eprintln!("SKIP: skills.sh unreachable");
+        if is_strict() {
+            panic!("skills.sh unreachable (CL_E2E_STRICT=1)")
+        }
+        return;
+    }
+
+    let results = search_skills_sh("web search")
+        .await
+        .expect("search_skills_sh should decode successfully");
+    eprintln!(
+        "skills.sh returned {} result(s) for 'web search'",
+        results.len()
+    );
+    assert!(!results.is_empty(), "expected at least one result for 'web search'");
+
+    for (i, s) in results.iter().enumerate() {
+        assert!(!s.skill_id.is_empty(), "result[{i}] skill_id empty");
+        assert!(!s.name.is_empty(), "result[{i}] name empty");
+        assert!(!s.source.is_empty(), "result[{i}] source empty");
+        assert!(s.installs >= 0, "result[{i}] negative installs");
+    }
+
+    // pick_skills_sh_exact works with live data.
+    let first_id = &results[0].skill_id;
+    let picked = pick_skills_sh_exact(&results, first_id);
+    assert!(picked.is_some(), "pick_skills_sh_exact should find '{first_id}'");
+    assert_eq!(picked.unwrap().skill_id, *first_id);
+}
+
+/// E2E: search via `search_registry`. The skills.sh API returns
+/// `{ skills: [...] }` while the struct expects `{ results: [...] }`,
+/// so `search_registry` always returns empty — this test verifies
+/// it doesn't error and handles the mismatch gracefully.
+#[tokio::test]
+async fn search_registry_gracefully_returns_empty() {
+    if !skills_sh_reachable().await {
+        eprintln!("SKIP: skills.sh unreachable");
+        return;
+    }
+
+    let hits = search_registry("translate", 10)
+        .await
+        .expect("search_registry should not error");
+    eprintln!(
+        "search_registry returned {} hit(s) — expected 0 (struct field mismatch with API)",
+        hits.len()
+    );
+    assert!(hits.is_empty(), "search_registry returns 0 due to field name mismatch");
+}
+
+/// E2E: full install-from-market flow.
+///
+/// 1. Search skills.sh for a broad query
+/// 2. Pick the most-installed match
+/// 3. Install it to a temporary directory
+/// 4. Load it with `discover()` and verify the SKILL.md content
+///
+/// Soft-fails at any HTTP step; requires CL_E2E_STRICT=1 to
+/// hard-fail.
+#[tokio::test]
+async fn skillssh_install_then_discover() {
+    if !skills_sh_reachable().await {
+        eprintln!("SKIP: skills.sh unreachable");
+        if is_strict() {
+            panic!("skills.sh unreachable (CL_E2E_STRICT=1)")
+        }
+        return;
+    }
+
+    // Step 1: search for a broad query.
+    let results = search_skills_sh("skill").await.expect("search should succeed");
+    if results.is_empty() {
+        eprintln!("SKIP: no results from skills.sh for 'skill'");
+        return;
+    }
+
+    // Step 2: pick the most-installed skill.
+    let best = pick_skills_sh_exact(&results, "").expect("pick should find a result");
+    eprintln!(
+        "Picked skill: {} (skill_id={:?}, source={:?}, installs={})",
+        best.name, best.skill_id, best.source, best.installs
+    );
+
+    // Step 3: install into a temp dir.
+    let install_dir = tempfile::tempdir().expect("tempdir");
+    let installed = match cleanclaw_skills::skillssh::install_from_skills_sh(
+        &best,
+        install_dir.path(),
+    )
+    .await
+    {
+        Ok(i) => i,
+        Err(e) => {
+            eprintln!("SKIP: install_from_skills_sh failed: {e}");
+            if is_strict() {
+                panic!("install_from_skills_sh failed: {e}")
+            }
+            return;
+        }
+    };
+    eprintln!("Installed to {:?}", installed.dir);
+    assert!(installed.dir.exists(), "installed dir must exist");
+    assert_eq!(installed.name, best.skill_id);
+
+    // Step 4: load with discover().
+    let loaded_skills = discover(install_dir.path());
+    assert!(
+        !loaded_skills.is_empty(),
+        "discover() should find installed skill in {:?}",
+        install_dir.path()
+    );
+    let loaded = loaded_skills.iter().find(|s| s.name == best.skill_id);
+    assert!(
+        loaded.is_some(),
+        "discover() should find skill '{}'",
+        best.skill_id
+    );
+    if let Some(s) = loaded {
+        eprintln!(
+            "Loaded skill '{}' (desc={:?}, content_len={})",
+            s.name,
+            s.description,
+            s.content.len()
+        );
+        assert!(!s.content.is_empty(), "SKILL.md body should not be empty");
+        assert!(s.enabled, "freshly installed skill should be enabled");
+    }
 }

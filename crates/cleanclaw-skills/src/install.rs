@@ -420,6 +420,20 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn install_from_path_with_custom_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("src");
+        tokio::fs::create_dir_all(&src).await.unwrap();
+        tokio::fs::write(src.join("SKILL.md"), b"# my skill").await.unwrap();
+
+        let target = dir.path().join("target");
+        let r = install_from_path(&src, "my-renamed-skill", &target).await.unwrap();
+        assert_eq!(r.name, "my-renamed-skill");
+        assert!(target.join("my-renamed-skill").exists());
+        assert!(target.join("my-renamed-skill/SKILL.md").exists());
+    }
+
+    #[tokio::test]
     async fn install_from_path_rejects_missing() {
         let dir = tempfile::tempdir().unwrap();
         let err = install_from_path(&dir.path().join("nope"), "", &dir.path().join("t"))

@@ -56,6 +56,7 @@ pub enum SkillsShError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillsShResult {
     pub id: String,
+    #[serde(rename = "skillId")]
     pub skill_id: String,
     pub name: String,
     pub source: String,
@@ -453,6 +454,54 @@ mod tests {
         let data = std::fs::read(&tar_path).unwrap();
         let sub = find_skill_dir_in_tarball(&data, "pdf").unwrap();
         assert_eq!(sub, "skills/pdf");
+    }
+
+    #[tokio::test]
+    async fn install_from_skills_sh_validates_missing_skill_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = SkillsShResult {
+            id: String::new(),
+            skill_id: String::new(),
+            name: "test".into(),
+            source: "owner/repo".into(),
+            installs: 0,
+        };
+        let err = install_from_skills_sh(&result, dir.path())
+            .await
+            .unwrap_err();
+        assert!(matches!(err, SkillsShError::Invalid(_)));
+    }
+
+    #[tokio::test]
+    async fn install_from_skills_sh_validates_missing_source() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = SkillsShResult {
+            id: "x".into(),
+            skill_id: "x".into(),
+            name: "test".into(),
+            source: String::new(),
+            installs: 0,
+        };
+        let err = install_from_skills_sh(&result, dir.path())
+            .await
+            .unwrap_err();
+        assert!(matches!(err, SkillsShError::Invalid(_)));
+    }
+
+    #[tokio::test]
+    async fn install_from_skills_sh_validates_malformed_source() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = SkillsShResult {
+            id: "x".into(),
+            skill_id: "x".into(),
+            name: "test".into(),
+            source: "not-owner-repo-format".into(),
+            installs: 0,
+        };
+        let err = install_from_skills_sh(&result, dir.path())
+            .await
+            .unwrap_err();
+        assert!(matches!(err, SkillsShError::Invalid(_)));
     }
 
     #[test]

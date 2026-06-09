@@ -196,6 +196,7 @@ pub fn parse_frontmatter(raw: &str) -> (SkillFrontmatter, String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn parse_frontmatter_with_yaml() {
@@ -265,5 +266,167 @@ mod tests {
         let b = skills.iter().find(|s| s.name == "b").unwrap();
         assert!(!a.enabled);
         assert!(b.always_load);
+    }
+
+    // ── Skill::from_dir edge cases ──────────────────────────────
+
+    #[test]
+    fn skill_from_dir_without_skill_md_returns_none() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("sub")).unwrap();
+        assert!(Skill::from_dir(&dir.path().join("sub")).is_none());
+    }
+
+    #[test]
+    fn skill_from_dir_falls_back_to_dir_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let skill_dir = dir.path().join("my-skill");
+        std::fs::create_dir(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("SKILL.md"), "# just body\n")
+            .unwrap();
+        let s = Skill::from_dir(&skill_dir).unwrap();
+        assert_eq!(s.name, "my-skill");
+        assert!(s.description.is_empty());
+    }
+
+    // ── render_prompt ───────────────────────────────────────────
+
+    #[test]
+    fn render_prompt_empty_when_no_skills() {
+        let output = render_prompt(&[]);
+        assert!(output.is_empty());
+    }
+
+    #[test]
+    fn render_prompt_empty_when_all_disabled() {
+        let skills = vec![Skill {
+            name: "test".into(),
+            description: "desc".into(),
+            path: PathBuf::from("/x"),
+            content: "body".into(),
+            env: vec![],
+            enabled: false,
+            always_load: false,
+        }];
+        let output = render_prompt(&skills);
+        assert!(output.is_empty());
+    }
+
+    #[test]
+    fn render_prompt_includes_skill_names() {
+        let skills = vec![
+            Skill {
+                name: "alpha".into(),
+                description: "first".into(),
+                path: PathBuf::from("/x"),
+                content: "body".into(),
+                env: vec![],
+                enabled: true,
+                always_load: false,
+            },
+            Skill {
+                name: "beta".into(),
+                description: "second".into(),
+                path: PathBuf::from("/y"),
+                content: "body".into(),
+                env: vec![],
+                enabled: true,
+                always_load: false,
+            },
+        ];
+        let output = render_prompt(&skills);
+        assert!(output.contains("alpha"));
+        assert!(output.contains("beta"));
+        assert!(output.contains("first"));
+        assert!(output.contains("second"));
+        assert!(output.contains("# Available Skills"));
+    }
+
+    #[test]
+    fn render_prompt_marks_always_load() {
+        let skills = vec![Skill {
+            name: "auto".into(),
+            description: "auto-loaded".into(),
+            path: PathBuf::from("/x"),
+            content: "body".into(),
+            env: vec![],
+            enabled: true,
+            always_load: true,
+        }];
+        let output = render_prompt(&skills);
+        assert!(output.contains("auto-loaded"));
+    }
+
+    // ── render_always_loaded ────────────────────────────────────
+
+    #[test]
+    fn render_always_loaded_skips_non_always() {
+        let skills = vec![
+            Skill {
+                name: "a".into(),
+                description: String::new(),
+                path: PathBuf::from("/x"),
+                content: "content-a".into(),
+                env: vec![],
+                enabled: true,
+                always_load: false,
+            },
+            Skill {
+                name: "b".into(),
+                description: String::new(),
+                path: PathBuf::from("/y"),
+                content: "content-b".into(),
+                env: vec![],
+                enabled: true,
+                always_load: true,
+            },
+        ];
+        let output = render_always_loaded(&skills);
+        assert!(!output.contains("content-a"));
+        assert!(output.contains("content-b"));
+    }
+
+    #[test]
+    fn render_always_loaded_skips_disabled() {
+        let skills = vec![Skill {
+            name: "x".into(),
+            description: String::new(),
+            path: PathBuf::from("/x"),
+            content: "secret".into(),
+            env: vec![],
+            enabled: false,
+            always_load: true,
+        }];
+        assert!(render_always_loaded(&skills).is_empty());
+    }
+
+    // ── resolve_env ─────────────────────────────────────────────
+
+    #[test]
+    fn resolve_env_uses_runtime_overrides() {
+        let env_spec = SkillEnvSpec {
+            name: "MY_KEY".into(),
+            description: "test key".into(),
+            required: false,
+        };
+        let skills = vec![Skill {
+            name: "s".into(),
+            description: String::new(),
+            path: PathBuf::from("/x"),
+            content: String::new(),
+            env: vec![env_spec],
+            enabled: true,
+            always_load: false,
+        }];
+        let mut runtime = HashMap::new();
+        runtime.insert("MY_KEY".into(), "override".into());
+        let resolved = resolve_env(&skills, &runtime);
+        assert_eq!(resolved.get("MY_KEY").unwrap(), "override");
+    }
+
+    #[test]
+    fn resolve_env_empty_when_no_skills_and_no_runtime() {
+        let resolved = resolve_env(&[], &HashMap::new());
+        assert!(resolved.is_empty());
     }
 }

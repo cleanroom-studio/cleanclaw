@@ -12,12 +12,14 @@ path = "src/lib.rs"
 cleanclaw-core = { path = "../cleanclaw-core" }
 cleanclaw-config = { path = "../cleanclaw-config" }
 cleanclaw-web = { path = "../cleanclaw-web" }
+cleanclaw-skills = { path = "../cleanclaw-skills", features = ["http"] }
 cleanclaw-skills-bundled = { path = "../cleanclaw-skills-bundled" }
 cleanclaw-workspace-defaults = { path = "../cleanclaw-workspace-defaults" }
 cleanclaw-plugin-runtime = { path = "../cleanclaw-plugin-runtime" }
 cleanclaw-provider = { path = "../cleanclaw-provider" }
 
 tokio = { version = "1", features = ["full"] }
+tempfile = "3"
 axum = { version = "0.7", features = ["ws"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
