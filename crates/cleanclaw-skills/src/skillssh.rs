@@ -137,10 +137,7 @@ fn find_skill_dir_in_tarball(data: &[u8], skill_id: &str) -> Result<String, Skil
     let suffix = format!("/{}/SKILL.md", skill_id);
     for entry in archive.entries().map_err(SkillsShError::Io)? {
         let entry = entry.map_err(SkillsShError::Io)?;
-        let path = entry
-            .path()
-            .map_err(SkillsShError::Io)?
-            .into_owned();
+        let path = entry.path().map_err(SkillsShError::Io)?.into_owned();
         let path_str = path.to_string_lossy().to_string();
         // Strip the top-level "<repo>-<sha>/" prefix.
         let first = match path.components().next() {
@@ -304,10 +301,7 @@ fn extract_skill_from_tar(data: &[u8], subpath: &str, dest: &Path) -> Result<usi
     let mut count = 0;
     for entry in archive.entries().map_err(SkillsShError::Io)? {
         let mut entry = entry.map_err(SkillsShError::Io)?;
-        let path = entry
-            .path()
-            .map_err(SkillsShError::Io)?
-            .into_owned();
+        let path = entry.path().map_err(SkillsShError::Io)?.into_owned();
         let path_str = path.to_string_lossy().to_string();
         // Strip top-level dir.
         let first = match path.components().next() {

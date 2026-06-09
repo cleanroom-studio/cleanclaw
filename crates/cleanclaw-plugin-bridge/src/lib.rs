@@ -80,7 +80,6 @@ impl<P: Plugin + Send + Sync> Plugin for BridgePlugin<P> {
 mod tests {
     use super::*;
     use cleanclaw_plugin_runtime::ToolDef;
-    
 
     struct StubPlugin;
 

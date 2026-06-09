@@ -147,10 +147,7 @@ impl Tool for WebSearchTool {
             .and_then(|v| serde_json::from_value(v.clone()).ok())
             .unwrap_or_default();
         let make_req = |p: &dyn cleanclaw_toolprov::Provider| {
-            let cfg = configs
-                .get(p.name())
-                .cloned()
-                .unwrap_or_default();
+            let cfg = configs.get(p.name()).cloned().unwrap_or_default();
             cleanclaw_toolprov::Request {
                 args: args.clone(),
                 config: cfg,

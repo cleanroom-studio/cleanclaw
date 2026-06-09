@@ -255,10 +255,7 @@ fn extract_tar_gz(data: &[u8], subpath: &str, dest: &Path) -> Result<usize, Inst
     let subpath = subpath.trim_end_matches('/');
     for entry in archive.entries().map_err(InstallError::Io)? {
         let mut entry = entry.map_err(InstallError::Io)?;
-        let path = entry
-            .path()
-            .map_err(InstallError::Io)?
-            .into_owned();
+        let path = entry.path().map_err(InstallError::Io)?.into_owned();
         // Top-level dir is the repo name (e.g. "repo-SHA/..."); strip
         // it. Then optionally strip the requested subpath.
         let stripped = {

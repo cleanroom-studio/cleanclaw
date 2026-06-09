@@ -1755,7 +1755,6 @@ impl Channel for LineChannel {
 #[cfg(test)]
 mod platform_tests {
     use super::*;
-    
 
     fn client() -> reqwest::Client {
         reqwest::Client::new()

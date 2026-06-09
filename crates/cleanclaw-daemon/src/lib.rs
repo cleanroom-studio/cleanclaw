@@ -118,9 +118,7 @@ pub fn send_signal(pid: u32, sig: &str) -> std::io::Result<()> {
         .args(["-s", sig, &pid.to_string()])
         .status()?;
     if !status.success() {
-        return Err(std::io::Error::other(
-            format!("kill returned {status:?}"),
-        ));
+        return Err(std::io::Error::other(format!("kill returned {status:?}")));
     }
     Ok(())
 }
