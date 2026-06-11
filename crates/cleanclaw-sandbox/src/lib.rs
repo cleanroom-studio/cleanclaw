@@ -13,6 +13,20 @@
 //! parity sweep (they each need a real backend). The trait is the
 //! contract; pool plumbing, idle eviction, and user-context injection
 //! are testable here.
+//!
+//! Role of this crate
+//! ------------------
+//!
+//! `cleanclaw-sandbox` is the only place in the workspace that knows how
+//! to run a shell command, read a file, or write a file. Every other
+//! crate goes through the `Executor` trait, so the cloud-vs-local split
+//! is a one-line configuration choice at boot.
+//!
+//! Threading: the trait is `Send + Sync` and all methods are `async`,
+//! so the gateway can hand `Arc<dyn Executor>` to any tokio task without
+//! extra wrapping. Backpressure is the caller's problem; this crate
+//! never spawns long-running background tasks of its own (the
+//! `LifecyclePool` sweeper is the only exception, and it's opt-in).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -29,6 +43,13 @@ pub mod remote;
 pub use remote::*;
 use tokio::sync::Mutex;
 
+/// Crate-wide error type.
+///
+/// Every public fallible API in this crate returns
+/// `Result<_, SandboxError>`. The variants map 1:1 to operator-
+/// actionable failure modes: missing config (offline build), IO
+/// failure, upstream sandbox failure, timeout, etc. The tool
+/// layer matches on the variant, not on the message.
 #[derive(Debug, Error)]
 pub enum SandboxError {
     #[error("io: {0}")]
@@ -51,6 +72,18 @@ pub enum SandboxError {
     Upstream(String),
 }
 
+/// Per-scope execution environment.
+///
+/// One implementation per backend (local, Docker, E2B, BoxLite).
+/// The trait is the *only* surface the agent tool layer uses, so
+/// swapping backends is a no-op for upstream code.
+///
+/// All methods are `async` and `Send + Sync` so the trait object
+/// (`Arc<dyn Executor>`) can move freely across tokio tasks.
+/// Implementations are expected to be cheap to clone (they live
+/// behind `Arc`) and safe to call concurrently from many tasks
+/// at once — the pool hands out the *same* `Arc` to every caller
+/// in a given scope.
 #[async_trait]
 pub trait Executor: Send + Sync {
     async fn exec(&self, command: &str, timeout: Duration) -> Result<SandboxExec, SandboxError>;
@@ -61,6 +94,11 @@ pub trait Executor: Send + Sync {
     async fn close(&self) -> Result<(), SandboxError>;
 }
 
+/// Result of an `Executor::exec` call.
+///
+/// Captured I/O plus the wall-clock duration so the tool layer
+/// can attribute latency to the sandbox rather than to the
+/// network or the LLM round-trip.
 #[derive(Debug, Clone)]
 pub struct SandboxExec {
     pub stdout: String,
@@ -69,6 +107,11 @@ pub struct SandboxExec {
     pub duration: Duration,
 }
 
+/// One entry in an `Executor::list_dir` result.
+///
+/// `is_dir` is the only structural distinction; the other fields
+/// are metadata that the LLM can use to decide what to do next
+/// ("is this a 50-line README or a 50-MB log?").
 #[derive(Debug, Clone)]
 pub struct SandboxEntry {
     pub name: String,
@@ -77,6 +120,18 @@ pub struct SandboxEntry {
     pub mod_time: DateTime<Utc>,
 }
 
+/// Per-scope pool of `Executor` instances.
+///
+/// Implementations are responsible for actually spinning up the
+/// backend (Docker, E2B, ...) and for caching the resulting
+/// `Executor` so repeat calls in the same scope return the same
+/// instance.
+///
+/// "Scope" = `(agent_id, project_id, session_id)`. The triple is
+/// treated as opaque by this trait; the gateway picks how to
+/// populate it. Implementations may scope by a subset of the
+/// triple (e.g. ignore `project_id` when empty) — see
+/// `LocalExecutorPool::get` for the reference behaviour.
 /// Per-scope pool. Implementations are responsible for actually
 /// spinning up the backend (Docker, E2B, ...).
 #[async_trait]
@@ -101,11 +156,23 @@ pub trait ExecutorPool: Send + Sync {
 // LocalExecutor — host passthrough. Dev + tests + single-user installs.
 // =====================================================================
 
+/// Host-filesystem passthrough.
+///
+/// Every method operates on files / processes on the *gateway
+/// host*, rooted at `root`. Used in dev, tests, and single-user
+/// installs where the isolation of a real sandbox isn't required.
+///
+/// `root` is the only state. The struct is intentionally cheap to
+/// clone (it is wrapped in `Arc` by the pool) and `Send + Sync`
+/// because `PathBuf` is.
 pub struct LocalExecutor {
     root: PathBuf,
 }
 
 impl LocalExecutor {
+    /// Build a `LocalExecutor` rooted at `root`. The directory
+    /// does not need to exist yet — `get` / `list_dir` create it
+    /// on demand.
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
     }
@@ -113,6 +180,20 @@ impl LocalExecutor {
 
 #[async_trait]
 impl Executor for LocalExecutor {
+        // Run a shell command via `/bin/sh -c`, with a hard timeout.
+        //
+        // The command is executed in `self.root` (so paths in the
+        // command line are resolved relative to it). Stdout/stderr
+        // are captured and lossy-decoded as UTF-8; binary output
+        // is best-effort — the LLM tool layer should use `read_file`
+        // for binary payloads.
+        //
+        // Three exit branches:
+        //   * `Ok(Ok(out))` — process exited; map to SandboxExec.
+        //   * `Ok(Err(e))` — failed to spawn `sh`; surface as Io.
+        //   * `Err(_)` — `tokio::time::timeout` fired; surface as
+        //     `Timeout(timeout)` so the tool layer can tell the user
+        //     "killed after 30s".
     async fn exec(&self, command: &str, timeout: Duration) -> Result<SandboxExec, SandboxError> {
         let start = std::time::Instant::now();
         let result = tokio::time::timeout(
@@ -137,6 +218,12 @@ impl Executor for LocalExecutor {
         }
     }
 
+    /// Read a file relative to `self.root`.
+    ///
+    /// Missing files surface as `SandboxError::NotFound(path)`
+    /// so the tool layer can produce a clean "no such file"
+    /// response without string-matching on the IO error kind.
+    /// Other IO failures bubble up as `SandboxError::Io`.
     async fn read_file(&self, path: &str) -> Result<Bytes, SandboxError> {
         let full = self.root.join(path);
         match tokio::fs::read(&full).await {
@@ -148,6 +235,9 @@ impl Executor for LocalExecutor {
         }
     }
 
+    /// Write (create or overwrite) a file. Parent directories
+    /// are created on demand — the LLM doesn't have to `mkdir -p`
+    /// before `write_file`.
     async fn write_file(&self, path: &str, content: &[u8]) -> Result<(), SandboxError> {
         let full = self.root.join(path);
         if let Some(parent) = full.parent() {
@@ -157,6 +247,12 @@ impl Executor for LocalExecutor {
         Ok(())
     }
 
+    /// List a directory (one level, no recursion).
+    ///
+    /// The result is sorted by name for deterministic output —
+    /// the LLM shouldn't have to deal with a different ordering
+    /// every call. `mod_time` falls back to "now" on filesystems
+    /// (e.g. some FUSE mounts) that don't expose a real mtime.
     async fn list_dir(&self, path: &str) -> Result<Vec<SandboxEntry>, SandboxError> {
         let full = self.root.join(path);
         let mut entries = match tokio::fs::read_dir(&full).await {
@@ -194,6 +290,7 @@ impl Executor for LocalExecutor {
         "local"
     }
 
+    /// No-op: `LocalExecutor` has no resources to release.
     async fn close(&self) -> Result<(), SandboxError> {
         Ok(())
     }
@@ -203,12 +300,22 @@ impl Executor for LocalExecutor {
 // LocalExecutorPool — single root, all scopes share it.
 // =====================================================================
 
+/// Per-process pool of `LocalExecutor` instances.
+///
+/// The whole map is behind a `tokio::sync::Mutex` — a regular
+/// `std::sync::Mutex` would deadlock with `async` lock holders.
+/// Scope conflicts are rare (`get`/`release` are short), so a
+/// single global mutex is fine; a `DashMap` would be premature
+/// optimization.
 pub struct LocalExecutorPool {
     root: PathBuf,
     executors: Mutex<HashMap<String, Arc<LocalExecutor>>>,
 }
 
 impl LocalExecutorPool {
+    /// Build a pool whose scope directories live under `root`.
+    /// The root directory does not need to exist; `get` creates
+    /// it on demand.
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self {
             root: root.into(),
@@ -279,15 +386,46 @@ impl ExecutorPool for LocalExecutorPool {
 // LifecyclePool — adds lazy creation + idle eviction on top of any pool.
 // =====================================================================
 
+/// Decorator over any `ExecutorPool` that records the last-use time
+/// of every scope it has handed out, runs a background sweeper that
+/// calls `release` on scopes that haven't been used for `idle_ttl`,
+/// and exposes `active_count` / `sweep_once` for tests and ops.
+///
+/// This is the layer that turns a stateless pool into something
+/// safe to expose to many users at once: a forgotten scope (agent
+/// idle, project abandoned) is eventually released so its disk /
+/// container resources can be reclaimed.
+///
+/// Threading: `state` is a `Mutex<HashMap>`, not a `DashMap`. The
+/// operations are O(1) and the lock is only held for a couple of
+/// instructions at a time, so contention is negligible compared
+/// to the real cost of `inner.get` (which actually launches a
+/// container for the Docker backend).
 pub struct LifecyclePool {
+    /// The wrapped pool. `Arc` so the lifecycle decorator can
+    /// be cloned freely without giving up ownership of the
+    /// underlying executors.
     inner: Arc<dyn ExecutorPool>,
+    /// How long a scope can sit idle before the sweeper evicts it.
     idle_ttl: Duration,
+    /// How often the background sweeper wakes up. Decoupled from
+    /// `idle_ttl` so ops can tune them independently — e.g. a 5-min
+    /// TTL with a 30-s sweep is typical.
     sweep_interval: Duration,
+    /// `scope_key -> last_used_instant`. Missing entry means the
+    /// scope is not currently tracked (and `inner` has nothing
+    /// cached for it either).
     state: Mutex<HashMap<String, std::time::Instant>>,
+    /// Join handle for the background sweeper. `None` before
+    /// `start_sweeper` is called and after `stop_sweeper`.
     handle: Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
 impl LifecyclePool {
+    /// Wrap `inner` with idle-eviction. The sweeper is *not*
+    /// started automatically — call `start_sweeper` after the
+    /// gateway is fully wired up so the sweeper doesn't try to
+    /// evict scopes during bootstrap.
     pub fn new(inner: Arc<dyn ExecutorPool>, idle_ttl: Duration) -> Self {
         Self {
             inner,
@@ -303,6 +441,13 @@ impl LifecyclePool {
     }
 
     /// Start the background sweeper that releases idle sandboxes.
+    /// Start the background sweeper that releases idle sandboxes.
+    ///
+    /// Spawns a tokio task that wakes up every `sweep_interval`
+    /// and calls `sweep_once`. The task lives until `stop_sweeper`
+    /// is called or the process exits. `MissedTickBehavior::Skip`
+    /// is set so a slow sweep doesn't queue up a burst of
+    /// catch-up ticks.
     pub async fn start_sweeper(self: &Arc<Self>) {
         let me = self.clone();
         let handle = tokio::spawn(async move {
@@ -316,12 +461,19 @@ impl LifecyclePool {
         *self.handle.lock().await = Some(handle);
     }
 
+    /// Abort the background sweeper. Safe to call when no
+    /// sweeper is running (no-op). Typically called from `Drop`
+    /// or from a shutdown signal handler.
     pub async fn stop_sweeper(&self) {
         if let Some(h) = self.handle.lock().await.take() {
             h.abort();
         }
     }
 
+    /// Run one sweep iteration. Returns the number of scopes
+    /// that were released. Exposed publicly so tests can drive
+    /// it deterministically (with a back-dated `last_used`) and
+    /// so ops can wire a manual cron-style trigger.
     pub async fn sweep_once(&self) -> usize {
         let now = std::time::Instant::now();
         let stale: Vec<String> = {
@@ -343,10 +495,16 @@ impl LifecyclePool {
         released
     }
 
+    /// Number of scopes currently being tracked (= number of
+    /// executors the sweeper considers "alive"). Used by the
+    /// `/metrics` endpoint to expose pool pressure.
     pub async fn active_count(&self) -> usize {
         self.state.lock().await.len()
     }
 
+    /// Configured idle TTL. Read-only — changing it requires
+    /// a new pool. Operators can pull the value from `/config`
+    /// to confirm the sweeper is tuned as they expect.
     pub fn idle_ttl(&self) -> Duration {
         self.idle_ttl
     }
@@ -362,6 +520,10 @@ impl ExecutorPool for LifecyclePool {
     ) -> Result<Arc<dyn Executor>, SandboxError> {
         let key = Self::key(agent_id, project_id, session_id);
         // Mark the scope as freshly used.
+        // Forward to `inner.get` and refresh the last-used stamp.
+        // The stamp is updated *unconditionally* — even if `inner`
+        // returns an error, we don't want a half-broken scope to
+        // show up as "fresh" in the sweeper.
         self.state
             .lock()
             .await
@@ -369,6 +531,10 @@ impl ExecutorPool for LifecyclePool {
         self.inner.get(agent_id, project_id, session_id).await
     }
 
+        // Drop the last-used stamp *and* forward to `inner.release`.
+        // The stamp is removed first so a concurrent `get` that
+        // wins the race re-inserts a fresh stamp rather than
+        // resurrecting a stale one.
     async fn release(
         &self,
         agent_id: &str,
@@ -395,9 +561,27 @@ impl ExecutorPool for LifecyclePool {
 // freshly-created sandbox so the LLM sees the same files.
 // =====================================================================
 
+/// One-shot helper for hydrating an `Executor` from a workspace.
+///
+/// Hydration happens at *executor* creation time (via the
+/// `WorkspaceHydrator::hydrate` static method) so the very first
+/// tool call in a session sees the user's files. Flushing
+/// happens at session-end time (see `WorkspaceSync::flush`) so
+/// changes the LLM made survive process restarts.
 pub struct WorkspaceHydrator;
 
 impl WorkspaceHydrator {
+    /// One-shot: walk the workspace.Store and `write_file` each
+    /// object into the executor.
+    ///
+    /// Best-effort — the first IO error short-circuits and the
+    /// rest of the files are skipped. That's intentional: if the
+    /// sandbox is broken, we'd rather fail the hydrate loudly
+    /// than silently have a half-hydrated environment. The
+    /// lifecycle sweeper will tear the scope down and the next
+    /// `get` will retry from a clean slate.
+    ///
+    /// Returns the number of files written.
     /// One-shot: walk the workspace.Store and `write_file` each object
     /// into the executor. Best-effort — partial failures are logged
     /// and the first error short-circuits (the lifecycle sweeper will
@@ -428,6 +612,12 @@ impl WorkspaceHydrator {
 // environment a sandbox process sees.
 // =====================================================================
 
+/// Build the canonical `user_id` / `agent_id` env-var map that
+/// every backend should set on processes it spawns.
+///
+/// Today the keys are `CLEANCLAW_USER_ID` and `CLEANCLAW_AGENT_ID`;
+/// the schema is stable, so adding more keys here is a non-breaking
+/// change for any downstream consumer that already read them.
 pub fn user_environment(user_id: &str, agent_id: &str) -> HashMap<String, String> {
     let mut env = HashMap::new();
     env.insert("CLEANCLAW_USER_ID".to_string(), user_id.to_string());
@@ -449,6 +639,12 @@ use std::any::Any;
 
 /// Tag a `dyn Any` context with the current chatter's userID.
 /// Empty uid is a no-op so call sites don't have to nil-check.
+/// Tag a `dyn AnyExt` context with the current chatter's userID.
+///
+/// Empty uid is a no-op so call sites don't have to nil-check —
+/// the typical call shape is `with_user_id(&mut ctx, ctx.user_id())`
+/// which is safe even when no chatter is bound (the userID is `""`
+/// in that case).
 pub fn with_user_id(ctx: &mut dyn AnyExt, uid: &str) {
     if !uid.is_empty() {
         ctx.set_user_id(uid.to_string());
@@ -458,6 +654,11 @@ pub fn with_user_id(ctx: &mut dyn AnyExt, uid: &str) {
 /// Extract the chatter userID set by `with_user_id`, or `""` when
 /// no wrap happened. Used by sandbox backends to decide whether
 /// to mount per-user skills into the container.
+/// Extract the chatter userID set by `with_user_id`, or `""`
+/// when no wrap happened. The returned `&str` borrows from the
+/// context, so the caller must hold the context alive. Used by
+/// sandbox backends to decide whether to mount per-user skills
+/// into the container (e.g. E2B's `domain` mount).
 pub fn user_id_from_dyn(ctx: &dyn AnyExt) -> &str {
     ctx.user_id()
 }
@@ -466,12 +667,28 @@ pub fn user_id_from_dyn(ctx: &dyn AnyExt) -> &str {
 /// type-erased. Real callers (e.g. a tower middleware layer) will
 /// pass a concrete `RequestContext`; the trait is the contract
 /// our sandbox layer sees.
+/// Lightweight context trait so the per-key context box can be
+/// type-erased. Real callers (e.g. a tower middleware layer) will
+/// pass a concrete `RequestContext`; the trait is the contract
+/// our sandbox layer sees.
+///
+/// The trait is intentionally minimal — only the userID flows
+/// through it. If we ever need more context (tenant, request id,
+/// ...) we add another method; we don't widen `user_id` into a
+/// generic key/value bag because that turns every call site into
+/// a stringly-typed nightmare.
 pub trait AnyExt: Any + Send + Sync {
     fn set_user_id(&mut self, uid: String);
     fn user_id(&self) -> &str;
 }
 
 /// Default in-memory context for tests and standalone use.
+/// Default in-memory context for tests and standalone use.
+///
+/// `Default` is derived so `RequestContext::default()` is a valid
+/// "no chatter bound" context. The struct holds exactly one
+/// field today; that's the point — keep the test fixture boring
+/// so the production wiring can grow without touching the tests.
 #[derive(Default)]
 pub struct RequestContext {
     user_id: String,
@@ -495,6 +712,13 @@ impl AnyExt for RequestContext {
 /// Narrow durability interface — `cleanclaw_workspace::Store` is
 /// the production implementation (S3 / LocalFS). Mirrors the
 /// Go `WorkspaceStore` trait shape.
+/// Narrow durability interface — `cleanclaw_workspace::Store` is
+/// the production implementation (S3 / LocalFS).
+///
+/// The trait is per-user (not per-`agent/project/session`) because
+/// that's the granularity the sandbox layer cares about. The
+/// `WorkspaceStoreAdapter` below maps this onto the full store
+/// shape when needed.
 #[async_trait]
 pub trait WorkspaceStore: Send + Sync {
     async fn list_paths(&self, user_id: &str) -> Result<Vec<String>, SandboxError>;
@@ -508,6 +732,14 @@ pub trait WorkspaceStore: Send + Sync {
 /// the (agent_id=user_id, project_id="", session_id="") scope so
 /// per-user files land in a predictable place. Production callers
 /// can use this directly.
+/// Adapter: turn the full `cleanclaw_workspace::Store` into the
+/// narrow `WorkspaceStore` interface used by `WorkspaceSync`.
+///
+/// We pass through `agent_id = user_id` and an empty
+/// `(project_id, session_id)` so per-user files land in a
+/// predictable place in the backing store. Production callers can
+/// use this directly; tests use a hand-rolled `MemStore` to avoid
+/// touching the filesystem.
 pub struct WorkspaceStoreAdapter {
     pub inner: Arc<dyn cleanclaw_workspace::Store>,
 }
@@ -541,6 +773,19 @@ impl WorkspaceStore for WorkspaceStoreAdapter {
 /// Hydrate a sandbox's local directory from a `WorkspaceStore`.
 /// Called on sandbox creation. Best-effort — per-file errors are
 /// logged and skipped rather than failing the whole hydrate.
+/// File-by-file hydrate / flush helper for the sandbox layer.
+///
+/// Wraps a `WorkspaceStore` and provides three operations:
+/// 1. `hydrate` — pull every file the user has stored and write
+///    it into a local directory. Per-file errors are *logged and
+///    skipped* here (unlike `WorkspaceHydrator` which short-
+///    circuits) because the local-dir hydrate is best-effort: a
+///    missing file doesn't break the whole session.
+/// 2. `flush` — walk the local directory and upload every file
+///    to the store. Hidden files (basename starting with `.`)
+///    are skipped to avoid syncing editor swap files, etc.
+/// 3. `sync_file` — upload a single file. Used after `write_file`
+///    tool calls for real-time sync.
 pub struct WorkspaceSync {
     pub store: Arc<dyn WorkspaceStore>,
 }
@@ -550,6 +795,13 @@ impl WorkspaceSync {
         Self { store }
     }
 
+    /// Copy every workspace file for `user_id` into `local_dir`.
+    ///
+    /// Per-file errors are logged at `warn` and skipped, so a
+    /// single corrupt entry doesn't fail the whole hydrate. The
+    /// number of files *successfully* copied is returned (use
+    /// the difference between the count and `list_paths().len()`
+    /// to gauge loss).
     /// Copy every workspace file for `user_id` into `local_dir`.
     /// Returns the number of files copied.
     pub async fn hydrate(&self, user_id: &str, local_dir: &Path) -> Result<usize, SandboxError> {
@@ -573,6 +825,11 @@ impl WorkspaceSync {
         Ok(count)
     }
 
+    /// Walk `local_dir` and upload every regular file to the
+    /// store, skipping hidden files (basename starts with `.`).
+    /// Subdirectories are recursed depth-first; the relative path
+    /// is preserved with forward slashes regardless of host OS.
+    /// Per-file errors are logged and skipped (not fatal).
     /// Walk `local_dir` and upload every regular file to the
     /// store, skipping hidden files. Returns the number of files
     /// uploaded.
@@ -610,6 +867,11 @@ impl WorkspaceSync {
         Ok(count)
     }
 
+    /// Sync a single file. Used after `write_file` tool calls
+    /// for real-time sync — callers that prefer batching can use
+    /// `flush` instead. Errors are propagated to the caller (no
+    /// best-effort here) because a single `write_file` failure
+    /// is already user-visible.
     /// Sync a single file. Used after `write_file` tool calls for
     /// real-time sync (callers can batch via `flush` instead).
     pub async fn sync_file(
@@ -627,9 +889,26 @@ impl WorkspaceSync {
 
 /// Default sandbox root path. Mirrors CleanClaw's
 /// `defaultSandboxRoot = "/workspace"`. The path is where
+/// hydrated files land inside the sandbox. Backends that mount
+/// a host volume into the container are expected to use this
+/// same path as the mount target so `WorkspaceSync` and the
+/// `DockerExecutor::write_file` heredoc-tempfile trick both
+/// land in the same place.
+/// Default sandbox root path. Mirrors CleanClaw's
+/// `defaultSandboxRoot = "/workspace"`. The path is where
 /// hydrated files land inside the sandbox.
 pub const DEFAULT_SANDBOX_ROOT: &str = "/workspace";
 
+/// Strip leading slashes and `..` segments so a hydrated key
+/// can't escape `/workspace` even if the store holds a malicious
+/// path.
+///
+/// The rule is simple: split on `/`, drop empty segments and
+/// `..` segments, rejoin. The result is always a *relative*
+/// path with no parent references, so joining it to
+/// `DEFAULT_SANDBOX_ROOT` is always safe. We deliberately do
+/// not validate the *first* segment (no `..` is allowed at the
+/// start either).
 /// Strip leading slashes and `..` segments so a hydrated key
 /// can't escape `/workspace` even if the store holds a malicious
 /// path. Mirrors CleanClaw's `sanitizeSandboxPath`.
@@ -984,6 +1263,12 @@ mod tests {
 // Docker executor. go`.
 // =====================================================================
 
+/// Compute the on-disk scope directory:
+/// `root/agent_id[/projects/project_id | /sessions/session_id]`.
+///
+/// Either the project or the session is used, never both —
+/// this mirrors the Go daemon's path scheme and keeps the
+/// layout stable for backup tooling that walks the tree.
 fn scope_dir_helper(root: &Path, agent_id: &str, project_id: &str, session_id: &str) -> PathBuf {
     let mut p = root.join(agent_id);
     if !project_id.is_empty() {
@@ -995,10 +1280,23 @@ fn scope_dir_helper(root: &Path, agent_id: &str, project_id: &str, session_id: &
 }
 
 /// Resource + network policy for a sandbox container.
+/// Resource + network policy for a sandbox container.
+///
+/// All fields are strings (not `u32` / enums) because the
+/// container runtime's parsing is string-based and we don't
+/// want to duplicate its grammar. Empty values mean "no limit
+/// set by us" — the runtime's own defaults apply.
 #[derive(Debug, Clone, Default)]
 pub struct Policy {
+    /// CPU cap, e.g. `"2"` (two cores). Forwarded to docker's
+    /// `--cpus` flag. Empty = no cap.
     pub max_cpu: String,    // e.g. "2"
+    /// Memory cap, e.g. `"512m"`. Forwarded to docker's
+    /// `--memory` flag. Empty = no cap.
     pub max_memory: String, // e.g. "512m"
+    /// Network mode, one of `"none" | "host" | "bridge"`.
+    /// `"none"` is the safe default — the agent can't reach the
+    /// internet or the host network.
     pub net_mode: String,   // "none" | "host" | "bridge"
 }
 
@@ -1009,6 +1307,22 @@ pub struct Policy {
 /// it with a Docker daemon reachable from the gateway host. The
 /// stub here doesn't actually create containers — it returns a
 /// `DockerExecutor` that can be queried for backend/identity.
+/// Docker-backed `Executor` running each tool call as `docker exec`.
+///
+/// `DockerExecutor` shells out to the `docker` CLI rather than
+/// talking to the daemon over HTTP. That keeps the binary's
+/// dependency surface small (no `bollard` / `shiplift`) at the
+/// cost of one extra fork per tool call. The CLI is also the
+/// path the Go daemon uses, so behaviour matches the parity sweep.
+///
+/// Lifecycle:
+/// 1. `DockerExecutor::new` is just configuration; no process is
+///    launched.
+/// 2. `bind_container_id(Some(id))` records a live container id
+///    (typically set by the gateway after a `docker run`).
+/// 3. Subsequent `Executor::exec` calls route through
+///    `docker exec -i <id> sh -c <command>`.
+/// 4. `close` stops and removes the bound container.
 pub struct DockerExecutor {
     image: String,
     workspace: String,
@@ -1023,6 +1337,9 @@ pub struct DockerExecutor {
 }
 
 impl DockerExecutor {
+    /// Build a `DockerExecutor`. No `docker run` happens here —
+    /// call `bind_container_id` after the gateway has brought a
+    /// container up via `DockerExecutor::docker_run`.
     pub fn new(image: impl Into<String>, workspace: impl Into<String>, policy: Policy) -> Self {
         Self {
             image: image.into(),
@@ -1033,22 +1350,38 @@ impl DockerExecutor {
         }
     }
 
+    /// Configured image (e.g. `"python:3.12"`).
     pub fn image(&self) -> &str {
         &self.image
     }
 
+    /// Host path that is bind-mounted to `/workspace` inside the
+    /// container. Tests use a tempdir; production uses
+    /// `scope_dir_helper` output.
     pub fn workspace(&self) -> &str {
         &self.workspace
     }
 
+    /// Resource / network policy. Read-only — changing the
+    /// policy means building a new `DockerExecutor`.
     pub fn policy(&self) -> &Policy {
         &self.policy
     }
 
+    /// Configured container id (set by the gateway, not by
+    /// `new`). Empty until `bind_container_id` is called.
     pub fn container_id(&self) -> &str {
         &self.container_id
     }
 
+    /// Bind (or clear) the live container id.
+    ///
+    /// Once bound, subsequent `Executor::exec` calls route
+    /// through `docker exec` against this container. Pass `None`
+    /// to clear the binding — typically called from `close`
+    /// after `docker rm -f` succeeds. The binding lives in a
+    /// `std::sync::Mutex` because the critical section is too
+    /// short to justify a `tokio::sync::Mutex`.
     /// Bind a live container id so subsequent `Executor::exec` calls
     /// use `docker exec` against it. Pass `None` to clear.
     pub fn bind_container_id(&self, id: Option<String>) {
@@ -1061,6 +1394,13 @@ impl DockerExecutor {
         self.bound_container.lock().ok().and_then(|g| g.clone())
     }
 
+    /// Issue a `docker exec` against the given container.
+    ///
+    /// The command runs as `docker exec -i <container> <args…>`
+    /// inside the container. The `-i` flag keeps stdin open so
+    /// callers that pipe data (e.g. `write_file`) can. Returns
+    /// the captured I/O and exit code, or an IO error if the
+    /// `docker` binary is missing or fails to spawn.
     /// Issue a `docker exec` against the given container. Returns
     /// (stdout, stderr, exit_code) or an Io error.
     pub async fn docker_exec(
@@ -1083,6 +1423,14 @@ impl DockerExecutor {
         })
     }
 
+    /// Spawn a fresh detached container that sleeps forever.
+    ///
+    /// The container is run with `--network=none` (no outbound
+    /// network, not even to the host) and a bind mount of the
+    /// host `workspace` directory into `/workspace` inside the
+    /// container. Returns the container id (12 hex chars from
+    /// `docker run --detach` output), which the caller passes
+    /// to `bind_container_id`.
     /// Issue a `docker run` to bring a fresh container up. Returns
     /// the container id (first 12 hex chars from `docker run --detach`
     /// output). Mirrors the entrypoint the Go daemon's
@@ -1113,6 +1461,19 @@ impl DockerExecutor {
 
 #[async_trait::async_trait]
 impl Executor for DockerExecutor {
+    /// Run a command inside the bound container via `docker exec`.
+    ///
+    /// If no container is bound, fall back to the historical
+    /// `NotConfigured` so callers that haven't wired the gateway
+    /// sandbox runtime keep their existing semantics. When a
+    /// container is bound, shell out via `docker exec` and run
+    /// the command through `sh -c` so the caller can use shell
+    /// metacharacters the way the Go exec tool does.
+    ///
+    /// The timeout argument is *currently* ignored — the local
+    /// `docker exec` does not respect a wall-clock timeout. A
+    /// future patch will wrap the call in `tokio::time::timeout`
+    /// and SIGKILL the docker child on expiry.
     async fn exec(&self, command: &str, _timeout: Duration) -> Result<SandboxExec, SandboxError> {
         // If no container is bound, fall back to the historical
         // NotConfigured so callers that haven't wired the gateway
@@ -1130,6 +1491,13 @@ impl Executor for DockerExecutor {
         };
         self.docker_exec(&container, &["sh", "-c", command]).await
     }
+    /// `docker exec cat <path>` — read a file from the container.
+    ///
+    /// We don't use `docker cp` because the container has to be
+    /// running for `cat` to work, and `cp` requires the gateway
+    /// to know the container's filesystem layout. A non-zero
+    /// exit code surfaces as `Exec(stderr)` so the LLM can read
+    /// the cat error message.
     async fn read_file(&self, path: &str) -> Result<bytes::Bytes, SandboxError> {
         let container = self.bound().ok_or(SandboxError::NotConfigured("docker"))?;
         let out = self.docker_exec(&container, &["cat", path]).await?;
@@ -1141,6 +1509,16 @@ impl Executor for DockerExecutor {
         }
         Ok(bytes::Bytes::from(out.stdout.into_bytes()))
     }
+    /// Write a file into the container via
+    /// `cat > <tmp> && mv <tmp> <path>`.
+    ///
+    /// We deliberately avoid `docker cp` (which writes outside
+    /// the container's namespace and bypasses the bind-mounted
+    /// `/workspace`) and use a two-step cat + mv with stdin
+    /// piping. The tempfile lives in `/workspace` so the same
+    /// `mv` works on filesystems that don't allow cross-device
+    /// renames. The pid is included in the tempfile name to
+    /// avoid collisions when two writes race.
     async fn write_file(&self, path: &str, content: &[u8]) -> Result<(), SandboxError> {
         let container = self.bound().ok_or(SandboxError::NotConfigured("docker"))?;
         // Pipe via stdin: `cat > <path>` with the content as the
@@ -1174,6 +1552,17 @@ impl Executor for DockerExecutor {
         }
         Ok(())
     }
+    /// `docker exec ls -1a <path>` — list a directory inside the
+    /// container.
+    ///
+    /// We use `ls -1a` (one entry per line, include dotfiles)
+    /// and parse the output as plain text. This is simpler than
+    /// `ls -la` (which we don't use because parsing the size
+    /// column reliably is annoying across locales) and matches
+    /// the Go `ListDir` shape. A non-zero exit code is treated
+    /// as "directory does not exist" and returns an empty
+    /// vector (matches the Go behaviour, where the missing-dir
+    /// case is non-fatal).
     async fn list_dir(&self, path: &str) -> Result<Vec<SandboxEntry>, SandboxError> {
         let container = self.bound().ok_or(SandboxError::NotConfigured("docker"))?;
         // `ls -1` one entry per line; the -a flag exposes dotfiles
@@ -1197,6 +1586,13 @@ impl Executor for DockerExecutor {
     fn backend(&self) -> &'static str {
         "docker"
     }
+    /// `docker stop` + `docker rm -f` against the bound container.
+    ///
+    /// Idempotent: the second call is a no-op because
+    /// `bind_container_id(None)` clears the binding after the
+    /// first call. Errors from the `docker` CLI are swallowed
+    /// because there's nothing useful the caller can do with
+    /// them at shutdown time.
     async fn close(&self) -> Result<(), SandboxError> {
         // `docker stop` + `docker rm` against the bound container.
         if let Some(c) = self.bound() {
@@ -1214,6 +1610,14 @@ impl Executor for DockerExecutor {
     }
 }
 
+/// Per-process pool of `DockerExecutor` instances.
+///
+/// Every `get` call returns a *fresh* `DockerExecutor` rather
+/// than caching one. The gateway is expected to call
+/// `bind_container_id` on the returned handle to attach it to
+/// a running container. This avoids the caching complexity of
+/// the local pool because container lifecycle is owned by the
+/// gateway anyway.
 /// Pool that returns Docker executors.
 pub struct DockerExecutorPool {
     image: String,
@@ -1279,6 +1683,21 @@ impl ExecutorPool for DockerExecutorPool {
 // activates once an `E2BExecutor::with_client()` is plugged in at boot.
 // =====================================================================
 
+/// E2B HTTP client. Talks to `https://api.e2b.dev`.
+///
+/// **Offline / online duality**:
+/// `E2BExecutor::new` builds a struct with `client = None`.
+/// Every method that would otherwise hit the network returns
+/// `SandboxError::NotConfigured` so the rest of the workspace
+/// can be compiled, tested, and shipped without an E2B API key.
+/// At boot, the gateway calls `with_client(...)` to flip the
+/// struct into its online mode. The trait methods that need a
+/// *bound sandbox id* still return `NotConfigured` because the
+/// trait API doesn't take a sandbox id; the `*_remote` methods
+/// are the real entry points in the online path.
+///
+/// Wire format is defined in `crate::remote` and mirrors the
+/// Go daemon's `e2b_executor.go` field-for-field.
 pub struct E2BExecutor {
     api_key: String,
     template: String,
@@ -1291,6 +1710,10 @@ pub struct E2BExecutor {
 }
 
 impl E2BExecutor {
+    /// Build an offline `E2BExecutor`. No HTTP calls happen
+    /// until `with_client` is called. The `api_key` is stored
+    /// eagerly so the offline struct is fully formed (and
+    /// `auth_headers` can be tested without a client).
     pub fn new(api_key: impl Into<String>, template: impl Into<String>) -> Self {
         Self {
             api_key: api_key.into(),
@@ -1300,24 +1723,34 @@ impl E2BExecutor {
         }
     }
 
+    /// Configured template id. Read-only — change means a new
+    /// executor.
     pub fn template(&self) -> &str {
         &self.template
     }
 
+    /// Configured base URL. Read-only.
     pub fn base_url(&self) -> &str {
         &self.base_url
     }
 
+    /// Override the base URL (e.g. for an internal E2B-
+    /// compatible proxy). Chainable builder.
     pub fn with_endpoint(mut self, base: impl Into<String>) -> Self {
         self.base_url = base.into();
         self
     }
 
+    /// Flip into online mode by attaching a `reqwest::Client`.
+    /// Chainable builder.
     pub fn with_client(mut self, c: Arc<reqwest::Client>) -> Self {
         self.client = Some(c);
         self
     }
 
+    /// Internal helper: get the underlying `reqwest::Client` or
+    /// return `NotConfigured`. Every method that would do
+    /// network I/O calls this first.
     fn require_client(&self) -> Result<&reqwest::Client, SandboxError> {
         self.client
             .as_ref()
@@ -1325,6 +1758,13 @@ impl E2BExecutor {
             .ok_or(SandboxError::NotConfigured("e2b client"))
     }
 
+    /// Build the auth headers E2B expects.
+    ///
+    /// E2B uses `X-API-Key: <key>` (NOT `Authorization: Bearer`),
+    /// which is what distinguishes it from BoxLite at the wire
+    /// level. Centralised so the test suite can pin the exact
+    /// header set; the tests below assert both the presence of
+    /// `X-API-Key` and the absence of `Authorization`.
     /// Build the auth headers E2B expects (Authorization + JSON
     /// content type). Centralised so the test suite can pin the
     /// exact wire format.
@@ -1494,6 +1934,12 @@ impl E2BExecutor {
 
 #[async_trait::async_trait]
 impl Executor for E2BExecutor {
+    /// Trait-level exec — returns `NotConfigured` because the
+    /// trait API has no sandbox id parameter.
+    ///
+    /// The trait path needs a bound sandbox id; the gateway is
+    /// responsible for that. Operators that wired a client use
+    /// `exec_remote()` after binding an id.
     async fn exec(&self, _command: &str, _timeout: Duration) -> Result<SandboxExec, SandboxError> {
         // The trait path needs a bound sandbox id; the gateway
         // is responsible for that. Operators that wired a client
@@ -1539,6 +1985,19 @@ impl Executor for E2BExecutor {
 // a `BoxLiteExecutor::with_endpoint()` is plugged in at boot.
 // =====================================================================
 
+/// BoxLite REST + WebSocket client.
+/// Talks to `https://api.boxlite.ai/v1`.
+///
+/// BoxLite differs from E2B in three ways that show up in the
+/// wire format:
+/// 1. Authentication uses `Authorization: Bearer <key>` instead
+///    of `X-API-Key`.
+/// 2. Uploads are multipart/form-data (not base64-in-JSON).
+/// 3. Interactive shells go over a WebSocket stream, modelled
+///    by `BoxLiteShellFrame` in `crate::remote`.
+///
+/// The same offline / online duality applies: `new` builds a
+/// `client = None` struct; `with_client` flips it online.
 pub struct BoxLiteExecutor {
     image: String,
     api_key: String,
@@ -1551,6 +2010,9 @@ pub struct BoxLiteExecutor {
 }
 
 impl BoxLiteExecutor {
+    /// Build an offline `BoxLiteExecutor`. The api key is
+    /// deliberately optional and defaults to empty; pass it
+    /// via `with_api_key` to flip into authenticated mode.
     pub fn new(image: impl Into<String>) -> Self {
         Self {
             image: image.into(),
@@ -1560,29 +2022,37 @@ impl BoxLiteExecutor {
         }
     }
 
+    /// Set the API key. Chainable. Empty key is allowed and
+    /// suppresses the `Authorization` header.
     pub fn with_api_key(mut self, k: impl Into<String>) -> Self {
         self.api_key = k.into();
         self
     }
 
+    /// Override the base URL. Chainable.
     pub fn with_endpoint(mut self, base: impl Into<String>) -> Self {
         self.base_url = base.into();
         self
     }
 
+    /// Flip into online mode. Chainable.
     pub fn with_client(mut self, c: Arc<reqwest::Client>) -> Self {
         self.client = Some(c);
         self
     }
 
+    /// Configured image id. Read-only.
     pub fn image(&self) -> &str {
         &self.image
     }
 
+    /// Configured base URL. Read-only.
     pub fn base_url(&self) -> &str {
         &self.base_url
     }
 
+    /// Internal helper: get the underlying `reqwest::Client` or
+    /// return `NotConfigured`.
     fn require_client(&self) -> Result<&reqwest::Client, SandboxError> {
         self.client
             .as_ref()
@@ -1590,6 +2060,12 @@ impl BoxLiteExecutor {
             .ok_or(SandboxError::NotConfigured("boxlite client"))
     }
 
+    /// Build the auth headers BoxLite expects.
+    ///
+    /// Unlike E2B, BoxLite uses `Authorization: Bearer <key>`
+    /// and requires a key *only* when one is configured (empty
+    /// key → unauthenticated request, used for local-only
+    /// installs). The test suite pins both branches.
     /// Build the auth headers BoxLite expects. Centralised so the
     /// test suite can pin the exact wire format.
     pub fn auth_headers(&self) -> std::collections::HashMap<&'static str, String> {
@@ -1766,6 +2242,13 @@ impl BoxLiteExecutor {
 // Tiny adapter: turn a HashMap<&str, String> into a reqwest
 // HeaderMap. Used by the BoxLite executor's auth_headers().
 // Lives in this crate to avoid a new tiny utility crate.
+/// Tiny adapter: turn a `HashMap<&str, String>` into a reqwest
+/// `HeaderMap`. Used by the `auth_headers()` helpers above. We
+/// define the trait here (rather than in a separate util crate)
+/// because it's only used by E2B and BoxLite and the rest of the
+/// workspace doesn't need it. The error type is a `String` (not
+/// a `reqwest::header::InvalidHeader*`) because the only caller
+/// maps it into `SandboxError::Http` directly.
 trait TryIntoHeaderMap {
     type Err;
     fn try_into_http(self) -> Result<reqwest::header::HeaderMap, Self::Err>;
@@ -1787,6 +2270,12 @@ impl TryIntoHeaderMap for std::collections::HashMap<&'static str, String> {
 
 #[async_trait::async_trait]
 impl Executor for BoxLiteExecutor {
+    /// Trait-level exec — returns `NotConfigured` because the
+    /// trait API has no sandbox id parameter.
+    ///
+    /// Without a bound sandbox id there's no remote to talk to.
+    /// The `exec_remote()` method is the real path; this method
+    /// exists to satisfy the trait + the offline build.
     async fn exec(&self, _command: &str, _timeout: Duration) -> Result<SandboxExec, SandboxError> {
         // Without a bound sandbox id there's no remote to talk to.
         // The exec_remote() method is the real path; this method
