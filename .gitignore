@@ -21,3 +21,4 @@ web/.env.*
 !**/.env.example
 
 _ref/
+*.adoc
